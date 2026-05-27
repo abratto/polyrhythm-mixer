@@ -70,3 +70,13 @@ startAnimation({
     playChannelSound: (channelName) => playChannelSound(state, channels, channelName),
     markCurrentButtons: (active) => markCurrentButtons(lanes, active)
 });
+
+// Handle viewport resize and orientation change on mobile devices.
+// The canvas scales via CSS (width:100%; height:auto), so the render loop
+// does not need coordinate changes. Reading canvas.offsetWidth forces the
+// browser to reflow the canvas container — important on iOS after rotation.
+window.addEventListener('resize', function () {
+    requestAnimationFrame(function () {
+        void canvas.offsetWidth;
+    });
+});
