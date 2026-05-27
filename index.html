@@ -33,91 +33,93 @@
 
     <div class="rack-unit">
         <div class="config-layout">
-            <button id="audioBtn">Enable Audio</button>
-            <button id="helpBtn">Help</button>
-            <button id="shareBtn">Share Groove</button>
-            <div class="v-divider"></div>
-
-            <div class="control-group">
-                <label>Meter A</label>
-                <select id="rhythmA">
-                    <option value="2">2</option>
-                    <option value="3" selected>3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                    <option value="6">6</option>
-                    <option value="7">7</option>
-                    <option value="8">8</option>
-                    <option value="9">9</option>
-                    <option value="10">10</option>
-                    <option value="12">12</option>
-                    <option value="16">16</option>
-                </select>
+            <div class="config-row action-row">
+                <button id="audioBtn">Enable Audio</button>
+                <button id="helpBtn">Help</button>
+                <button id="shareBtn">Share Groove</button>
             </div>
 
-            <div class="control-group">
-                <label>Phrase A Length</label>
-                <select id="phraseCyclesA">
-                    <option value="1">1 cycle</option>
-                    <option value="2">2 cycles</option>
-                    <option value="3">3 cycles</option>
-                    <option value="4" selected>4 cycles</option>
-                </select>
-            </div>
+            <div class="config-row controls-row">
+                <div class="control-group">
+                    <label>Meter A</label>
+                    <select id="rhythmA">
+                        <option value="2">2</option>
+                        <option value="3" selected>3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                        <option value="12">12</option>
+                        <option value="16">16</option>
+                    </select>
+                </div>
 
-            <div class="control-group">
-                <label>Phase Shift A</label>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range" id="phaseA" min="0" max="47" value="0" style="width:85px;">
-                    <span id="phaseALabel" style="font-size: 13px; font-weight: bold; width: 24px; color: #ff3366;">0</span>
+                <div class="control-group">
+                    <label>Phrase A Length</label>
+                    <select id="phraseCyclesA">
+                        <option value="1">1 cycle</option>
+                        <option value="2">2 cycles</option>
+                        <option value="3">3 cycles</option>
+                        <option value="4" selected>4 cycles</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label>Phase Shift A</label>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="range" id="phaseA" min="0" max="47" value="0" style="width:85px;">
+                        <span id="phaseALabel" style="font-size: 13px; font-weight: bold; width: 24px; color: #ff3366;">0</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="v-divider"></div>
+            <div class="config-row controls-row">
+                <div class="control-group">
+                    <label>Meter B</label>
+                    <select id="rhythmB">
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4" selected>4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                        <option value="12">12</option>
+                        <option value="16">16</option>
+                    </select>
+                </div>
 
-            <div class="control-group">
-                <label>Meter B</label>
-                <select id="rhythmB">
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4" selected>4</option>
-                    <option value="5">5</option>
-                    <option value="6">6</option>
-                    <option value="7">7</option>
-                    <option value="8">8</option>
-                    <option value="9">9</option>
-                    <option value="10">10</option>
-                    <option value="12">12</option>
-                    <option value="16">16</option>
-                </select>
-            </div>
+                <div class="control-group">
+                    <label>Phrase B Length</label>
+                    <select id="phraseCyclesB">
+                        <option value="1">1 cycle</option>
+                        <option value="2">2 cycles</option>
+                        <option value="3" selected>3 cycles</option>
+                        <option value="4">4 cycles</option>
+                    </select>
+                </div>
 
-            <div class="control-group">
-                <label>Phrase B Length</label>
-                <select id="phraseCyclesB">
-                    <option value="1">1 cycle</option>
-                    <option value="2">2 cycles</option>
-                    <option value="3" selected>3 cycles</option>
-                    <option value="4">4 cycles</option>
-                </select>
-            </div>
-
-            <div class="control-group">
-                <label>Phase Shift B</label>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range" id="phaseB" min="0" max="47" value="0" style="width:85px;">
-                    <span id="phaseBLabel" style="font-size: 13px; font-weight: bold; width: 24px; color: #00e5ff;">0</span>
+                <div class="control-group">
+                    <label>Phase Shift B</label>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="range" id="phaseB" min="0" max="47" value="0" style="width:85px;">
+                        <span id="phaseBLabel" style="font-size: 13px; font-weight: bold; width: 24px; color: #00e5ff;">0</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="v-divider"></div>
-
-            <div class="control-group">
-                <label>Global Tempo</label>
-                <input type="range" id="speed" min="1" max="10" value="3" style="width:90px;">
+            <div class="config-row utility-row">
+                <div class="control-group">
+                    <label>Global Tempo</label>
+                    <input type="range" id="speed" min="1" max="10" value="3" style="width:90px;">
+                </div>
+                <button id="resetBtn">Sync System</button>
             </div>
-
-            <button id="resetBtn">Sync System</button>
         </div>
     </div>
 
