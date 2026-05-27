@@ -59,6 +59,16 @@
             align-items: end;
             gap: 12px;
         }
+        .utility-panel {
+            padding: 10px 16px;
+            margin-top: 12px;
+        }
+        .utility-panel .utility-row {
+            justify-content: flex-end;
+        }
+        .utility-panel .control-group {
+            min-width: 140px;
+        }
         .control-group {
             display: flex;
             flex-direction: column;

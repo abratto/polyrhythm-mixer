@@ -113,18 +113,21 @@
                 </div>
             </div>
 
-            <div class="config-row utility-row">
-                <div class="control-group">
-                    <label>Global Tempo</label>
-                    <input type="range" id="speed" min="1" max="10" value="3" style="width:90px;">
-                </div>
-                <button id="resetBtn">Sync System</button>
-            </div>
         </div>
     </div>
 
     <div id="canvasContainer">
         <canvas id="simCanvas" width="960" height="580"></canvas>
+    </div>
+
+    <div class="rack-unit utility-panel">
+        <div class="utility-row">
+            <div class="control-group">
+                <label>Global Tempo</label>
+                <input type="range" id="speed" min="1" max="10" value="3" style="width:90px;">
+            </div>
+            <button id="resetBtn">Sync System</button>
+        </div>
     </div>
 
     <div class="rack-unit" style="background: #101015; border-color: #2a2a3c; padding-top: 5px; padding-bottom: 5px; margin-top: 12px;">
