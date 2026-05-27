@@ -298,6 +298,10 @@
             box-shadow: 0 20px 60px rgba(0,0,0,0.7);
             padding: 22px 22px 18px;
             box-sizing: border-box;
+            max-height: calc(100vh - 40px);
+            max-height: calc(100dvh - 40px);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
         .modal-title {
             font-size: 18px;
@@ -357,5 +361,9 @@
             }
             .utility-row #resetBtn {
                 width: 100%;
+            }
+            .modal-backdrop {
+                align-items: flex-start;
+                padding: 12px;
             }
         }
