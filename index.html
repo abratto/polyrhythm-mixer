@@ -172,61 +172,73 @@
         </div>
     </div>
 
-    <div class="rack-unit mixer-console">
-        <div class="mixer-strip">
-            <div class="strip-header" style="color: #7a8a9e;">4-Beat Click</div>
-            <select id="soundDriver" style="padding: 4px; width: 100%; font-size:12px;"></select>
-            <div class="fader-area">
-                <button id="muteDriver" class="mute-btn">Mute</button>
-                <input type="range" id="volDriver" class="volume-fader" min="0" max="1" step="0.05" value="0.6">
-            </div>
-        </div>
+      <div class="rack-unit mixer-console">
+          <div class="mixer-strip">
+              <div class="strip-header" style="color: #7a8a9e;">4-Beat Click</div>
+              <select id="soundDriver" style="padding: 4px; width: 100%; font-size:12px;"></select>
+              <div class="fader-area">
+                  <button id="muteDriver" class="mute-btn">Mute</button>
+              </div>
+              <div class="fader-area volume-only-area">
+                  <input type="range" id="volDriver" class="volume-fader" min="0" max="1" step="0.05" value="0.6">
+              </div>
+          </div>
 
-        <div class="mixer-strip ch-custom">
-            <div class="strip-header" style="color: #ff9100;">Master Steps</div>
-            <select id="soundCustom" style="padding: 4px; width: 100%; font-size:12px;"></select>
-            <div class="fader-area">
-                <button id="muteCustom" class="mute-btn">Mute</button>
-                <input type="range" id="volCustom" class="volume-fader" min="0" max="1" step="0.05" value="0.7">
-            </div>
-        </div>
+          <div class="mixer-strip ch-custom">
+              <div class="strip-header" style="color: #ff9100;">Master Steps</div>
+              <select id="soundCustom" style="padding: 4px; width: 100%; font-size:12px;"></select>
+              <div class="fader-area">
+                  <button id="muteCustom" class="mute-btn">Mute</button>
+              </div>
+              <div class="fader-area volume-only-area">
+                  <input type="range" id="volCustom" class="volume-fader" min="0" max="1" step="0.05" value="0.7">
+              </div>
+          </div>
 
-        <div class="mixer-strip ch-a">
-            <div class="strip-header" style="color: #ff3366;">Meter A Phrase</div>
-            <select id="soundA" style="padding: 4px; width: 100%; font-size:12px;"></select>
-            <div class="fader-area">
-                <button id="muteA" class="mute-btn">Mute</button>
-                <input type="range" id="volA" class="volume-fader" min="0" max="1" step="0.05" value="0.5">
-            </div>
-        </div>
+          <div class="mixer-strip ch-a">
+              <div class="strip-header" style="color: #ff3366;">Meter A Phrase</div>
+              <select id="soundA" style="padding: 4px; width: 100%; font-size:12px;"></select>
+              <div class="fader-area">
+                  <button id="muteA" class="mute-btn">Mute</button>
+              </div>
+              <div class="fader-area volume-only-area">
+                  <input type="range" id="volA" class="volume-fader" min="0" max="1" step="0.05" value="0.5">
+              </div>
+          </div>
 
-        <div class="mixer-strip ch-a-wheel">
-            <div class="strip-header" style="color: #ff6b8f;">Meter A Wheel</div>
-            <select id="soundAWheel" style="padding: 4px; width: 100%; font-size:12px;"></select>
-            <div class="fader-area">
-                <button id="muteAWheel" class="mute-btn">Mute</button>
-                <input type="range" id="volAWheel" class="volume-fader" min="0" max="1" step="0.05" value="0.45">
-            </div>
-        </div>
+          <div class="mixer-strip ch-a-wheel">
+              <div class="strip-header" style="color: #ff6b8f;">Meter A Wheel</div>
+              <select id="soundAWheel" style="padding: 4px; width: 100%; font-size:12px;"></select>
+              <div class="fader-area">
+                  <button id="muteAWheel" class="mute-btn">Mute</button>
+              </div>
+              <div class="fader-area volume-only-area">
+                  <input type="range" id="volAWheel" class="volume-fader" min="0" max="1" step="0.05" value="0.45">
+              </div>
+          </div>
 
-        <div class="mixer-strip ch-b">
-            <div class="strip-header" style="color: #00e5ff;">Meter B Phrase</div>
-            <select id="soundB" style="padding: 4px; width: 100%; font-size:12px;"></select>
-            <div class="fader-area">
-                <button id="muteB" class="mute-btn">Mute</button>
-                <input type="range" id="volB" class="volume-fader" min="0" max="1" step="0.05" value="0.4">
-            </div>
-        </div>
+          <div class="mixer-strip ch-b">
+              <div class="strip-header" style="color: #00e5ff;">Meter B Phrase</div>
+              <select id="soundB" style="padding: 4px; width: 100%; font-size:12px;"></select>
+              <div class="fader-area">
+                  <button id="muteB" class="mute-btn">Mute</button>
+              </div>
+              <div class="fader-area volume-only-area">
+                  <input type="range" id="volB" class="volume-fader" min="0" max="1" step="0.05" value="0.4">
+              </div>
+          </div>
 
-        <div class="mixer-strip ch-b-wheel">
-            <div class="strip-header" style="color: #6ef2ff;">Meter B Wheel</div>
-            <select id="soundBWheel" style="padding: 4px; width: 100%; font-size:12px;"></select>
-            <div class="fader-area">
-                <button id="muteBWheel" class="mute-btn">Mute</button>
-                <input type="range" id="volBWheel" class="volume-fader" min="0" max="1" step="0.05" value="0.35">
-            </div>
-        </div>
-    </div>
+          <div class="mixer-strip ch-b-wheel">
+              <div class="strip-header" style="color: #6ef2ff;">Meter B Wheel</div>
+              <select id="soundBWheel" style="padding: 4px; width: 100%; font-size:12px;"></select>
+              <div class="fader-area">
+                  <button id="muteBWheel" class="mute-btn">Mute</button>
+              </div>
+              <div class="fader-area volume-only-area">
+                  <input type="range" id="volBWheel" class="volume-fader" min="0" max="1" step="0.05" value="0.35">
+              </div>
+          </div>
+      </div>
     <script type="module" src="scripts/app.js"></script>
 </body>
 </html>
