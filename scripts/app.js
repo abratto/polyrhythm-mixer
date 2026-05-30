@@ -67,7 +67,10 @@ startAnimation({
     ui,
     state,
     lanes,
-    playChannelSound: (channelName) => playChannelSound(state, channels, channelName),
+    playChannelSound: (channelName) => {
+        const globalVol = parseInt(ui.masterVolumeSlider.value, 10) / 100;
+        return playChannelSound(state, channels, channelName, globalVol);
+    },
     markCurrentButtons: (active) => markCurrentButtons(lanes, active)
 });
 

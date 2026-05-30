@@ -17,6 +17,7 @@ export function createState(ui) {
         fullPatternCycles: 0,
 
         mainAngle: 0,
+        tempo: 90,
         audioCtx: null,
         audioEnabled: false,
 

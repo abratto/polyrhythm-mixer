@@ -69,10 +69,147 @@
         .utility-panel .control-group {
             min-width: 140px;
         }
+        .tempo-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tempo-display input[type="range"] {
+            width: 180px;
+            padding: 0;
+            border: none;
+            background: transparent;
+            height: 12px;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            cursor: pointer;
+        }
+        .tempo-display input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            background: #2a2a36;
+            border-radius: 4px;
+            border: 1px solid #3a3a4a;
+        }
+        .tempo-display input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #ff9100;
+            border: 2px solid #ffb347;
+            margin-top: -8px;
+            box-shadow: 0 2px 6px rgba(255,145,0,0.4);
+            cursor: grab;
+        }
+        .tempo-display input[type="range"]::-webkit-slider-thumb:hover {
+            background: #ffb347;
+        }
+        .tempo-display input[type="range"]::-moz-range-track {
+            width: 100%;
+            height: 8px;
+            background: #2a2a36;
+            border-radius: 4px;
+            border: 1px solid #3a3a4a;
+        }
+        .tempo-display input[type="range"]::-moz-range-thumb {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #ff9100;
+            border: 2px solid #ffb347;
+            box-shadow: 0 2px 6px rgba(255,145,0,0.4);
+            cursor: grab;
+        }
+        .tempo-value {
+            font-size: 16px;
+            font-weight: 800;
+            color: #ff9100;
+            font-variant-numeric: tabular-nums;
+            min-width: 36px;
+            text-align: right;
+        }
+        .tempo-unit {
+            font-size: 10px;
+            font-weight: 600;
+            color: #a1a1aa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .volume-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .volume-display input[type="range"] {
+            width: 120px;
+            padding: 0;
+            border: none;
+            background: transparent;
+            height: 12px;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            cursor: pointer;
+        }
+        .volume-display input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            background: #2a2a36;
+            border-radius: 4px;
+            border: 1px solid #3a3a4a;
+        }
+        .volume-display input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #7a8a9e;
+            border: 2px solid #a1a1aa;
+            margin-top: -8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            cursor: grab;
+        }
+        .volume-display input[type="range"]::-moz-range-track {
+            width: 100%;
+            height: 8px;
+            background: #2a2a36;
+            border-radius: 4px;
+            border: 1px solid #3a3a4a;
+        }
+        .volume-display input[type="range"]::-moz-range-thumb {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #7a8a9e;
+            border: 2px solid #a1a1aa;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            cursor: grab;
+        }
+        .volume-value {
+            font-size: 14px;
+            font-weight: 800;
+            color: #e4e4e7;
+            font-variant-numeric: tabular-nums;
+            min-width: 30px;
+            text-align: right;
+        }
+        .volume-unit {
+            font-size: 10px;
+            font-weight: 600;
+            color: #a1a1aa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
         .control-group {
             display: flex;
             flex-direction: column;
             gap: 6px;
+        }
+        .control-group + .v-divider,
+        .v-divider + .control-group {
+            margin-left: 12px;
         }
         label {
             font-size: 10px;
@@ -333,6 +470,8 @@
             width: 1px;
             height: 40px;
             background: #252535;
+            align-self: flex-end;
+            margin-bottom: 6px;
         }
         #canvasContainer {
             background: #08080c;

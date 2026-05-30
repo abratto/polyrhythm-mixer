@@ -1,8 +1,11 @@
+const SHARE_VERSION = 1;
+
 const CHANNEL_ORDER = ['driver', 'custom', 'A', 'Awheel', 'B', 'Bwheel'];
 
 function clampInteger(value, min, max) {
-    if (!Number.isInteger(value)) return null;
-    return Math.min(max, Math.max(min, value));
+    if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+    const int = Math.round(value);
+    return Math.min(max, Math.max(min, int));
 }
 
 function selectedIndexes(values) {
@@ -49,9 +52,18 @@ function decodePayload(encoded) {
     return JSON.parse(json);
 }
 
-function serializeState({ state, lanes, channels, ui }) {
+function serializeState({ state, lanes, channels }) {
     return {
-        m: [state.A, state.B, state.phraseCyclesA, state.phraseCyclesB, state.phaseA, state.phaseB, parseFloat(ui.speedSlider.value)],
+        v: SHARE_VERSION,
+        m: {
+            A: state.A,
+            B: state.B,
+            phraseA: state.phraseCyclesA,
+            phraseB: state.phraseCyclesB,
+            phaseA: state.phaseA,
+            phaseB: state.phaseB,
+            tempo: state.tempo
+        },
         p: {
             m: selectedIndexes(lanes.master.selected),
             ap: selectedIndexes(lanes.Aphrase.selected),
@@ -67,6 +79,39 @@ function serializeState({ state, lanes, channels, ui }) {
     };
 }
 
+function migrateV0toV1(payload) {
+    const m = payload.m;
+    if (!Array.isArray(m)) return payload;
+
+    payload.m = {
+        A: m[0],
+        B: m[1],
+        phraseA: m[2],
+        phraseB: m[3],
+        phaseA: m[4],
+        phaseB: m[5],
+        tempo: m[6]
+    };
+    payload.v = 1;
+    return payload;
+}
+
+function migratePayload(payload) {
+    if (!payload || typeof payload !== 'object') {
+        throw new Error('Invalid share payload');
+    }
+
+    if (!payload.v) {
+        payload = migrateV0toV1(payload);
+    }
+
+    if (payload.v > SHARE_VERSION) {
+        throw new Error(`Share payload version ${payload.v} is newer than supported version ${SHARE_VERSION}`);
+    }
+
+    return payload;
+}
+
 function applyChannelState(channels, channelState) {
     if (!channelState || typeof channelState !== 'object') return;
 
@@ -75,6 +120,7 @@ function applyChannelState(channels, channelState) {
             const name = CHANNEL_ORDER[idx];
             if (!name) return;
             const channel = channels[name];
+            if (!channel) return;
             const hasSoundOption = Array.from(channel.soundEl.options).some((opt) => opt.value === sound);
             if (typeof sound === 'string' && hasSoundOption) {
                 channel.soundEl.value = sound;
@@ -87,6 +133,7 @@ function applyChannelState(channels, channelState) {
             const name = CHANNEL_ORDER[idx];
             if (!name) return;
             const channel = channels[name];
+            if (!channel) return;
             if (typeof volume === 'number' && Number.isFinite(volume)) {
                 const clampedVolume = Math.max(0, Math.min(1, volume));
                 channel.volume = clampedVolume;
@@ -100,6 +147,7 @@ function applyChannelState(channels, channelState) {
             const name = CHANNEL_ORDER[idx];
             if (!name) return;
             const channel = channels[name];
+            if (!channel) return;
             channel.muted = !!muted;
             channel.muteEl.classList.toggle('muted', channel.muted);
             channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
@@ -107,16 +155,16 @@ function applyChannelState(channels, channelState) {
     }
 }
 
-export function restoreFromPayload(payload, deps) {
+function restoreFromPayload(payload, deps) {
     const { state, ui, lanes, channels, updateDerivedState, updatePhaseUI, resetPatterns, buildAllLanes, resetFlashState } = deps;
-    if (!payload || typeof payload !== 'object') return;
 
-    const meters = Array.isArray(payload.m) ? payload.m : [];
+    const meters = payload.m;
+    if (!meters || typeof meters !== 'object') return;
 
-    const a = clampInteger(meters[0], 2, 16);
-    const b = clampInteger(meters[1], 2, 16);
-    const phraseA = clampInteger(meters[2], 1, 4);
-    const phraseB = clampInteger(meters[3], 1, 4);
+    const a = clampInteger(meters.A, 2, 16);
+    const b = clampInteger(meters.B, 2, 16);
+    const phraseA = clampInteger(meters.phraseA, 1, 4);
+    const phraseB = clampInteger(meters.phraseB, 1, 4);
 
     if (a !== null) state.A = a;
     if (b !== null) state.B = b;
@@ -130,8 +178,8 @@ export function restoreFromPayload(payload, deps) {
 
     updateDerivedState(state);
 
-    const phaseA = clampInteger(meters[4], 0, state.mainTeeth - 1);
-    const phaseB = clampInteger(meters[5], 0, state.mainTeeth - 1);
+    const phaseA = clampInteger(meters.phaseA, 0, state.mainTeeth - 1);
+    const phaseB = clampInteger(meters.phaseB, 0, state.mainTeeth - 1);
 
     if (phaseA !== null) state.phaseA = phaseA;
     if (phaseB !== null) state.phaseB = phaseB;
@@ -139,9 +187,11 @@ export function restoreFromPayload(payload, deps) {
     ui.phaseSliderA.value = String(state.phaseA);
     ui.phaseSliderB.value = String(state.phaseB);
 
-    const tempo = meters[6];
-    if (typeof tempo === 'number' && Number.isFinite(tempo)) {
-        ui.speedSlider.value = String(Math.max(1, Math.min(10, tempo)));
+    const tempo = clampInteger(meters.tempo, 30, 180);
+    if (tempo !== null) {
+        state.tempo = tempo;
+        ui.tempoSlider.value = String(tempo);
+        ui.tempoLabel.textContent = String(tempo);
     }
 
     updatePhaseUI(state, ui);
@@ -204,11 +254,11 @@ export function loadStateFromUrl(deps) {
     if (!encoded) return false;
 
     try {
-        const payload = decodePayload(encoded);
+        const raw = decodePayload(encoded);
+        const payload = migratePayload(raw);
         restoreFromPayload(payload, deps);
         return true;
-    } catch (err) {
-        console.warn('Could not load shared state from URL.', err);
+    } catch {
         return false;
     }
 }

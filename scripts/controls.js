@@ -57,6 +57,15 @@ export function wireControls({ ui, state, rebuildSystem, resetAndRebuild, toggle
         ui.phaseLabelB.textContent = String(state.phaseB);
     });
 
+    ui.tempoSlider.addEventListener('input', () => {
+        state.tempo = parseInt(ui.tempoSlider.value, 10);
+        ui.tempoLabel.textContent = String(state.tempo);
+    });
+
+    ui.masterVolumeSlider.addEventListener('input', () => {
+        ui.masterVolumeLabel.textContent = String(ui.masterVolumeSlider.value);
+    });
+
     ui.resetBtn.addEventListener('click', resetAndRebuild);
 
     ui.audioBtn.addEventListener('click', async () => {

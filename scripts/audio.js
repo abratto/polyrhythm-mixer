@@ -1,33 +1,33 @@
 export const instrumentCatalog = [
-    { value: 'kick', label: 'Bass Drum (Kick)' },
-    { value: 'snare', label: 'Snare Drum' },
-    { value: 'rimshot', label: 'Rimshot Click' },
-    { value: 'clap', label: 'Handclap' },
-    { value: 'cl_hihat', label: 'Closed Hi-Hat' },
-    { value: 'op_hihat', label: 'Open Hi-Hat' },
-    { value: 'shaker', label: 'Percussion Shaker' },
-    { value: 'tom', label: 'Synth Electronic Tom' },
-    { value: 'woodblock', label: 'Woodblock Clack' },
-    { value: 'cowbell', label: 'Analog Cowbell' },
     { value: 'agogo', label: 'Agogo Bell Accent' },
-    { value: 'ping', label: 'Crystal High Ping' },
-    { value: 'tambourine', label: 'Tambourine' },
-{ value: 'conga_low', label: 'Conga (Low)' },
-{ value: 'conga_high', label: 'Conga (High)' },
-{ value: 'conga_slap', label: 'Conga Slap' },
-    { value: 'bongo_low', label: 'Bongo (Low)' },
+    { value: 'cowbell', label: 'Analog Cowbell' },
+    { value: 'kick', label: 'Bass Drum (Kick)' },
     { value: 'bongo_high', label: 'Bongo (High)' },
-    { value: 'maraca', label: 'Maraca' },
-    { value: 'crash', label: 'Crash Cymbal' },
-    { value: 'ride', label: 'Ride Cymbal' },
-    { value: 'claves', label: 'Claves' },
-    { value: 'djembe', label: 'Frame Drum / Djembe' },
-    { value: 'timbale', label: 'Timbale' },
+    { value: 'bongo_low', label: 'Bongo (Low)' },
     { value: 'castanets', label: 'Castanets' },
+    { value: 'claves', label: 'Claves' },
+    { value: 'cl_hihat', label: 'Closed Hi-Hat' },
+    { value: 'conga_high', label: 'Conga (High)' },
+    { value: 'conga_low', label: 'Conga (Low)' },
+    { value: 'conga_slap', label: 'Conga Slap' },
+    { value: 'crash', label: 'Crash Cymbal' },
+    { value: 'ping', label: 'Crystal High Ping' },
     { value: 'synth_kick', label: 'EDM Synth Kick' },
     { value: 'electronic_snare', label: 'Electronic Snare' },
     { value: 'foot_tap', label: 'Foot Tap' },
-    { value: 'slap', label: 'Hand Slap' }
+    { value: 'djembe', label: 'Frame Drum / Djembe' },
+    { value: 'slap', label: 'Hand Slap' },
+    { value: 'clap', label: 'Handclap' },
+    { value: 'maraca', label: 'Maraca' },
+    { value: 'op_hihat', label: 'Open Hi-Hat' },
+    { value: 'shaker', label: 'Percussion Shaker' },
+    { value: 'ride', label: 'Ride Cymbal' },
+    { value: 'rimshot', label: 'Rimshot Click' },
+    { value: 'snare', label: 'Snare Drum' },
+    { value: 'tom', label: 'Synth Electronic Tom' },
+    { value: 'tambourine', label: 'Tambourine' },
+    { value: 'timbale', label: 'Timbale' },
+    { value: 'woodblock', label: 'Woodblock Clack' }
 ];
 
 export function createChannels() {
@@ -88,9 +88,9 @@ export function populateMenus(channels) {
         driver: 'kick',
         custom: 'rimshot',
         A: 'woodblock',
-        Awheel: 'agogo',
+        Awheel: 'shaker',
         B: 'cowbell',
-        Bwheel: 'ping'
+        Bwheel: 'shaker'
     };
 
     Object.entries(channels).forEach(([name, channel]) => {
@@ -741,13 +741,13 @@ const instruments = {
     slap: (state, now, vol, channel) => playSlap(state, now, vol, channel)
 };
 
-export function playChannelSound(state, channels, channelName) {
+export function playChannelSound(state, channels, channelName, globalVolume = 1) {
     if (!state.audioEnabled || !state.audioCtx) return;
 
     const channel = channels[channelName];
     if (!channel || channel.muted) return;
 
-    const vol = channel.volume * channel.gainScale;
+    const vol = channel.volume * channel.gainScale * globalVolume;
     if (vol <= 0) return;
 
     const sound = channel.soundEl.value;

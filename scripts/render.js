@@ -316,13 +316,26 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width) {
 }
 
 export function startAnimation({ canvas, ctx, ui, state, lanes, playChannelSound, markCurrentButtons }) {
-    function animate() {
+    let lastTime = null;
+
+    function animate(timestamp) {
         ctx.fillStyle = '#08080c';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        const speed = parseFloat(ui.speedSlider.value) * 0.005;
+        if (lastTime === null) {
+            lastTime = timestamp;
+        }
+
+        const deltaTime = Math.min((timestamp - lastTime) / 1000, 0.1);
+        lastTime = timestamp;
+
+        // 1 beat = 1/4 master cycle (quarter note = BPM)
+        // radians per second = BPM * (π/2) / 60
+        const radiansPerSecond = state.tempo * Math.PI / 120;
+        const angleDelta = radiansPerSecond * deltaTime;
+
         const prevMainAngle = state.mainAngle;
-        state.mainAngle += speed;
+        state.mainAngle += angleDelta;
 
         const cx = canvas.width / 2;
         const cy = 205;
@@ -394,5 +407,5 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, playChannelSound
         requestAnimationFrame(animate);
     }
 
-    animate();
+    requestAnimationFrame(animate);
 }

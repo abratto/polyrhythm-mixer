@@ -124,7 +124,20 @@
         <div class="utility-row">
             <div class="control-group">
                 <label>Global Tempo</label>
-                <input type="range" id="speed" min="1" max="10" value="3" style="width:90px;">
+                <div class="tempo-display">
+                    <input type="range" id="tempoSlider" min="30" max="180" value="90" />
+                    <span class="tempo-value" id="tempoLabel">90</span>
+                    <span class="tempo-unit">BPM</span>
+                </div>
+            </div>
+            <div class="v-divider"></div>
+            <div class="control-group">
+                <label>Master Volume</label>
+                <div class="volume-display">
+                    <input type="range" id="masterVolumeSlider" min="0" max="100" value="80" />
+                    <span class="volume-value" id="masterVolumeLabel">80</span>
+                    <span class="volume-unit">%</span>
+                </div>
             </div>
             <button id="resetBtn">Sync System</button>
         </div>
