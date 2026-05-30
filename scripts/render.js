@@ -381,7 +381,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, playChannelSound
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 13px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`MASTER WHEEL (${state.mainTeeth} TEETH / LCM)`, cx, cy - rMainOuter - 12);
+        ctx.fillText(`MASTER WHEEL (${state.mainTeeth} TEETH / LCM)`, cx, cy - rMainOuter - 32);
         ctx.fillText(`A: ${state.A}:${state.mainTeeth}`, cxA, cy + rAOuter + 50);
         ctx.fillText(`B: ${state.B}:${state.mainTeeth}`, cxB, cy + rBOuter + 50);
 
