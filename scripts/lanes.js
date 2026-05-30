@@ -1,7 +1,7 @@
 import { reduceFraction } from './math.js';
 
 function masterRateLabelForMeter(state, meterValue) {
-    return reduceFraction(meterValue, state.mainTeeth);
+    return reduceFraction(state.mainTeeth / meterValue, state.mainTeeth);
 }
 
 export function createLanes(ui, state) {
