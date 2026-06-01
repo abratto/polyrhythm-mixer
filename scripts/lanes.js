@@ -130,8 +130,11 @@ function createStepButton(lane, i) {
 export function buildLane(lane) {
     lane.container.innerHTML = '';
     lane.titleEl.textContent = lane.label();
+    lane.buttons = [];
     for (let i = 0; i < lane.count(); i++) {
-        lane.container.appendChild(createStepButton(lane, i));
+        const btn = createStepButton(lane, i);
+        lane.container.appendChild(btn);
+        lane.buttons.push(btn);
     }
 }
 
@@ -150,25 +153,30 @@ export function wireLaneClearButtons(lanes) {
     });
 }
 
-function activeStepId(prefix, index) {
-    return `${prefix}-${index}`;
-}
-
 /**
  * Highlights the currently active step button across all lanes
  * by adding the "current" class and removing it from all others.
+ * Uses cached button references to avoid DOM queries.
  */
 export function markCurrentButtons(lanes, active) {
-    document.querySelectorAll('.step-btn').forEach(btn => btn.classList.remove('current'));
+    // Remove "current" class from all cached buttons
+    for (const lane of Object.values(lanes)) {
+        for (const btn of lane.buttons) {
+            btn.classList.remove('current');
+        }
+    }
 
-    [
-        activeStepId(lanes.master.stepId, active.master),
-        activeStepId(lanes.Aphrase.stepId, active.Aphrase),
-        activeStepId(lanes.Bphrase.stepId, active.Bphrase),
-        activeStepId(lanes.Awheel.stepId, active.Awheel),
-        activeStepId(lanes.Bwheel.stepId, active.Bwheel)
-    ].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('current');
-    });
+    // Add "current" class to the active step in each lane
+    const mappings = [
+        [lanes.master, active.master],
+        [lanes.Aphrase, active.Aphrase],
+        [lanes.Bphrase, active.Bphrase],
+        [lanes.Awheel, active.Awheel],
+        [lanes.Bwheel, active.Bwheel]
+    ];
+
+    for (const [lane, index] of mappings) {
+        const btn = lane.buttons[index];
+        if (btn) btn.classList.add('current');
+    }
 }

@@ -165,17 +165,24 @@ export async function toggleAudio(state, ui) {
     }
 }
 
-/** Generates a white noise buffer of the given duration for percussion synthesis. */
-function generateNoiseBuffer(state, duration) {
+/**
+ * Pre-generates a 1-second noise buffer that can be reused for short sounds.
+ * Short sounds just start the source and let it auto-stop, so we only need
+ * one buffer and create new BufferSource nodes from it.
+ */
+let _noiseBuffer = null;
+
+function getNoiseSource(state) {
     if (!state.audioCtx) return null;
-
-    const bufferSize = Math.floor(state.audioCtx.sampleRate * duration);
-    const buffer = state.audioCtx.createBuffer(1, bufferSize, state.audioCtx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-
+    if (!_noiseBuffer) {
+        const duration = 1.0;
+        const bufferSize = Math.floor(state.audioCtx.sampleRate * duration);
+        _noiseBuffer = state.audioCtx.createBuffer(1, bufferSize, state.audioCtx.sampleRate);
+        const data = _noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    }
     const source = state.audioCtx.createBufferSource();
-    source.buffer = buffer;
+    source.buffer = _noiseBuffer;
     return source;
 }
 
@@ -205,7 +212,7 @@ function playSnare(state, now, vol) {
     osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.08);
 
-    const noise = generateNoiseBuffer(state, 0.15);
+    const noise = getNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'highpass';
@@ -219,7 +226,7 @@ function playSnare(state, now, vol) {
 
 /** Closed hi-hat: short bandpass noise burst at 7.5 kHz. */
 function playClosedHiHat(state, now, vol) {
-    const noise = generateNoiseBuffer(state, 0.04);
+    const noise = getNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -233,7 +240,7 @@ function playClosedHiHat(state, now, vol) {
 
 /** Open hi-hat: longer bandpass noise burst at 7.5 kHz. */
 function playOpenHiHat(state, now, vol) {
-    const noise = generateNoiseBuffer(state, 0.28);
+    const noise = getNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -247,7 +254,7 @@ function playOpenHiHat(state, now, vol) {
 
 /** Shaker: bandpass noise with a quick attack envelope to simulate bead movement. */
 function playShaker(state, now, vol) {
-    const noise = generateNoiseBuffer(state, 0.07);
+    const noise = getNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -284,7 +291,7 @@ function playClap(state, now, vol) {
     gain.connect(state.audioCtx.destination);
 
     [0, 0.012, 0.024].forEach((delay) => {
-        const burst = generateNoiseBuffer(state, 0.02);
+        const burst = getNoiseSource(state);
         if (!burst) return;
         const burstGain = state.audioCtx.createGain();
         burstGain.gain.setValueAtTime(vol * 0.45, now + delay);
@@ -295,7 +302,7 @@ function playClap(state, now, vol) {
         burst.start(now + delay);
     });
 
-    const mainClap = generateNoiseBuffer(state, 0.16);
+    const mainClap = getNoiseSource(state);
     if (!mainClap) return;
     gain.gain.setValueAtTime(vol * 0.65, now + 0.038);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
@@ -372,7 +379,7 @@ function playCowbell(state, now, vol) {
 
 /** Tambourine: bandpass noise for jingle + sine ring for body. */
 function playTambourine(state, now, vol) {
-    const noise = generateNoiseBuffer(state, 0.2);
+    const noise = getNoiseSource(state);
     if (!noise) return;
     const noiseFilter = state.audioCtx.createBiquadFilter();
     noiseFilter.type = 'bandpass';
@@ -448,7 +455,7 @@ function playBongoHigh(state, now, vol, channelName) {
 
 /** Maraca: bandpass noise with amplitude modulation to simulate shaking. */
 function playMaraca(state, now, vol) {
-    const noise = generateNoiseBuffer(state, 0.15);
+    const noise = getNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -467,7 +474,7 @@ function playMaraca(state, now, vol) {
 
 /** Crash cymbal: full highpass noise with sustained sine wash for resonance. */
 function playCrash(state, now, vol) {
-    const noise = generateNoiseBuffer(state, 1.0);
+    const noise = getNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'highpass';
@@ -490,7 +497,7 @@ function playCrash(state, now, vol) {
 
 /** Ride cymbal: bandpass noise ping + sustained sine bell tone. */
 function playRide(state, now, vol) {
-    const noise = generateNoiseBuffer(state, 0.6);
+    const noise = getNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -557,7 +564,7 @@ function playTimbale(state, now, vol, channelName) {
     osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.08);
 
-    const noise = generateNoiseBuffer(state, 0.03);
+    const noise = getNoiseSource(state);
     if (!noise) return;
     const noiseFilter = state.audioCtx.createBiquadFilter();
     noiseFilter.type = 'bandpass';
@@ -571,7 +578,7 @@ function playTimbale(state, now, vol, channelName) {
 
 /** Castanets: short bandpass noise burst + resonant wood tone at 3.5 kHz. */
 function playCastanets(state, now, vol) {
-    const noise = generateNoiseBuffer(state, 0.04);
+    const noise = getNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -605,7 +612,7 @@ function playSynthKick(state, now, vol) {
     subOsc.connect(subGain); subGain.connect(state.audioCtx.destination);
     subOsc.start(now); subOsc.stop(now + 0.25);
 
-    const noise = generateNoiseBuffer(state, 0.05);
+    const noise = getNoiseSource(state);
     if (!noise) return;
     const noiseFilter = state.audioCtx.createBiquadFilter();
     noiseFilter.type = 'bandpass';
@@ -639,7 +646,7 @@ function playElectronicSnare(state, now, vol) {
     osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.1);
 
-    const noise = generateNoiseBuffer(state, 0.2);
+    const noise = getNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -657,7 +664,7 @@ function playCongaSlap(state, now, vol, channelName) {
     const baseFreq = channelName.startsWith('A') ? 300 : 260;
 
     // Sharp broadband transient for finger strike on skin
-    const noise = generateNoiseBuffer(state, 0.05);
+    const noise = getNoiseSource(state);
     if (!noise) return;
     const noiseFilter = state.audioCtx.createBiquadFilter();
     noiseFilter.type = 'bandpass';
@@ -692,7 +699,7 @@ function playCongaSlap(state, now, vol, channelName) {
     osc2.start(now); osc2.stop(now + 0.1);
 
     // High-frequency pop layer for the finger release "click"
-    const popNoise = generateNoiseBuffer(state, 0.02);
+    const popNoise = getNoiseSource(state);
     if (!popNoise) return;
     const popFilter = state.audioCtx.createBiquadFilter();
     popFilter.type = 'bandpass';
@@ -708,7 +715,7 @@ function playCongaSlap(state, now, vol, channelName) {
 
 /** Foot tap: very short bandpass noise click at 180 Hz. */
 function playFootTap(state, now, vol) {
-    const noise = generateNoiseBuffer(state, 0.025);
+    const noise = getNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -723,7 +730,7 @@ function playFootTap(state, now, vol) {
 
 /** Hand slap: noise burst + medium sine resonance. */
 function playSlap(state, now, vol) {
-    const noise = generateNoiseBuffer(state, 0.06);
+    const noise = getNoiseSource(state);
     if (!noise) return;
     const noiseFilter = state.audioCtx.createBiquadFilter();
     noiseFilter.type = 'bandpass';
@@ -747,35 +754,35 @@ function playSlap(state, now, vol) {
 
 /** Dispatch table mapping instrument value keys to their synthesis functions. */
 const instruments = {
-    kick: (state, now, vol, channel) => playKick(state, now, vol, channel),
-    snare: (state, now, vol, channel) => playSnare(state, now, vol, channel),
-    cl_hihat: (state, now, vol, channel) => playClosedHiHat(state, now, vol, channel),
-    op_hihat: (state, now, vol, channel) => playOpenHiHat(state, now, vol, channel),
-    shaker: (state, now, vol, channel) => playShaker(state, now, vol, channel),
-    tom: (state, now, vol, channel) => playTom(state, now, vol, channel),
-    clap: (state, now, vol, channel) => playClap(state, now, vol, channel),
-    agogo: (state, now, vol, channel) => playAgogo(state, now, vol, channel),
-    ping: (state, now, vol, channel) => playPing(state, now, vol, channel),
-    rimshot: (state, now, vol, channel) => playRimshot(state, now, vol, channel),
-    woodblock: (state, now, vol, channel) => playWoodblock(state, now, vol, channel),
-    cowbell: (state, now, vol, channel) => playCowbell(state, now, vol, channel),
-    tambourine: (state, now, vol, channel) => playTambourine(state, now, vol, channel),
-    conga_low: (state, now, vol, channel) => playCongaLow(state, now, vol, channel),
-    conga_high: (state, now, vol, channel) => playCongaHigh(state, now, vol, channel),
-    bongo_low: (state, now, vol, channel) => playBongoLow(state, now, vol, channel),
-    bongo_high: (state, now, vol, channel) => playBongoHigh(state, now, vol, channel),
-    maraca: (state, now, vol, channel) => playMaraca(state, now, vol, channel),
-    crash: (state, now, vol, channel) => playCrash(state, now, vol, channel),
-    ride: (state, now, vol, channel) => playRide(state, now, vol, channel),
-    claves: (state, now, vol, channel) => playClaves(state, now, vol, channel),
-    djembe: (state, now, vol, channel) => playDjembe(state, now, vol, channel),
-    timbale: (state, now, vol, channel) => playTimbale(state, now, vol, channel),
-    castanets: (state, now, vol, channel) => playCastanets(state, now, vol, channel),
-    synth_kick: (state, now, vol, channel) => playSynthKick(state, now, vol, channel),
-    electronic_snare: (state, now, vol, channel) => playElectronicSnare(state, now, vol, channel),
-    foot_tap: (state, now, vol, channel) => playFootTap(state, now, vol, channel),
-    conga_slap: (state, now, vol, channel) => playCongaSlap(state, now, vol, channel),
-    slap: (state, now, vol, channel) => playSlap(state, now, vol, channel)
+    kick: playKick,
+    snare: playSnare,
+    cl_hihat: playClosedHiHat,
+    op_hihat: playOpenHiHat,
+    shaker: playShaker,
+    tom: playTom,
+    clap: playClap,
+    agogo: playAgogo,
+    ping: playPing,
+    rimshot: playRimshot,
+    woodblock: playWoodblock,
+    cowbell: playCowbell,
+    tambourine: playTambourine,
+    conga_low: playCongaLow,
+    conga_high: playCongaHigh,
+    bongo_low: playBongoLow,
+    bongo_high: playBongoHigh,
+    maraca: playMaraca,
+    crash: playCrash,
+    ride: playRide,
+    claves: playClaves,
+    djembe: playDjembe,
+    timbale: playTimbale,
+    castanets: playCastanets,
+    synth_kick: playSynthKick,
+    electronic_snare: playElectronicSnare,
+    foot_tap: playFootTap,
+    conga_slap: playCongaSlap,
+    slap: playSlap
 };
 
 /**

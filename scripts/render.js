@@ -105,24 +105,23 @@ function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop
     // Orange markers for selected steps on the master wheel
     if (selectedSteps && selectedSteps.some(Boolean)) {
         const markerRadius = rInner + ((rOuter - rInner) * 0.45);
+        ctx.save();
+        ctx.fillStyle = '#ff9100';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#ff9100';
         for (let i = 0; i < selectedSteps.length; i++) {
             if (!selectedSteps[i]) continue;
             const theta = (i / selectedSteps.length) * Math.PI * 2 - Math.PI / 2;
             const x = markerRadius * Math.cos(theta);
             const y = markerRadius * Math.sin(theta);
-
-            ctx.save();
-            ctx.fillStyle = '#ff9100';
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 2;
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#ff9100';
             ctx.beginPath();
             ctx.arc(x, y, Math.max(4, rOuter * 0.035), 0, 2 * Math.PI);
             ctx.fill();
             ctx.stroke();
-            ctx.restore();
         }
+        ctx.restore();
     }
 
     // Top position indicator dot
@@ -446,9 +445,11 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, playChannelSound
         }
 
         // Decay flash counters
-        Object.keys(state.flash).forEach(k => {
-            if (state.flash[k] > 0) state.flash[k]--;
-        });
+        const f = state.flash;
+        if (f.driver > 0) f.driver--;
+        if (f.custom > 0) f.custom--;
+        if (f.A > 0) f.A--;
+        if (f.B > 0) f.B--;
 
         // Draw gears
         drawGear(ctx, cx, cy, rMainInner, rMainOuter, state.mainTeeth, angles.main, '#7a8a9e', true, Math.max(state.flash.driver, state.flash.custom), lanes.master.selected);
