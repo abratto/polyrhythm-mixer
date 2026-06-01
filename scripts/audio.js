@@ -1,3 +1,18 @@
+/**
+ * audio.js — Web Audio instrument synthesis and channel management.
+ *
+ * Defines a catalog of percussion instruments synthesized in real-time using
+ * oscillators, noise buffers, and filters. Each instrument is a function that
+ * receives the audio context, scheduling time, volume, and channel name.
+ *
+ * Channels (driver, custom, A, Awheel, B, Bwheel) each have their own sound
+ * selection, volume fader, and mute toggle.
+ */
+
+/**
+ * Available percussion instruments, sorted alphabetically by display label.
+ * Each entry maps a short value key (used in serialization) to a human-readable label.
+ */
 export const instrumentCatalog = [
     { value: 'agogo', label: 'Agogo Bell Accent' },
     { value: 'cowbell', label: 'Analog Cowbell' },
@@ -30,6 +45,11 @@ export const instrumentCatalog = [
     { value: 'woodblock', label: 'Woodblock Clack' }
 ];
 
+/**
+ * Creates channel objects that hold the state and DOM references for each
+ * audio lane. Each channel has a sound selector, volume fader, mute button,
+ * and a gainScale factor that balances relative loudness between lanes.
+ */
 export function createChannels() {
     return {
         driver: {
@@ -83,6 +103,10 @@ export function createChannels() {
     };
 }
 
+/**
+ * Populates each channel's sound selector dropdown with the instrument catalog.
+ * Sets the default instrument for each channel.
+ */
 export function populateMenus(channels) {
     const defaults = {
         driver: 'kick',
@@ -105,6 +129,7 @@ export function populateMenus(channels) {
     });
 }
 
+/** Attaches input/click handlers to each channel's volume fader and mute button. */
 export function wireChannels(channels) {
     Object.values(channels).forEach(channel => {
         channel.volEl.addEventListener('input', () => {
@@ -119,6 +144,10 @@ export function wireChannels(channels) {
     });
 }
 
+/**
+ * Toggles audio on/off. Creates the AudioContext on first user gesture
+ * (required by browser autoplay policies) and resumes it if suspended.
+ */
 export async function toggleAudio(state, ui) {
     try {
         if (!state.audioCtx) {
@@ -136,6 +165,7 @@ export async function toggleAudio(state, ui) {
     }
 }
 
+/** Generates a white noise buffer of the given duration for percussion synthesis. */
 function generateNoiseBuffer(state, duration) {
     if (!state.audioCtx) return null;
 
@@ -149,6 +179,9 @@ function generateNoiseBuffer(state, duration) {
     return source;
 }
 
+// ===== Instrument synthesis functions =====
+
+/** Kick drum: sine oscillator with fast pitch sweep downward. */
 function playKick(state, now, vol) {
     const osc = state.audioCtx.createOscillator();
     const gain = state.audioCtx.createGain();
@@ -161,6 +194,7 @@ function playKick(state, now, vol) {
     osc.start(now); osc.stop(now + 0.14);
 }
 
+/** Snare: triangle oscillator body + highpass noise for snap. */
 function playSnare(state, now, vol) {
     const osc = state.audioCtx.createOscillator();
     const oscGain = state.audioCtx.createGain();
@@ -183,6 +217,7 @@ function playSnare(state, now, vol) {
     noise.start(now);
 }
 
+/** Closed hi-hat: short bandpass noise burst at 7.5 kHz. */
 function playClosedHiHat(state, now, vol) {
     const noise = generateNoiseBuffer(state, 0.04);
     if (!noise) return;
@@ -196,6 +231,7 @@ function playClosedHiHat(state, now, vol) {
     noise.start(now);
 }
 
+/** Open hi-hat: longer bandpass noise burst at 7.5 kHz. */
 function playOpenHiHat(state, now, vol) {
     const noise = generateNoiseBuffer(state, 0.28);
     if (!noise) return;
@@ -209,6 +245,7 @@ function playOpenHiHat(state, now, vol) {
     noise.start(now);
 }
 
+/** Shaker: bandpass noise with a quick attack envelope to simulate bead movement. */
 function playShaker(state, now, vol) {
     const noise = generateNoiseBuffer(state, 0.07);
     if (!noise) return;
@@ -223,6 +260,7 @@ function playShaker(state, now, vol) {
     noise.start(now);
 }
 
+/** Tom: sine oscillator with pitch sweep, frequency varies by channel (A vs B). */
 function playTom(state, now, vol, channelName) {
     const osc = state.audioCtx.createOscillator();
     const gain = state.audioCtx.createGain();
@@ -235,6 +273,7 @@ function playTom(state, now, vol, channelName) {
     osc.start(now); osc.stop(now + 0.22);
 }
 
+/** Handclap: multiple short noise bursts followed by a longer tail through a bandpass filter. */
 function playClap(state, now, vol) {
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -264,6 +303,7 @@ function playClap(state, now, vol) {
     mainClap.start(now + 0.038);
 }
 
+/** Agogo bell: sine oscillator, pitch varies by channel. */
 function playAgogo(state, now, vol, channelName) {
     const osc = state.audioCtx.createOscillator();
     const gain = state.audioCtx.createGain();
@@ -275,6 +315,7 @@ function playAgogo(state, now, vol, channelName) {
     osc.start(now); osc.stop(now + 0.18);
 }
 
+/** Crystal ping: high-frequency sine tone, pitch varies by channel. */
 function playPing(state, now, vol, channelName) {
     const osc = state.audioCtx.createOscillator();
     const gain = state.audioCtx.createGain();
@@ -286,6 +327,7 @@ function playPing(state, now, vol, channelName) {
     osc.start(now); osc.stop(now + 0.3);
 }
 
+/** Rimshot: short triangle oscillator click at 680 Hz. */
 function playRimshot(state, now, vol) {
     const osc = state.audioCtx.createOscillator();
     const gain = state.audioCtx.createGain();
@@ -297,6 +339,7 @@ function playRimshot(state, now, vol) {
     osc.start(now); osc.stop(now + 0.05);
 }
 
+/** Woodblock: sine oscillator with a brief downward pitch sweep. */
 function playWoodblock(state, now, vol) {
     const osc = state.audioCtx.createOscillator();
     const gain = state.audioCtx.createGain();
@@ -309,6 +352,7 @@ function playWoodblock(state, now, vol) {
     osc.start(now); osc.stop(now + 0.1);
 }
 
+/** Cowbell: two detuned square oscillators through a bandpass filter. */
 function playCowbell(state, now, vol) {
     const osc1 = state.audioCtx.createOscillator();
     const osc2 = state.audioCtx.createOscillator();
@@ -326,10 +370,8 @@ function playCowbell(state, now, vol) {
     osc1.start(now); osc2.start(now); osc1.stop(now + 0.25); osc2.stop(now + 0.25);
 }
 
-// ===== New Percussion Instruments =====
-
+/** Tambourine: bandpass noise for jingle + sine ring for body. */
 function playTambourine(state, now, vol) {
-    // Bandpass noise for jingle + sine ring for body
     const noise = generateNoiseBuffer(state, 0.2);
     if (!noise) return;
     const noiseFilter = state.audioCtx.createBiquadFilter();
@@ -352,6 +394,7 @@ function playTambourine(state, now, vol) {
     osc.start(now); osc.stop(now + 0.15);
 }
 
+/** Conga low: sine oscillator with deep pitch sweep, frequency varies by channel. */
 function playCongaLow(state, now, vol, channelName) {
     const osc = state.audioCtx.createOscillator();
     const gain = state.audioCtx.createGain();
@@ -364,6 +407,7 @@ function playCongaLow(state, now, vol, channelName) {
     osc.start(now); osc.stop(now + 0.18);
 }
 
+/** Conga high: higher-pitched sine sweep, frequency varies by channel. */
 function playCongaHigh(state, now, vol, channelName) {
     const osc = state.audioCtx.createOscillator();
     const gain = state.audioCtx.createGain();
@@ -376,6 +420,7 @@ function playCongaHigh(state, now, vol, channelName) {
     osc.start(now); osc.stop(now + 0.14);
 }
 
+/** Bongo low: short sine sweep, frequency varies by channel. */
 function playBongoLow(state, now, vol, channelName) {
     const osc = state.audioCtx.createOscillator();
     const gain = state.audioCtx.createGain();
@@ -388,6 +433,7 @@ function playBongoLow(state, now, vol, channelName) {
     osc.start(now); osc.stop(now + 0.09);
 }
 
+/** Bongo high: higher-pitched short sine sweep, frequency varies by channel. */
 function playBongoHigh(state, now, vol, channelName) {
     const osc = state.audioCtx.createOscillator();
     const gain = state.audioCtx.createGain();
@@ -400,8 +446,8 @@ function playBongoHigh(state, now, vol, channelName) {
     osc.start(now); osc.stop(now + 0.08);
 }
 
+/** Maraca: bandpass noise with amplitude modulation to simulate shaking. */
 function playMaraca(state, now, vol) {
-    // Noise with amplitude modulation to simulate shaking
     const noise = generateNoiseBuffer(state, 0.15);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
@@ -409,7 +455,6 @@ function playMaraca(state, now, vol) {
     filter.frequency.setValueAtTime(7000, now);
     filter.Q.setValueAtTime(2, now);
     const gain = state.audioCtx.createGain();
-    // AM envelope: rapid pulses simulate shaking
     gain.gain.setValueAtTime(0.001, now);
     for (let i = 0; i < 12; i++) {
         const t = now + i * 0.012;
@@ -420,8 +465,8 @@ function playMaraca(state, now, vol) {
     noise.start(now);
 }
 
+/** Crash cymbal: full highpass noise with sustained sine wash for resonance. */
 function playCrash(state, now, vol) {
-    // Full noise with highpass + sustained sine for wash
     const noise = generateNoiseBuffer(state, 1.0);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
@@ -433,7 +478,6 @@ function playCrash(state, now, vol) {
     noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
     noise.start(now);
 
-    // Subtle metallic resonance
     const osc = state.audioCtx.createOscillator();
     const oscGain = state.audioCtx.createGain();
     osc.type = 'sine';
@@ -444,8 +488,8 @@ function playCrash(state, now, vol) {
     osc.start(now); osc.stop(now + 0.6);
 }
 
+/** Ride cymbal: bandpass noise ping + sustained sine bell tone. */
 function playRide(state, now, vol) {
-    // Bandpass noise for ping + sustained sine for wash
     const noise = generateNoiseBuffer(state, 0.6);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
@@ -458,7 +502,6 @@ function playRide(state, now, vol) {
     noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
     noise.start(now);
 
-    // Metallic bell tone
     const osc = state.audioCtx.createOscillator();
     const oscGain = state.audioCtx.createGain();
     osc.type = 'sine';
@@ -469,23 +512,23 @@ function playRide(state, now, vol) {
     osc.start(now); osc.stop(now + 0.4);
 }
 
+/** Claves: two slightly detuned sines creating a 5 Hz beat frequency for wooden click. */
 function playClaves(state, now, vol) {
-    // Two sine oscillators with slight beat frequency for wooden click
     const osc1 = state.audioCtx.createOscillator();
     const osc2 = state.audioCtx.createOscillator();
     const gain = state.audioCtx.createGain();
     osc1.type = 'sine';
     osc2.type = 'sine';
     osc1.frequency.setValueAtTime(2000, now);
-    osc2.frequency.setValueAtTime(2005, now); // 5Hz beat
+    osc2.frequency.setValueAtTime(2005, now);
     gain.gain.setValueAtTime(vol * 0.6, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
     osc1.connect(gain); osc2.connect(gain); gain.connect(state.audioCtx.destination);
     osc1.start(now); osc2.start(now); osc1.stop(now + 0.08); osc2.stop(now + 0.08);
 }
 
+/** Djembe: sine + triangle mix with deep downward pitch sweep, frequency varies by channel. */
 function playDjembe(state, now, vol, channelName) {
-    // Sine + triangle mix with deep sweep for body
     const osc1 = state.audioCtx.createOscillator();
     const osc2 = state.audioCtx.createOscillator();
     const gain = state.audioCtx.createGain();
@@ -501,8 +544,8 @@ function playDjembe(state, now, vol, channelName) {
     osc1.start(now); osc2.start(now); osc1.stop(now + 0.2); osc2.stop(now + 0.2);
 }
 
+/** Timbale: sine with fast pitch envelope + noise transient attack, frequency varies by channel. */
 function playTimbale(state, now, vol, channelName) {
-    // Sine with fast attack + pitch envelope + noise transient
     const osc = state.audioCtx.createOscillator();
     const oscGain = state.audioCtx.createGain();
     osc.type = 'sine';
@@ -514,7 +557,6 @@ function playTimbale(state, now, vol, channelName) {
     osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.08);
 
-    // Noise transient attack
     const noise = generateNoiseBuffer(state, 0.03);
     if (!noise) return;
     const noiseFilter = state.audioCtx.createBiquadFilter();
@@ -527,8 +569,8 @@ function playTimbale(state, now, vol, channelName) {
     noise.start(now);
 }
 
+/** Castanets: short bandpass noise burst + resonant wood tone at 3.5 kHz. */
 function playCastanets(state, now, vol) {
-    // Short noise burst + resonant peak
     const noise = generateNoiseBuffer(state, 0.04);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
@@ -541,7 +583,6 @@ function playCastanets(state, now, vol) {
     noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
     noise.start(now);
 
-    // Resonant wood tone
     const osc = state.audioCtx.createOscillator();
     const oscGain = state.audioCtx.createGain();
     osc.type = 'sine';
@@ -552,8 +593,8 @@ function playCastanets(state, now, vol) {
     osc.start(now); osc.stop(now + 0.04);
 }
 
+/** EDM synth kick: sub-bass sine + noise transient + mid-range click. */
 function playSynthKick(state, now, vol) {
-    // Sub-bass sine + noise transient + distortion for EDM kick
     const subOsc = state.audioCtx.createOscillator();
     const subGain = state.audioCtx.createGain();
     subOsc.type = 'sine';
@@ -564,7 +605,6 @@ function playSynthKick(state, now, vol) {
     subOsc.connect(subGain); subGain.connect(state.audioCtx.destination);
     subOsc.start(now); subOsc.stop(now + 0.25);
 
-    // Transient click with distortion
     const noise = generateNoiseBuffer(state, 0.05);
     if (!noise) return;
     const noiseFilter = state.audioCtx.createBiquadFilter();
@@ -576,7 +616,6 @@ function playSynthKick(state, now, vol) {
     noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
     noise.start(now);
 
-    // Mid-range click
     const midOsc = state.audioCtx.createOscillator();
     const midGain = state.audioCtx.createGain();
     midOsc.type = 'sine';
@@ -588,8 +627,8 @@ function playSynthKick(state, now, vol) {
     midOsc.start(now); midOsc.stop(now + 0.06);
 }
 
+/** Electronic snare: sine body + noise through formant bandpass filter. */
 function playElectronicSnare(state, now, vol) {
-    // Noise + distorted sine + formant filter
     const osc = state.audioCtx.createOscillator();
     const oscGain = state.audioCtx.createGain();
     osc.type = 'sine';
@@ -600,7 +639,6 @@ function playElectronicSnare(state, now, vol) {
     osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.1);
 
-    // Noise through formant bandpass
     const noise = generateNoiseBuffer(state, 0.2);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
@@ -614,8 +652,8 @@ function playElectronicSnare(state, now, vol) {
     noise.start(now);
 }
 
+/** Conga slap: broadband noise transient + pitch-rising fundamental + second harmonic + finger pop. */
 function playCongaSlap(state, now, vol, channelName) {
-     // Conga slap technique: sharp finger strike noise + resonant body with pitch rise
     const baseFreq = channelName.startsWith('A') ? 300 : 260;
 
     // Sharp broadband transient for finger strike on skin
@@ -631,7 +669,7 @@ function playCongaSlap(state, now, vol, channelName) {
     noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
     noise.start(now);
 
-    // Fundamental: slap technique produces a pitch rise (skin tension increases on impact)
+    // Fundamental: pitch rises on impact (skin tension increases)
     const osc = state.audioCtx.createOscillator();
     const oscGain = state.audioCtx.createGain();
     osc.type = 'sine';
@@ -668,8 +706,8 @@ function playCongaSlap(state, now, vol, channelName) {
     popNoise.start(now + 0.025);
 }
 
+/** Foot tap: very short bandpass noise click at 180 Hz. */
 function playFootTap(state, now, vol) {
-    // Very short filtered noise click
     const noise = generateNoiseBuffer(state, 0.025);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
@@ -683,8 +721,8 @@ function playFootTap(state, now, vol) {
     noise.start(now);
 }
 
+/** Hand slap: noise burst + medium sine resonance. */
 function playSlap(state, now, vol) {
-    // Noise burst + medium sine resonance for hand slap
     const noise = generateNoiseBuffer(state, 0.06);
     if (!noise) return;
     const noiseFilter = state.audioCtx.createBiquadFilter();
@@ -696,7 +734,6 @@ function playSlap(state, now, vol) {
     noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
     noise.start(now);
 
-    // Mid resonance
     const osc = state.audioCtx.createOscillator();
     const oscGain = state.audioCtx.createGain();
     osc.type = 'sine';
@@ -708,6 +745,7 @@ function playSlap(state, now, vol) {
     osc.start(now); osc.stop(now + 0.05);
 }
 
+/** Dispatch table mapping instrument value keys to their synthesis functions. */
 const instruments = {
     kick: (state, now, vol, channel) => playKick(state, now, vol, channel),
     snare: (state, now, vol, channel) => playSnare(state, now, vol, channel),
@@ -721,7 +759,6 @@ const instruments = {
     rimshot: (state, now, vol, channel) => playRimshot(state, now, vol, channel),
     woodblock: (state, now, vol, channel) => playWoodblock(state, now, vol, channel),
     cowbell: (state, now, vol, channel) => playCowbell(state, now, vol, channel),
-    // New instruments
     tambourine: (state, now, vol, channel) => playTambourine(state, now, vol, channel),
     conga_low: (state, now, vol, channel) => playCongaLow(state, now, vol, channel),
     conga_high: (state, now, vol, channel) => playCongaHigh(state, now, vol, channel),
@@ -741,6 +778,10 @@ const instruments = {
     slap: (state, now, vol, channel) => playSlap(state, now, vol, channel)
 };
 
+/**
+ * Plays the sound for a given channel. Applies the channel's volume,
+ * mute state, gain scale, and the global volume multiplier.
+ */
 export function playChannelSound(state, channels, channelName, globalVolume = 1) {
     if (!state.audioEnabled || !state.audioCtx) return;
 

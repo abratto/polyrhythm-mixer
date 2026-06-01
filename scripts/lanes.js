@@ -1,9 +1,29 @@
+/**
+ * lanes.js — Sequencer lane management.
+ *
+ * Each "lane" represents a row of step buttons in the mixer UI:
+ *   - master: the master wheel sequence (one step per tooth)
+ *   - Aphrase / Bphrase: phrase sequencers for meters A and B
+ *   - Awheel / Bwheel: wheel lanes showing equal placements within one cycle
+ *
+ * Lanes are defined as configuration objects, then built into DOM buttons
+ * and wired for interaction (toggle steps, clear all).
+ */
 import { reduceFraction } from './math.js';
 
+/** Returns a human-readable ratio like "3/4" for the master-to-meter relationship. */
 function masterRateLabelForMeter(state, meterValue) {
     return reduceFraction(state.mainTeeth / meterValue, state.mainTeeth);
 }
 
+/**
+ * Creates the lane configuration objects. Each lane defines:
+ *   - container: the DOM element to hold step buttons
+ *   - count(): how many steps this lane has
+ *   - label(): descriptive text shown above the lane
+ *   - textForStep(i): label for each individual step button
+ *   - boundary(i): whether step i should have a visual bar-line separator
+ */
 export function createLanes(ui, state) {
     return {
         master: {
@@ -69,6 +89,12 @@ export function createLanes(ui, state) {
     };
 }
 
+/**
+ * Resets all lane patterns to their defaults:
+ *   - Master and phrase lanes start empty
+ *   - Wheel lanes start fully active (every step triggers)
+ *   - First step of each phrase lane is enabled by default
+ */
 export function resetPatterns(state, lanes) {
     lanes.master.selected = new Array(state.mainTeeth).fill(false);
     lanes.Aphrase.selected = new Array(state.phraseStepsA).fill(false);
@@ -82,6 +108,7 @@ export function resetPatterns(state, lanes) {
     state.lastActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };
 }
 
+/** Creates a single step button for a lane with click-to-toggle behavior. */
 function createStepButton(lane, i) {
     const btn = document.createElement('button');
     btn.className = `step-btn ${lane.className}`;
@@ -99,6 +126,7 @@ function createStepButton(lane, i) {
     return btn;
 }
 
+/** Builds all step buttons for a single lane, replacing any existing content. */
 export function buildLane(lane) {
     lane.container.innerHTML = '';
     lane.titleEl.textContent = lane.label();
@@ -107,10 +135,12 @@ export function buildLane(lane) {
     }
 }
 
+/** Rebuilds every lane's DOM buttons. */
 export function buildAllLanes(lanes) {
     Object.values(lanes).forEach(buildLane);
 }
 
+/** Attaches click handlers to all lane clear buttons. */
 export function wireLaneClearButtons(lanes) {
     Object.values(lanes).forEach((lane) => {
         lane.clearBtn.addEventListener('click', () => {
@@ -124,6 +154,10 @@ function activeStepId(prefix, index) {
     return `${prefix}-${index}`;
 }
 
+/**
+ * Highlights the currently active step button across all lanes
+ * by adding the "current" class and removing it from all others.
+ */
 export function markCurrentButtons(lanes, active) {
     document.querySelectorAll('.step-btn').forEach(btn => btn.classList.remove('current'));
 

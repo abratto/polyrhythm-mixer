@@ -1,13 +1,30 @@
+/**
+ * share.js — State serialization, URL sharing, and versioned migration.
+ *
+ * Encodes the current app state into a compact Base64 URL parameter so users
+ * can share their configurations. Supports versioned payloads with automatic
+ * migration from older formats, and fails silently on invalid data.
+ *
+ * Payload structure (v1):
+ *   { v: 1, m: { A, B, phraseA, ... }, p: { m, ap, aw, bp, bw }, c: { s, v, u } }
+ *
+ * Migration: v0 payloads (positional array `m`) are automatically converted
+ * to v1 (named fields) on load. Future versions (v > current) are rejected.
+ */
+
 const SHARE_VERSION = 1;
 
+// Channel order for serializing sound selections, volumes, and mute states
 const CHANNEL_ORDER = ['driver', 'custom', 'A', 'Awheel', 'B', 'Bwheel'];
 
+/** Clamps a value to an integer range, returning null for invalid input. */
 function clampInteger(value, min, max) {
     if (typeof value !== 'number' || !Number.isFinite(value)) return null;
     const int = Math.round(value);
     return Math.min(max, Math.max(min, int));
 }
 
+/** Returns the indices of all true values in a boolean array. */
 function selectedIndexes(values) {
     const indexes = [];
     values.forEach((on, i) => {
@@ -16,6 +33,7 @@ function selectedIndexes(values) {
     return indexes;
 }
 
+/** Sets a boolean array to false, then marks the given indexes as true. */
 function applySelectedIndexes(target, indexes) {
     if (!Array.isArray(target)) return;
     target.fill(false);
@@ -28,6 +46,10 @@ function applySelectedIndexes(target, indexes) {
     });
 }
 
+/**
+ * Encodes a payload object into a URL-safe Base64 string.
+ * Uses JSON → UTF-8 bytes → Base64 with URL-safe character replacement.
+ */
 function encodePayload(payload) {
     const json = JSON.stringify(payload);
     const bytes = new TextEncoder().encode(json);
@@ -41,6 +63,7 @@ function encodePayload(payload) {
         .replace(/=+$/g, '');
 }
 
+/** Decodes a URL-safe Base64 string back into a parsed JSON object. */
 function decodePayload(encoded) {
     const base64 = encoded
         .replace(/-/g, '+')
@@ -52,6 +75,10 @@ function decodePayload(encoded) {
     return JSON.parse(json);
 }
 
+/**
+ * Serializes the current app state into a shareable payload object.
+ * Includes meter settings, phrase patterns, lane patterns, and channel audio settings.
+ */
 function serializeState({ state, lanes, channels }) {
     return {
         v: SHARE_VERSION,
@@ -79,6 +106,11 @@ function serializeState({ state, lanes, channels }) {
     };
 }
 
+/**
+ * Migrates a v0 payload (positional array) to v1 (named fields).
+ * v0 format: m = [A, B, phraseA, phraseB, phaseA, phaseB, tempo]
+ * v1 format: m = { A, B, phraseA, phraseB, phaseA, phaseB, tempo }
+ */
 function migrateV0toV1(payload) {
     const m = payload.m;
     if (!Array.isArray(m)) return payload;
@@ -96,15 +128,21 @@ function migrateV0toV1(payload) {
     return payload;
 }
 
+/**
+ * Runs the appropriate migration functions based on the payload version.
+ * Throws if the payload is invalid or from a future (unsupported) version.
+ */
 function migratePayload(payload) {
     if (!payload || typeof payload !== 'object') {
         throw new Error('Invalid share payload');
     }
 
+    // Unversioned payloads are assumed to be v0
     if (!payload.v) {
         payload = migrateV0toV1(payload);
     }
 
+    // Reject payloads from future versions
     if (payload.v > SHARE_VERSION) {
         throw new Error(`Share payload version ${payload.v} is newer than supported version ${SHARE_VERSION}`);
     }
@@ -112,6 +150,10 @@ function migratePayload(payload) {
     return payload;
 }
 
+/**
+ * Applies channel audio settings (sound selection, volume, mute) from a share payload.
+ * Skips channels that no longer exist in the current version.
+ */
 function applyChannelState(channels, channelState) {
     if (!channelState || typeof channelState !== 'object') return;
 
@@ -155,6 +197,10 @@ function applyChannelState(channels, channelState) {
     }
 }
 
+/**
+ * Restores the app state from a deserialized and migrated share payload.
+ * Applies meter settings, phrase patterns, lane patterns, and channel audio settings.
+ */
 function restoreFromPayload(payload, deps) {
     const { state, ui, lanes, channels, updateDerivedState, updatePhaseUI, resetPatterns, buildAllLanes, resetFlashState } = deps;
 
@@ -212,6 +258,7 @@ function restoreFromPayload(payload, deps) {
     buildAllLanes(lanes);
 }
 
+/** Builds a full share URL with the encoded state as a query parameter. */
 function createShareUrl(shareData) {
     const encoded = encodePayload(shareData);
     const url = new URL(window.location.href);
@@ -220,6 +267,7 @@ function createShareUrl(shareData) {
     return url.toString();
 }
 
+/** Copies the share URL to clipboard, falling back to a prompt if unavailable. */
 async function copyToClipboard(url) {
     if (!navigator.clipboard || !navigator.clipboard.writeText) {
         window.prompt('Copy this share link:', url);
@@ -233,6 +281,7 @@ async function copyToClipboard(url) {
     }
 }
 
+/** Temporarily changes the share button text to provide visual feedback. */
 function pulseShareButton(button, label) {
     const original = button.textContent;
     button.textContent = label;
@@ -241,6 +290,7 @@ function pulseShareButton(button, label) {
     }, 1200);
 }
 
+/** Encodes the current state and copies the share URL to the clipboard. */
 export async function copyShareLink(deps) {
     const payload = serializeState(deps);
     const url = createShareUrl(payload);
@@ -248,6 +298,11 @@ export async function copyShareLink(deps) {
     pulseShareButton(deps.ui.shareBtn, 'Copied');
 }
 
+/**
+ * Checks the URL for a share parameter, decodes and migrates the payload,
+ * then restores the app state. Returns false if no share param or if the
+ * payload is invalid (app falls back to defaults in that case).
+ */
 export function loadStateFromUrl(deps) {
     const params = new URLSearchParams(window.location.search);
     const encoded = params.get('s');
