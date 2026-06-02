@@ -11,8 +11,23 @@
         <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
             <div id="helpModalTitle" class="modal-title">Welcome to Alan's Polyrhythm Mixer</div>
             <div class="modal-subtitle">
-                This mixer works at two rhythmic scales: wheel lanes divide one master cycle, while phrase sequencers run at each meter’s own pulse and unfold across multiple master cycles.
+                This mixer works at two rhythmic scales: wheel lanes divide one master cycle, while phrase sequencers run at each meter's own pulse and unfold across multiple master cycles. You can also layer multiple independent voices on each sequencer lane.
             </div>
+            <div class="modal-help-grid">
+                <div class="modal-help-item"><strong>1.</strong> Pick <strong>Meter A</strong> and <strong>Meter B</strong> to choose the polyrhythm.</div>
+                <div class="modal-help-item"><strong>2.</strong> Set each phrase sequencer's length in <strong>master cycles</strong>. Patterns are preserved when you change lengths.</div>
+                <div class="modal-help-item"><strong>3.</strong> <strong>Click step boxes</strong> to activate them. They trigger when the playhead reaches them.</div>
+                <div class="modal-help-item"><strong>4.</strong> Click <strong>+ Voice</strong> on any sequencer lane to layer an independent pattern with its own instrument, volume, and mute.</div>
+                <div class="modal-help-item"><strong>5.</strong> The <strong>center gear</strong> is the master wheel (LCM of A and B). One rotation = one full polyrhythmic cycle.</div>
+                <div class="modal-help-item"><strong>6.</strong> <strong>Wheel lanes</strong> show evenly-spaced placements within one cycle. <strong>Phrase sequencers</strong> unfold across multiple cycles.</div>
+                <div class="modal-help-item"><strong>7.</strong> The <strong>timelines</strong> below the gears show one cycle and the full repeating pattern, with markers for every voice.</div>
+                <div class="modal-help-item"><strong>8.</strong> <strong>Enable audio</strong>, then pick instruments and adjust volume/mute for each lane and voice in the mixer console.</div>
+            </div>
+            <div class="modal-actions">
+                <button id="closeHelpModalBtn" class="modal-close-btn">Got It</button>
+            </div>
+        </div>
+    </div>
             <div class="modal-help-grid">
                 <div class="modal-help-item"><strong>1.</strong> Pick <strong>Meter A</strong> and <strong>Meter B</strong> to choose the polyrhythm.</div>
                 <div class="modal-help-item"><strong>2.</strong> Pick each phrase sequencer’s length in <strong>master cycles</strong>. The app converts that into phrase steps automatically.</div>
