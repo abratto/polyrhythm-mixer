@@ -35,9 +35,8 @@ const channels = createChannels();
 function createVoiceStripDOM(container, prefix, voiceIndex, color, label) {
     const id = `${prefix}_${voiceIndex}`;
     const strip = document.createElement('div');
-    strip.className = 'mixer-strip';
+    strip.className = `mixer-strip voice-${prefix.toLowerCase()}`;
     strip.id = `strip_${id}`;
-    strip.style.borderLeft = `3px solid ${color}`;
 
     strip.innerHTML = `
         <div class="strip-header" style="color: ${color};">${label} Voice ${voiceIndex + 1}</div>

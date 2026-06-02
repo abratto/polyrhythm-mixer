@@ -189,7 +189,8 @@
     </div>
 
       <div class="rack-unit mixer-console">
-          <div class="mixer-strip">
+          <!-- Row 1: 4-Beat Click -->
+          <div class="mixer-strip full-width">
               <div class="strip-header" style="color: #7a8a9e;">4-Beat Click</div>
               <select id="soundDriver" style="padding: 4px; width: 100%; font-size:12px;"></select>
               <div class="fader-area">
@@ -200,13 +201,8 @@
               </div>
           </div>
 
-          <!-- Dynamic master voice strips -->
-          <div id="masterVoiceContainer"></div>
-
-          <!-- Dynamic A phrase voice strips -->
-          <div id="AVoiceContainer"></div>
-
-          <div class="mixer-strip ch-a-wheel">
+          <!-- Row 2: Meter A Wheel -->
+          <div class="mixer-strip full-width">
               <div class="strip-header" style="color: #ff6b8f;">Meter A Wheel</div>
               <select id="soundAWheel" style="padding: 4px; width: 100%; font-size:12px;"></select>
               <div class="fader-area">
@@ -217,10 +213,8 @@
               </div>
           </div>
 
-          <!-- Dynamic B phrase voice strips -->
-          <div id="BVoiceContainer"></div>
-
-          <div class="mixer-strip ch-b-wheel">
+          <!-- Row 3: Meter B Wheel -->
+          <div class="mixer-strip full-width">
               <div class="strip-header" style="color: #6ef2ff;">Meter B Wheel</div>
               <select id="soundBWheel" style="padding: 4px; width: 100%; font-size:12px;"></select>
               <div class="fader-area">
@@ -229,6 +223,13 @@
               <div class="fader-area volume-only-area">
                   <input type="range" id="volBWheel" class="volume-fader" min="0" max="1" step="0.05" value="0.35">
               </div>
+          </div>
+
+          <!-- Row 4: Voice groups (horizontal layout) -->
+          <div class="voice-groups-row">
+              <div id="masterVoiceContainer" class="voice-group"></div>
+              <div id="AVoiceContainer" class="voice-group"></div>
+              <div id="BVoiceContainer" class="voice-group"></div>
           </div>
       </div>
     <script type="module" src="scripts/app.js"></script>

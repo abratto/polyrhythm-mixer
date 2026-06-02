@@ -326,11 +326,11 @@
         }
         .mixer-console {
             display: flex;
-            justify-content: space-between;
-            gap: 12px;
+            flex-direction: column;
+            gap: 8px;
             background: #0c0c10 !important;
             border: 1px solid #1e1e26;
-            flex-wrap: wrap;
+            padding: 12px;
         }
         .mixer-strip {
             flex: 1 1 140px;
@@ -346,11 +346,32 @@
             height: 145px;
             box-sizing: border-box;
         }
+        .mixer-strip.full-width {
+            flex: 0 0 auto;
+            width: 100%;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+        .voice-groups-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .voice-group {
+            flex: 1;
+            min-width: 140px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
         .mixer-strip.ch-custom { border-top-color: #ff9100; }
         .mixer-strip.ch-a { border-top-color: #ff3366; }
         .mixer-strip.ch-a-wheel { border-top-color: #ff6b8f; }
         .mixer-strip.ch-b { border-top-color: #00e5ff; }
         .mixer-strip.ch-b-wheel { border-top-color: #6ef2ff; }
+        .mixer-strip.voice-master { border-top-color: #ff9100; }
+        .mixer-strip.voice-a { border-top-color: #ff3366; }
+        .mixer-strip.voice-b { border-top-color: #00e5ff; }
         .strip-header {
             font-size: 11px;
             font-weight: 700;
