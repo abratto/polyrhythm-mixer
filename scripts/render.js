@@ -497,7 +497,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, playChannelSound
                 Bwheel: getActiveWheelStep(currentStep, state.phaseB, state.teethB, state.B)
             };
 
-            markCurrentButtons(state, active);
+            markCurrentButtons(active);
             processTriggers(state, lanes, playChannelSound, active);
         }
 

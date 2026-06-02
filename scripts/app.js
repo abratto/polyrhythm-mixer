@@ -82,7 +82,10 @@ function applyVoiceChannelState(channel, voiceState) {
 
     if (voiceState.instrument && channel.soundEl) {
         const hasSoundOption = Array.from(channel.soundEl.options).some(opt => opt.value === voiceState.instrument);
-        if (hasSoundOption) channel.soundEl.value = voiceState.instrument;
+        if (hasSoundOption) {
+            channel.soundEl.value = voiceState.instrument;
+            channel.sound = voiceState.instrument;
+        }
     }
 
     if (typeof voiceState.volume === 'number' && Number.isFinite(voiceState.volume)) {

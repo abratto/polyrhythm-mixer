@@ -73,7 +73,7 @@ function decodePayload(encoded) {
 function serializeVoice(voice, channel) {
     return {
         s: selectedIndexes(voice.selected),
-        instrument: channel?.soundEl?.value || null,
+        instrument: channel?.sound || null,
         volume: channel?.volume ?? 0.5,
         muted: channel?.muted ? 1 : 0
     };
@@ -104,17 +104,17 @@ function serializeState({ state, lanes, channels }) {
         },
         c: {
             driver: {
-                s: channels.driver.soundEl.value,
+                s: channels.driver.sound,
                 v: channels.driver.volume,
                 u: channels.driver.muted ? 1 : 0
             },
             awheel: {
-                s: channels.Awheel.soundEl.value,
+                s: channels.Awheel.sound,
                 v: channels.Awheel.volume,
                 u: channels.Awheel.muted ? 1 : 0
             },
             bwheel: {
-                s: channels.Bwheel.soundEl.value,
+                s: channels.Bwheel.sound,
                 v: channels.Bwheel.volume,
                 u: channels.Bwheel.muted ? 1 : 0
             }
@@ -220,7 +220,10 @@ function applyVoiceChannelState(channel, voiceState) {
 
     if (voiceState.instrument && channel.soundEl) {
         const hasSoundOption = Array.from(channel.soundEl.options).some(opt => opt.value === voiceState.instrument);
-        if (hasSoundOption) channel.soundEl.value = voiceState.instrument;
+        if (hasSoundOption) {
+            channel.soundEl.value = voiceState.instrument;
+            channel.sound = voiceState.instrument;
+        }
     }
 
     if (typeof voiceState.volume === 'number' && Number.isFinite(voiceState.volume)) {
