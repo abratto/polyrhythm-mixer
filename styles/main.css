@@ -332,8 +332,12 @@
             border: 1px solid #1e1e26;
             padding: 12px;
         }
+        .fixed-controls-row {
+            display: flex;
+            gap: 12px;
+        }
         .mixer-strip {
-            flex: 1 1 140px;
+            flex: 1;
             min-width: 0;
             background: #171721;
             border: 1px solid #252535;
@@ -346,20 +350,13 @@
             height: 145px;
             box-sizing: border-box;
         }
-        .mixer-strip.full-width {
-            flex: 0 0 auto;
-            width: 100%;
-            max-width: 320px;
-            margin: 0 auto;
-        }
         .voice-groups-row {
             display: flex;
             gap: 12px;
-            flex-wrap: wrap;
         }
         .voice-group {
             flex: 1;
-            min-width: 140px;
+            min-width: 0;
             display: flex;
             flex-direction: column;
             gap: 8px;
