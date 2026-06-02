@@ -139,8 +139,9 @@ const voiceDefaults = {
 export function addVoiceChannel(channels, prefix, container, voiceIndex) {
     const gainScale = prefix === 'master' ? 0.6 : prefix === 'A' ? 0.5 : 0.4;
     const channel = createVoiceChannel(container, voiceIndex, prefix, voiceDefaults, gainScale);
-    const voiceArray = channels[`${prefix}voices`];
-    voiceArray.push(channel);
+    const key = `${prefix}voices`;
+    if (!channels[key]) channels[key] = [];
+    channels[key].push(channel);
 
     // Wire volume and mute handlers
     if (channel.volEl) {
@@ -161,8 +162,9 @@ export function addVoiceChannel(channels, prefix, container, voiceIndex) {
 
 /** Removes a voice channel from a multi-voice group. */
 export function removeVoiceChannel(channels, prefix, voiceIndex) {
-    const voiceArray = channels[`${prefix}voices`];
-    if (voiceArray.length <= 1) return;
+    const key = `${prefix}voices`;
+    const voiceArray = channels[key];
+    if (!voiceArray || voiceArray.length <= 1) return;
 
     // Remove DOM elements
     const channel = voiceArray[voiceIndex];
@@ -1041,15 +1043,15 @@ export function playChannelSound(state, channels, channelName, globalVolume = 1)
 
     // Multi-voice channels: iterate over all voices
     if (channelName === 'master') {
-        channels.masterVoices.forEach(channel => {
+        (channels.masterVoices || []).forEach(channel => {
             playSingleChannel(state, channel, globalVolume);
         });
     } else if (channelName === 'A') {
-        channels.Avoices.forEach(channel => {
+        (channels.Avoices || []).forEach(channel => {
             playSingleChannel(state, channel, globalVolume);
         });
     } else if (channelName === 'B') {
-        channels.Bvoices.forEach(channel => {
+        (channels.Bvoices || []).forEach(channel => {
             playSingleChannel(state, channel, globalVolume);
         });
     } else {
