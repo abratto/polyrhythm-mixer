@@ -50,10 +50,7 @@ function applySelectedIndexes(target, indexes) {
 function encodePayload(payload) {
     const json = JSON.stringify(payload);
     const bytes = new TextEncoder().encode(json);
-    let binary = '';
-    bytes.forEach((b) => {
-        binary += String.fromCharCode(b);
-    });
+    const binary = String.fromCharCode.apply(null, bytes);
     return btoa(binary)
         .replace(/\+/g, '-')
         .replace(/\//g, '_')

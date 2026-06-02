@@ -15,7 +15,7 @@
  */
 import { getDomRefs } from './dom.js';
 import { createState, resetFlashState, updateDerivedState, updatePhaseUI } from './state.js';
-import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, wireLaneClearButtons, markCurrentButtons, addVoice, removeVoice } from './lanes.js';
+import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, markCurrentButtons, addVoice, removeVoice } from './lanes.js';
 import { createChannels, populateMenus, wireChannels, toggleAudio, playChannelSound, addVoiceChannel, removeVoiceChannel } from './audio.js';
 import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } from './controls.js';
 import { copyShareLink, loadStateFromUrl } from './share.js';
@@ -164,7 +164,7 @@ function handleAddVoice(lane, prefix, container, color, label) {
     createVoiceStripDOM(container, prefix, voiceIndex, color, label);
     const channel = addVoiceChannel(channels, prefix, container, voiceIndex);
     lane.voices[voiceIndex].channel = channel;
-    buildAllLanes(lanes);
+    buildLane(lane); // Only rebuild the affected lane, not all lanes
 }
 
 /**
@@ -172,22 +172,37 @@ function handleAddVoice(lane, prefix, container, color, label) {
  * The lane data and sequencer buttons are already handled by lanes.js.
  */
 function handleRemoveVoiceChannel(prefix, voiceIndex) {
-    removeVoiceChannel(channels, prefix, voiceIndex);
+    const key = prefix === 'master' ? 'masterVoices' : prefix === 'A' ? 'Avoices' : 'Bvoices';
+    const voiceArray = channels[key];
+    if (!voiceArray || voiceArray.length <= 1) return;
 
-    // Rebuild DOM strips with updated indices
+    // Remove the specific strip DOM element
+    const stripEl = document.getElementById(`strip_${prefix}_${voiceIndex}`);
+    if (stripEl) stripEl.remove();
+
+    // Remove channel from array
+    voiceArray.splice(voiceIndex, 1);
+
+    // Re-index remaining strips' labels
     const container = prefix === 'master' ? ui.masterVoiceContainer : prefix === 'A' ? ui.AVoiceContainer : ui.BVoiceContainer;
     const color = prefix === 'master' ? '#ff9100' : prefix === 'A' ? '#ff3366' : '#00e5ff';
     const label = prefix === 'master' ? 'Master' : prefix === 'A' ? 'A Phrase' : 'B Phrase';
-    const key = prefix === 'master' ? 'masterVoices' : prefix === 'A' ? 'Avoices' : 'Bvoices';
-
-    container.innerHTML = '';
-    channels[key] = [];
     const lane = prefix === 'master' ? lanes.master : prefix === 'A' ? lanes.Aphrase : lanes.Bphrase;
-    lane.voices.forEach((_, idx) => {
-        createVoiceStripDOM(container, prefix, idx, color, label);
-        const channel = addVoiceChannel(channels, prefix, container, idx);
-        lane.voices[idx].channel = channel;
+
+    // Update channel references and strip IDs
+    voiceArray.forEach((ch, idx) => {
+        const oldId = `strip_${prefix}_${idx}`;
+        const newId = `strip_${prefix}_${idx}`;
+        // Update channel voiceIndex
+        ch.voiceIndex = idx;
+        // Update strip ID if it exists
+        const strip = document.getElementById(oldId);
+        if (strip) strip.id = newId;
+        // Update voice reference
+        lane.voices[idx].channel = ch;
     });
+
+    buildLane(lane); // Only rebuild the affected lane
 }
 
 // Shared dependency bag passing to share and animation functions
@@ -208,6 +223,12 @@ updateDerivedState(state);
 populateMenus(channels);
 wireChannels(channels);
 wireLaneClearButtons(lanes);
+
+// Cache global volume to avoid parseInt per trigger
+let cachedGlobalVolume = parseInt(ui.masterVolumeSlider.value, 10) / 100;
+ui.masterVolumeSlider.addEventListener('input', () => {
+    cachedGlobalVolume = parseInt(ui.masterVolumeSlider.value, 10) / 100;
+});
 
 // Phase 4: Initialize voice channels
 initVoiceChannels();
@@ -274,10 +295,9 @@ startAnimation({
     state,
     lanes,
     playChannelSound: (channelName, voiceIndex) => {
-        const globalVol = parseInt(ui.masterVolumeSlider.value, 10) / 100;
-        return playChannelSound(state, channels, channelName, globalVol, voiceIndex);
+        return playChannelSound(state, channels, channelName, cachedGlobalVolume, voiceIndex);
     },
-    markCurrentButtons: (active) => markCurrentButtons(lanes, active)
+    markCurrentButtons: (active) => markCurrentButtons(state, lanes, active)
 });
 
 // Handle viewport resize and orientation change on mobile devices.

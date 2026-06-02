@@ -333,37 +333,39 @@ export function wireLaneClearButtons(lanes) {
 /**
  * Highlights the currently active step button across all lanes.
  * For multi-voice lanes, highlights the active step in each voice.
+ * Tracks previous button indices to avoid O(N) iteration.
  */
-export function markCurrentButtons(lanes, active) {
-    for (const lane of Object.values(lanes)) {
-        if (lane.isMultiVoice) {
-            for (const voice of lane.voices) {
-                for (const btn of voice.buttons) {
-                    btn.classList.remove('current');
-                }
-            }
-        } else {
-            for (const btn of lane.buttons) {
-                btn.classList.remove('current');
-            }
-        }
-    }
-
+export function markCurrentButtons(state, lanes, active) {
     const mappings = [
-        [lanes.master, active.master],
-        [lanes.Aphrase, active.Aphrase],
-        [lanes.Bphrase, active.Bphrase],
-        [lanes.Awheel, active.Awheel],
-        [lanes.Bwheel, active.Bwheel]
+        ['master', lanes.master, active.master],
+        ['Aphrase', lanes.Aphrase, active.Aphrase],
+        ['Bphrase', lanes.Bphrase, active.Bphrase],
+        ['Awheel', lanes.Awheel, active.Awheel],
+        ['Bwheel', lanes.Bwheel, active.Bwheel]
     ];
 
-    for (const [lane, index] of mappings) {
+    for (const [key, lane, index] of mappings) {
+        const prev = state.lastActive[key];
         if (lane.isMultiVoice) {
+            // Remove from previous voice buttons
+            if (prev >= 0) {
+                for (const voice of lane.voices) {
+                    const prevBtn = voice.buttons[prev];
+                    if (prevBtn) prevBtn.classList.remove('current');
+                }
+            }
+            // Add to current voice buttons
             for (const voice of lane.voices) {
                 const btn = voice.buttons[index];
                 if (btn) btn.classList.add('current');
             }
         } else {
+            // Remove from previous button
+            if (prev >= 0) {
+                const prevBtn = lane.buttons[prev];
+                if (prevBtn) prevBtn.classList.remove('current');
+            }
+            // Add to current button
             const btn = lane.buttons[index];
             if (btn) btn.classList.add('current');
         }

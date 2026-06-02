@@ -428,6 +428,10 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width) {
 export function startAnimation({ canvas, ctx, ui, state, lanes, playChannelSound, markCurrentButtons }) {
     let lastTime = null;
 
+    // Pre-allocated reusable buffer for merging master voice selections
+    const MAX_TEETH = 240; // LCM(16, 15) = 240, max possible
+    const _masterSelected = new Uint8Array(MAX_TEETH);
+
     function animate(timestamp) {
         ctx.fillStyle = '#08080c';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -493,7 +497,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, playChannelSound
                 Bwheel: getActiveWheelStep(currentStep, state.phaseB, state.teethB, state.B)
             };
 
-            markCurrentButtons(active);
+            markCurrentButtons(state, active);
             processTriggers(state, lanes, playChannelSound, active);
         }
 
@@ -504,13 +508,16 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, playChannelSound
         if (f.A > 0) f.A--;
         if (f.B > 0) f.B--;
 
-        // Merge all master voice selections for gear display
-        const masterSelected = new Array(state.mainTeeth).fill(false);
-        lanes.master.voices.forEach(voice => {
-            voice.selected.forEach((on, i) => {
-                if (on) masterSelected[i] = true;
-            });
-        });
+        // Merge all master voice selections for gear display (reuse pre-allocated buffer)
+        _masterSelected.fill(0);
+        const voices = lanes.master.voices;
+        for (let v = 0; v < voices.length; v++) {
+            const sel = voices[v].selected;
+            for (let i = 0; i < sel.length; i++) {
+                if (sel[i]) _masterSelected[i] = 1;
+            }
+        }
+        const masterSelected = _masterSelected.subarray(0, state.mainTeeth);
 
         // Draw gears
         drawGear(ctx, cx, cy, rMainInner, rMainOuter, state.mainTeeth, angles.main, '#7a8a9e', true, Math.max(state.flash.driver, state.flash.custom), masterSelected);

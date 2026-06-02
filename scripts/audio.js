@@ -60,6 +60,7 @@ export function createChannels() {
             soundEl: document.getElementById('soundDriver'),
             volEl: document.getElementById('volDriver'),
             muteEl: document.getElementById('muteDriver'),
+            sound: 'kick',
             volume: 0.6,
             muted: false,
             gainScale: 0.6
@@ -68,6 +69,7 @@ export function createChannels() {
             soundEl: document.getElementById('soundAWheel'),
             volEl: document.getElementById('volAWheel'),
             muteEl: document.getElementById('muteAWheel'),
+            sound: 'shaker',
             volume: 0.45,
             muted: false,
             gainScale: 0.5
@@ -76,6 +78,7 @@ export function createChannels() {
             soundEl: document.getElementById('soundBWheel'),
             volEl: document.getElementById('volBWheel'),
             muteEl: document.getElementById('muteBWheel'),
+            sound: 'shaker',
             volume: 0.35,
             muted: false,
             gainScale: 0.4
@@ -98,6 +101,7 @@ export function createVoiceChannel(container, voiceIndex, prefix, defaults, gain
         soundEl,
         volEl,
         muteEl,
+        sound: defaults[prefix] || 'kick', // cached instrument value
         volume: 0.5,
         muted: false,
         gainScale,
@@ -114,6 +118,10 @@ export function createVoiceChannel(container, voiceIndex, prefix, defaults, gain
             opt.textContent = inst.label;
             if (inst.value === defaults[prefix]) opt.selected = true;
             soundEl.appendChild(opt);
+        });
+        // Cache instrument changes
+        soundEl.addEventListener('change', () => {
+            channel.sound = soundEl.value;
         });
     }
 
@@ -211,6 +219,11 @@ export function wireChannels(channels) {
             channel.muted = !channel.muted;
             channel.muteEl.classList.toggle('muted', channel.muted);
             channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
+        });
+
+        // Cache instrument changes
+        channel.soundEl.addEventListener('change', () => {
+            channel.sound = channel.soundEl.value;
         });
     });
 }
@@ -1076,15 +1089,12 @@ export function playChannelSound(state, channels, channelName, globalVolume = 1,
 /** Plays a sound for a single channel if not muted. */
 function playSingleChannel(state, channel, globalVolume) {
     if (!channel || channel.muted) return;
-    if (!channel.soundEl) return;
+    if (!channel.sound) return;
 
     const vol = channel.volume * channel.gainScale * globalVolume;
     if (vol <= 0) return;
 
-    const sound = channel.soundEl.value;
-    if (!sound) return;
-
-    const fn = instruments[sound];
+    const fn = instruments[channel.sound];
     if (!fn) return;
 
     fn(state, state.audioCtx.currentTime, vol, channel.prefix || '');
