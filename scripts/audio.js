@@ -1055,11 +1055,12 @@ export function playChannelSound(state, channels, channelName, globalVolume = 1)
 /** Plays a sound for a single channel if not muted. */
 function playSingleChannel(state, channel, globalVolume) {
     if (!channel || channel.muted) return;
+    if (!channel.soundEl) return;
 
     const vol = channel.volume * channel.gainScale * globalVolume;
     if (vol <= 0) return;
 
-    const sound = channel.soundEl?.value;
+    const sound = channel.soundEl.value;
     if (!sound) return;
 
     const fn = instruments[sound];

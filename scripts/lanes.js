@@ -215,12 +215,15 @@ function buildVoiceButtons(lane, voice, voiceIndex) {
     row.className = 'voice-row';
     row.dataset.voiceIndex = voiceIndex;
 
-    // Voice label
+    // Voice label area (fixed width to prevent shifting)
+    const labelArea = document.createElement('div');
+    labelArea.className = 'voice-label-area';
+
     const label = document.createElement('span');
     label.className = 'voice-label';
     label.textContent = `Voice ${voiceIndex + 1}`;
     label.style.color = lane.color;
-    row.appendChild(label);
+    labelArea.appendChild(label);
 
     // Remove button (not for first voice)
     if (voiceIndex > 0) {
@@ -232,8 +235,10 @@ function buildVoiceButtons(lane, voice, voiceIndex) {
             removeVoice(lane, voiceIndex);
             buildMultiVoiceLane(lane);
         });
-        row.appendChild(removeBtn);
+        labelArea.appendChild(removeBtn);
     }
+
+    row.appendChild(labelArea);
 
     // Step buttons container
     const stepsContainer = document.createElement('div');

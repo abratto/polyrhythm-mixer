@@ -59,24 +59,30 @@ function createVoiceStripDOM(container, prefix, voiceIndex, color, label) {
 function initVoiceChannels() {
     // Master voices
     const masterContainer = ui.masterVoiceContainer;
-    lanes.master.voices.forEach((_, idx) => {
-        createVoiceStripDOM(masterContainer, 'master', idx, '#ff9100', 'Master');
-        addVoiceChannel(channels, 'master', masterContainer, idx);
-    });
+    if (masterContainer) {
+        lanes.master.voices.forEach((_, idx) => {
+            createVoiceStripDOM(masterContainer, 'master', idx, '#ff9100', 'Master');
+            addVoiceChannel(channels, 'master', masterContainer, idx);
+        });
+    }
 
     // A phrase voices
     const aContainer = ui.AVoiceContainer;
-    lanes.Aphrase.voices.forEach((_, idx) => {
-        createVoiceStripDOM(aContainer, 'A', idx, '#ff3366', 'A Phrase');
-        addVoiceChannel(channels, 'A', aContainer, idx);
-    });
+    if (aContainer) {
+        lanes.Aphrase.voices.forEach((_, idx) => {
+            createVoiceStripDOM(aContainer, 'A', idx, '#ff3366', 'A Phrase');
+            addVoiceChannel(channels, 'A', aContainer, idx);
+        });
+    }
 
     // B phrase voices
     const bContainer = ui.BVoiceContainer;
-    lanes.Bphrase.voices.forEach((_, idx) => {
-        createVoiceStripDOM(bContainer, 'B', idx, '#00e5ff', 'B Phrase');
-        addVoiceChannel(channels, 'B', bContainer, idx);
-    });
+    if (bContainer) {
+        lanes.Bphrase.voices.forEach((_, idx) => {
+            createVoiceStripDOM(bContainer, 'B', idx, '#00e5ff', 'B Phrase');
+            addVoiceChannel(channels, 'B', bContainer, idx);
+        });
+    }
 }
 
 /**

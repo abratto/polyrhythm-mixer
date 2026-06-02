@@ -614,14 +614,19 @@
             gap: 8px;
             width: 100%;
             margin-bottom: 4px;
-            flex-direction: row;
+        }
+        .voice-label-area {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 110px;
+            flex-shrink: 0;
         }
         .voice-label {
             font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1px;
-            min-width: 60px;
             flex-shrink: 0;
         }
         .voice-steps {
