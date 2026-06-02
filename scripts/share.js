@@ -171,11 +171,12 @@ function migrateV1toV2(payload) {
     // Migrate channel arrays to named objects
     const c = payload.c;
     if (c && Array.isArray(c.s) && Array.isArray(c.v) && Array.isArray(c.u)) {
-        const channelOrder = ['driver', 'A', 'Awheel', 'B', 'Bwheel'];
+        // v1 channel order: driver, custom, A, Awheel, B, Bwheel
+        const channelOrder = ['driver', 'custom', 'A', 'Awheel', 'B', 'Bwheel'];
         payload.c = {};
         channelOrder.forEach((name, idx) => {
-            // Skip A and B — they become voice arrays in v2
-            if (name === 'A' || name === 'B') return;
+            // Skip custom, A, and B — custom is removed, A/B become voice arrays in v2
+            if (name === 'custom' || name === 'A' || name === 'B') return;
             const v2Name = name === 'Awheel' ? 'awheel' : name === 'Bwheel' ? 'bwheel' : name.toLowerCase();
             payload.c[v2Name] = {
                 s: c.s[idx] || null,
