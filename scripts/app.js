@@ -14,7 +14,7 @@
  */
 import { getDomRefs } from './dom.js';
 import { createState, resetFlashState, updateDerivedState, updatePhaseUI } from './state.js';
-import { createLanes, resetPatterns, buildAllLanes, wireLaneClearButtons, markCurrentButtons } from './lanes.js';
+import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, wireLaneClearButtons, markCurrentButtons } from './lanes.js';
 import { createChannels, populateMenus, wireChannels, toggleAudio, playChannelSound } from './audio.js';
 import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } from './controls.js';
 import { copyShareLink, loadStateFromUrl } from './share.js';
@@ -30,13 +30,13 @@ const channels = createChannels();
 
 /**
  * Rebuilds the entire system after a meter or phrase cycle change.
- * Recalculates derived state, resets patterns, rebuilds lane buttons,
- * and resets the animation angle to zero.
+ * Recalculates derived state, resizes lanes (preserving patterns),
+ * rebuilds lane buttons, and resets the animation angle to zero.
  */
 function rebuildSystem() {
     updateDerivedState(state);
     updatePhaseUI(state, ui);
-    resetPatterns(state, lanes);
+    resizeAllLanes(state, lanes);
     buildAllLanes(lanes);
     state.mainAngle = 0;
 }

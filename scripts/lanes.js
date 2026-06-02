@@ -108,6 +108,37 @@ export function resetPatterns(state, lanes) {
     state.lastActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };
 }
 
+/**
+ * Resizes a lane's selected array while preserving existing pattern data.
+ * If growing, new slots are empty (false). If shrinking, excess is truncated.
+ * Wheel lanes are treated specially: new slots are active (true).
+ */
+export function resizeLane(lane, newLength, isWheel = false) {
+    const old = lane.selected;
+    const resized = new Array(newLength).fill(isWheel);
+    const copyCount = Math.min(old.length, newLength);
+    for (let i = 0; i < copyCount; i++) {
+        resized[i] = old[i];
+    }
+    lane.selected = resized;
+}
+
+/**
+ * Resizes all lanes to match current derived state while preserving patterns.
+ * Called when meter or phrase length changes — keeps existing steps intact.
+ */
+export function resizeAllLanes(state, lanes) {
+    resizeLane(lanes.master, state.mainTeeth);
+    resizeLane(lanes.Aphrase, state.phraseStepsA);
+    resizeLane(lanes.Bphrase, state.phraseStepsB);
+    resizeLane(lanes.Awheel, state.A, true);
+    resizeLane(lanes.Bwheel, state.B, true);
+
+    // Ensure first phrase step is enabled if lane has steps
+    if (lanes.Aphrase.selected.length > 0) lanes.Aphrase.selected[0] = true;
+    if (lanes.Bphrase.selected.length > 0) lanes.Bphrase.selected[0] = true;
+}
+
 /** Creates a single step button for a lane with click-to-toggle behavior. */
 function createStepButton(lane, i) {
     const btn = document.createElement('button');
