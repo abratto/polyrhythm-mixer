@@ -145,17 +145,19 @@
 
     <div class="rack-unit" style="background: #101015; border-color: #2a2a3c; padding-top: 5px; padding-bottom: 5px; margin-top: 12px;">
         <div class="matrix-row">
-            <div class="matrix-header">
+            <div class="matrix-header" id="masterHeaderContainer">
                 <label id="masterTitle" style="color: #ff9100;">Master Wheel Sequence</label>
                 <button id="clearMasterBtn" class="clear-btn">Clear</button>
+                <button id="addMasterVoiceBtn" class="add-voice-btn">+ Voice</button>
             </div>
             <div id="masterGrid" class="sequencer-container"></div>
         </div>
 
         <div class="matrix-row">
-            <div class="matrix-header">
+            <div class="matrix-header" id="meterAPhraseHeaderContainer">
                 <label id="titleAPhrase" style="color: #ff3366;">Meter A Phrase Sequencer</label>
                 <button id="clearAPhraseBtn" class="clear-btn">Clear</button>
+                <button id="addAPhraseVoiceBtn" class="add-voice-btn">+ Voice</button>
             </div>
             <div id="meterAPhraseGrid" class="sequencer-container"></div>
         </div>
@@ -169,9 +171,10 @@
         </div>
 
         <div class="matrix-row">
-            <div class="matrix-header">
+            <div class="matrix-header" id="meterBPhraseHeaderContainer">
                 <label id="titleBPhrase" style="color: #00e5ff;">Meter B Phrase Sequencer</label>
                 <button id="clearBPhraseBtn" class="clear-btn">Clear</button>
+                <button id="addBPhraseVoiceBtn" class="add-voice-btn">+ Voice</button>
             </div>
             <div id="meterBPhraseGrid" class="sequencer-container"></div>
         </div>
@@ -208,16 +211,11 @@
               </div>
           </div>
 
-          <div class="mixer-strip ch-a">
-              <div class="strip-header" style="color: #ff3366;">Meter A Phrase</div>
-              <select id="soundA" style="padding: 4px; width: 100%; font-size:12px;"></select>
-              <div class="fader-area">
-                  <button id="muteA" class="mute-btn">Mute</button>
-              </div>
-              <div class="fader-area volume-only-area">
-                  <input type="range" id="volA" class="volume-fader" min="0" max="1" step="0.05" value="0.5">
-              </div>
-          </div>
+          <!-- Dynamic master voice strips -->
+          <div id="masterVoiceContainer"></div>
+
+          <!-- Dynamic A phrase voice strips -->
+          <div id="AVoiceContainer"></div>
 
           <div class="mixer-strip ch-a-wheel">
               <div class="strip-header" style="color: #ff6b8f;">Meter A Wheel</div>
@@ -230,16 +228,8 @@
               </div>
           </div>
 
-          <div class="mixer-strip ch-b">
-              <div class="strip-header" style="color: #00e5ff;">Meter B Phrase</div>
-              <select id="soundB" style="padding: 4px; width: 100%; font-size:12px;"></select>
-              <div class="fader-area">
-                  <button id="muteB" class="mute-btn">Mute</button>
-              </div>
-              <div class="fader-area volume-only-area">
-                  <input type="range" id="volB" class="volume-fader" min="0" max="1" step="0.05" value="0.4">
-              </div>
-          </div>
+          <!-- Dynamic B phrase voice strips -->
+          <div id="BVoiceContainer"></div>
 
           <div class="mixer-strip ch-b-wheel">
               <div class="strip-header" style="color: #6ef2ff;">Meter B Wheel</div>

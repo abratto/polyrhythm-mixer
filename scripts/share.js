@@ -5,17 +5,14 @@
  * can share their configurations. Supports versioned payloads with automatic
  * migration from older formats, and fails silently on invalid data.
  *
- * Payload structure (v1):
- *   { v: 1, m: { A, B, phraseA, ... }, p: { m, ap, aw, bp, bw }, c: { s, v, u } }
+ * Payload structure (v2):
+ *   { v: 2, m: { A, B, phraseA, ... }, p: { m: [voice...], ap: [voice...], ... }, c: { driver, custom, ... } }
  *
- * Migration: v0 payloads (positional array `m`) are automatically converted
- * to v1 (named fields) on load. Future versions (v > current) are rejected.
+ * Migration: v0/v1 payloads are automatically converted to v2 on load.
+ * Future versions (v > current) are rejected.
  */
 
-const SHARE_VERSION = 1;
-
-// Channel order for serializing sound selections, volumes, and mute states
-const CHANNEL_ORDER = ['driver', 'custom', 'A', 'Awheel', 'B', 'Bwheel'];
+const SHARE_VERSION = 2;
 
 /** Clamps a value to an integer range, returning null for invalid input. */
 function clampInteger(value, min, max) {
@@ -75,6 +72,16 @@ function decodePayload(encoded) {
     return JSON.parse(json);
 }
 
+/** Serializes a single voice's pattern and channel state. */
+function serializeVoice(voice, channel) {
+    return {
+        s: selectedIndexes(voice.selected),
+        instrument: channel?.soundEl?.value || null,
+        volume: channel?.volume ?? 0.5,
+        muted: channel?.muted ? 1 : 0
+    };
+}
+
 /**
  * Serializes the current app state into a shareable payload object.
  * Includes meter settings, phrase patterns, lane patterns, and channel audio settings.
@@ -92,16 +99,33 @@ function serializeState({ state, lanes, channels }) {
             tempo: state.tempo
         },
         p: {
-            m: selectedIndexes(lanes.master.selected),
-            ap: selectedIndexes(lanes.Aphrase.selected),
-            aw: selectedIndexes(lanes.Awheel.selected),
-            bp: selectedIndexes(lanes.Bphrase.selected),
-            bw: selectedIndexes(lanes.Bwheel.selected)
+            m: lanes.master.voices.map((v, i) => serializeVoice(v, channels.masterVoices[i])),
+            ap: lanes.Aphrase.voices.map((v, i) => serializeVoice(v, channels.Avoices[i])),
+            aw: { s: selectedIndexes(lanes.Awheel.selected) },
+            bp: lanes.Bphrase.voices.map((v, i) => serializeVoice(v, channels.Bvoices[i])),
+            bw: { s: selectedIndexes(lanes.Bwheel.selected) }
         },
         c: {
-            s: CHANNEL_ORDER.map((name) => channels[name].soundEl.value),
-            v: CHANNEL_ORDER.map((name) => channels[name].volume),
-            u: CHANNEL_ORDER.map((name) => channels[name].muted ? 1 : 0)
+            driver: {
+                s: channels.driver.soundEl.value,
+                v: channels.driver.volume,
+                u: channels.driver.muted ? 1 : 0
+            },
+            custom: {
+                s: channels.custom.soundEl.value,
+                v: channels.custom.volume,
+                u: channels.custom.muted ? 1 : 0
+            },
+            awheel: {
+                s: channels.Awheel.soundEl.value,
+                v: channels.Awheel.volume,
+                u: channels.Awheel.muted ? 1 : 0
+            },
+            bwheel: {
+                s: channels.Bwheel.soundEl.value,
+                v: channels.Bwheel.volume,
+                u: channels.Bwheel.muted ? 1 : 0
+            }
         }
     };
 }
@@ -129,6 +153,48 @@ function migrateV0toV1(payload) {
 }
 
 /**
+ * Migrates a v1 payload (single arrays per lane) to v2 (multi-voice arrays).
+ * v1 format: p = { m: [indexes], ap: [indexes], aw: [indexes], bp: [indexes], bw: [indexes] }
+ * v2 format: p = { m: [{s: [...], instrument, volume, muted}], ap: [...], ... }
+ */
+function migrateV1toV2(payload) {
+    const p = payload.p;
+    if (!p || typeof p !== 'object') return payload;
+
+    // Wrap single arrays in voice objects
+    const wrapVoice = (arr) => [{ s: Array.isArray(arr) ? arr : [] }];
+    const wrapSingle = (arr) => ({ s: Array.isArray(arr) ? arr : [] });
+
+    payload.p = {
+        m: wrapVoice(p.m),
+        ap: wrapVoice(p.ap),
+        aw: wrapSingle(p.aw),
+        bp: wrapVoice(p.bp),
+        bw: wrapSingle(p.bw)
+    };
+
+    // Migrate channel arrays to named objects
+    const c = payload.c;
+    if (c && Array.isArray(c.s) && Array.isArray(c.v) && Array.isArray(c.u)) {
+        const channelOrder = ['driver', 'custom', 'A', 'Awheel', 'B', 'Bwheel'];
+        payload.c = {};
+        channelOrder.forEach((name, idx) => {
+            // Skip A and B — they become voice arrays in v2
+            if (name === 'A' || name === 'B') return;
+            const v2Name = name === 'Awheel' ? 'awheel' : name === 'Bwheel' ? 'bwheel' : name.toLowerCase();
+            payload.c[v2Name] = {
+                s: c.s[idx] || null,
+                v: c.v[idx] ?? 0.5,
+                u: c.u[idx] || 0
+            };
+        });
+    }
+
+    payload.v = 2;
+    return payload;
+}
+
+/**
  * Runs the appropriate migration functions based on the payload version.
  * Throws if the payload is invalid or from a future (unsupported) version.
  */
@@ -142,6 +208,11 @@ function migratePayload(payload) {
         payload = migrateV0toV1(payload);
     }
 
+    // v0 or v1 → v2
+    if (payload.v === 1) {
+        payload = migrateV1toV2(payload);
+    }
+
     // Reject payloads from future versions
     if (payload.v > SHARE_VERSION) {
         throw new Error(`Share payload version ${payload.v} is newer than supported version ${SHARE_VERSION}`);
@@ -150,50 +221,26 @@ function migratePayload(payload) {
     return payload;
 }
 
-/**
- * Applies channel audio settings (sound selection, volume, mute) from a share payload.
- * Skips channels that no longer exist in the current version.
- */
-function applyChannelState(channels, channelState) {
-    if (!channelState || typeof channelState !== 'object') return;
+/** Applies a single voice's channel state (instrument, volume, mute). */
+function applyVoiceChannelState(channel, voiceState) {
+    if (!channel || !voiceState) return;
 
-    if (Array.isArray(channelState.s)) {
-        channelState.s.forEach((sound, idx) => {
-            const name = CHANNEL_ORDER[idx];
-            if (!name) return;
-            const channel = channels[name];
-            if (!channel) return;
-            const hasSoundOption = Array.from(channel.soundEl.options).some((opt) => opt.value === sound);
-            if (typeof sound === 'string' && hasSoundOption) {
-                channel.soundEl.value = sound;
-            }
-        });
+    if (voiceState.instrument && channel.soundEl) {
+        const hasSoundOption = Array.from(channel.soundEl.options).some(opt => opt.value === voiceState.instrument);
+        if (hasSoundOption) channel.soundEl.value = voiceState.instrument;
     }
 
-    if (Array.isArray(channelState.v)) {
-        channelState.v.forEach((volume, idx) => {
-            const name = CHANNEL_ORDER[idx];
-            if (!name) return;
-            const channel = channels[name];
-            if (!channel) return;
-            if (typeof volume === 'number' && Number.isFinite(volume)) {
-                const clampedVolume = Math.max(0, Math.min(1, volume));
-                channel.volume = clampedVolume;
-                channel.volEl.value = String(clampedVolume);
-            }
-        });
+    if (typeof voiceState.volume === 'number' && Number.isFinite(voiceState.volume)) {
+        channel.volume = Math.max(0, Math.min(1, voiceState.volume));
+        if (channel.volEl) channel.volEl.value = String(channel.volume);
     }
 
-    if (Array.isArray(channelState.u)) {
-        channelState.u.forEach((muted, idx) => {
-            const name = CHANNEL_ORDER[idx];
-            if (!name) return;
-            const channel = channels[name];
-            if (!channel) return;
-            channel.muted = !!muted;
+    if (voiceState.muted !== undefined) {
+        channel.muted = !!voiceState.muted;
+        if (channel.muteEl) {
             channel.muteEl.classList.toggle('muted', channel.muted);
             channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
-        });
+        }
     }
 }
 
@@ -244,14 +291,48 @@ function restoreFromPayload(payload, deps) {
     resetPatterns(state, lanes);
 
     if (payload.p && typeof payload.p === 'object') {
-        applySelectedIndexes(lanes.master.selected, payload.p.m);
-        applySelectedIndexes(lanes.Aphrase.selected, payload.p.ap);
-        applySelectedIndexes(lanes.Awheel.selected, payload.p.aw);
-        applySelectedIndexes(lanes.Bphrase.selected, payload.p.bp);
-        applySelectedIndexes(lanes.Bwheel.selected, payload.p.bw);
+        // Multi-voice lanes: restore each voice
+        const restoreVoiceLane = (lane, voiceData, prefix, container, color, label) => {
+            if (!Array.isArray(voiceData)) return;
+            // Resize voices to match payload
+            while (lane.voices.length < voiceData.length) {
+                lane.voices.push({ selected: [], buttons: [], channel: null });
+            }
+            voiceData.forEach((vd, idx) => {
+                const voice = lane.voices[idx];
+                if (voice) {
+                    // Resize selected array to current lane length
+                    voice.selected = new Array(lane.count()).fill(false);
+                    applySelectedIndexes(voice.selected, vd.s);
+
+                    // Restore channel state if channel exists
+                    if (voice.channel) {
+                        applyVoiceChannelState(voice.channel, vd);
+                    }
+                }
+            });
+        };
+
+        restoreVoiceLane(lanes.master, payload.p.m, 'master', ui.masterVoiceContainer, '#ff9100', 'Master');
+        restoreVoiceLane(lanes.Aphrase, payload.p.ap, 'A', ui.AVoiceContainer, '#ff3366', 'A Phrase');
+        restoreVoiceLane(lanes.Bphrase, payload.p.bp, 'B', ui.BVoiceContainer, '#00e5ff', 'B Phrase');
+
+        // Single-voice lanes
+        if (payload.p.aw) applySelectedIndexes(lanes.Awheel.selected, payload.p.aw.s);
+        if (payload.p.bw) applySelectedIndexes(lanes.Bwheel.selected, payload.p.bw.s);
     }
 
-    applyChannelState(channels, payload.c);
+    // Restore fixed channel state
+    const fixedChannels = ['driver', 'custom', 'awheel', 'bwheel'];
+    if (payload.c && typeof payload.c === 'object') {
+        fixedChannels.forEach(name => {
+            const channelState = payload.c[name];
+            if (!channelState) return;
+            const channel = channels[name];
+            if (!channel) return;
+            applyVoiceChannelState(channel, channelState);
+        });
+    }
 
     state.mainAngle = 0;
     resetFlashState(state);

@@ -44,6 +44,16 @@ export function getDomRefs() {
         meterBPhraseGrid: document.getElementById('meterBPhraseGrid'),
         meterBWheelGrid: document.getElementById('meterBWheelGrid'),
 
+        // Header containers for multi-voice lanes (contain title + clear + add voice button)
+        masterHeaderContainer: document.getElementById('masterHeaderContainer'),
+        meterAPhraseHeaderContainer: document.getElementById('meterAPhraseHeaderContainer'),
+        meterBPhraseHeaderContainer: document.getElementById('meterBPhraseHeaderContainer'),
+
+        // Add voice buttons for multi-voice lanes
+        addMasterVoiceBtn: document.getElementById('addMasterVoiceBtn'),
+        addAPhraseVoiceBtn: document.getElementById('addAPhraseVoiceBtn'),
+        addBPhraseVoiceBtn: document.getElementById('addBPhraseVoiceBtn'),
+
         // Clear buttons for each lane's sequencer
         clearMasterBtn: document.getElementById('clearMasterBtn'),
         clearAPhraseBtn: document.getElementById('clearAPhraseBtn'),
@@ -56,7 +66,12 @@ export function getDomRefs() {
         titleAPhrase: document.getElementById('titleAPhrase'),
         titleAWheel: document.getElementById('titleAWheel'),
         titleBPhrase: document.getElementById('titleBPhrase'),
-        titleBWheel: document.getElementById('titleBWheel')
+        titleBWheel: document.getElementById('titleBWheel'),
+
+        // Mixer console containers for dynamic voice strips
+        masterVoiceContainer: document.getElementById('masterVoiceContainer'),
+        AVoiceContainer: document.getElementById('AVoiceContainer'),
+        BVoiceContainer: document.getElementById('BVoiceContainer')
     };
 
     return { canvas, ctx, ui };

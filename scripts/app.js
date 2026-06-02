@@ -4,9 +4,10 @@
  * Bootstraps the polyrhythm mixer by:
  *   1. Collecting DOM references
  *   2. Creating state, lanes, and audio channels
- *   3. Wiring all UI controls to their handlers
- *   4. Attempting to load shared state from the URL
- *   5. Starting the canvas animation loop
+ *   3. Initializing voice channels for multi-voice lanes
+ *   4. Wiring all UI controls to their handlers
+ *   5. Attempting to load shared state from the URL
+ *   6. Starting the canvas animation loop
  *
  * The initialization order is critical: state must be derived before
  * lanes are built, and controls must be wired before the animation
@@ -14,8 +15,8 @@
  */
 import { getDomRefs } from './dom.js';
 import { createState, resetFlashState, updateDerivedState, updatePhaseUI } from './state.js';
-import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, wireLaneClearButtons, markCurrentButtons } from './lanes.js';
-import { createChannels, populateMenus, wireChannels, toggleAudio, playChannelSound } from './audio.js';
+import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, wireLaneClearButtons, markCurrentButtons, addVoice, removeVoice } from './lanes.js';
+import { createChannels, populateMenus, wireChannels, toggleAudio, playChannelSound, addVoiceChannel, removeVoiceChannel } from './audio.js';
 import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } from './controls.js';
 import { copyShareLink, loadStateFromUrl } from './share.js';
 import { startAnimation } from './render.js';
@@ -27,6 +28,56 @@ const { canvas, ctx, ui } = getDomRefs();
 const state = createState(ui);
 const lanes = createLanes(ui, state);
 const channels = createChannels();
+
+/**
+ * Creates the initial voice channel DOM strips for a multi-voice group.
+ */
+function createVoiceStripDOM(container, prefix, voiceIndex, color, label) {
+    const id = `${prefix}_${voiceIndex}`;
+    const strip = document.createElement('div');
+    strip.className = 'mixer-strip';
+    strip.id = `strip_${id}`;
+    strip.style.borderLeft = `3px solid ${color}`;
+
+    strip.innerHTML = `
+        <div class="strip-header" style="color: ${color};">${label} Voice ${voiceIndex + 1}</div>
+        <select id="sound_${id}" style="padding: 4px; width: 100%; font-size:12px;"></select>
+        <div class="fader-area">
+            <button id="mute_${id}" class="mute-btn">Mute</button>
+        </div>
+        <div class="fader-area volume-only-area">
+            <input type="range" id="vol_${id}" class="volume-fader" min="0" max="1" step="0.05" value="0.5">
+        </div>
+    `;
+
+    container.appendChild(strip);
+}
+
+/**
+ * Initializes voice channels for all multi-voice groups.
+ */
+function initVoiceChannels() {
+    // Master voices
+    const masterContainer = ui.masterVoiceContainer;
+    lanes.master.voices.forEach((_, idx) => {
+        createVoiceStripDOM(masterContainer, 'master', idx, '#ff9100', 'Master');
+        addVoiceChannel(channels, 'master', masterContainer, idx);
+    });
+
+    // A phrase voices
+    const aContainer = ui.AVoiceContainer;
+    lanes.Aphrase.voices.forEach((_, idx) => {
+        createVoiceStripDOM(aContainer, 'A', idx, '#ff3366', 'A Phrase');
+        addVoiceChannel(channels, 'A', aContainer, idx);
+    });
+
+    // B phrase voices
+    const bContainer = ui.BVoiceContainer;
+    lanes.Bphrase.voices.forEach((_, idx) => {
+        createVoiceStripDOM(bContainer, 'B', idx, '#00e5ff', 'B Phrase');
+        addVoiceChannel(channels, 'B', bContainer, idx);
+    });
+}
 
 /**
  * Rebuilds the entire system after a meter or phrase cycle change.
@@ -52,7 +103,41 @@ function resetAndRebuild() {
     buildAllLanes(lanes);
 }
 
-// Shared dependency bag passed to share and animation functions
+/**
+ * Adds a new voice to a lane group and creates its channel/strip.
+ */
+function handleAddVoice(lane, prefix, container, color, label) {
+    addVoice(lane);
+    const voiceIndex = lane.voices.length - 1;
+    createVoiceStripDOM(container, prefix, voiceIndex, color, label);
+    const channel = addVoiceChannel(channels, prefix, container, voiceIndex);
+    lane.voices[voiceIndex].channel = channel;
+    buildAllLanes(lanes);
+}
+
+/**
+ * Removes a voice from a lane group and its channel/strip.
+ */
+function handleRemoveVoice(lane, prefix, voiceIndex) {
+    removeVoice(lane, voiceIndex);
+    removeVoiceChannel(channels, prefix, voiceIndex);
+
+    // Rebuild DOM strips with updated indices
+    const container = prefix === 'master' ? ui.masterVoiceContainer : prefix === 'A' ? ui.AVoiceContainer : ui.BVoiceContainer;
+    const color = prefix === 'master' ? '#ff9100' : prefix === 'A' ? '#ff3366' : '#00e5ff';
+    const label = prefix === 'master' ? 'Master' : prefix === 'A' ? 'A Phrase' : 'B Phrase';
+
+    container.innerHTML = '';
+    lane.voices.forEach((_, idx) => {
+        createVoiceStripDOM(container, prefix, idx, color, label);
+        const channel = addVoiceChannel(channels, prefix, container, idx);
+        lane.voices[idx].channel = channel;
+    });
+
+    buildAllLanes(lanes);
+}
+
+// Shared dependency bag passing to share and animation functions
 const shareDeps = {
     state,
     ui,
@@ -71,7 +156,23 @@ populateMenus(channels);
 wireChannels(channels);
 wireLaneClearButtons(lanes);
 
-// Phase 4: Wire all user controls
+// Phase 4: Initialize voice channels
+initVoiceChannels();
+
+// Phase 5: Wire add/remove voice buttons
+ui.addMasterVoiceBtn.addEventListener('click', () => {
+    handleAddVoice(lanes.master, 'master', ui.masterVoiceContainer, '#ff9100', 'Master');
+});
+
+ui.addAPhraseVoiceBtn.addEventListener('click', () => {
+    handleAddVoice(lanes.Aphrase, 'A', ui.AVoiceContainer, '#ff3366', 'A Phrase');
+});
+
+ui.addBPhraseVoiceBtn.addEventListener('click', () => {
+    handleAddVoice(lanes.Bphrase, 'B', ui.BVoiceContainer, '#00e5ff', 'B Phrase');
+});
+
+// Phase 6: Wire all user controls
 wireControls({
     ui,
     state,
@@ -81,20 +182,20 @@ wireControls({
     onShare: () => copyShareLink(shareDeps)
 });
 
-// Phase 5: Build initial lane patterns and attempt to load shared state
+// Phase 7: Build initial lane patterns and attempt to load shared state
 resetPatterns(state, lanes);
 updatePhaseUI(state, ui);
 buildAllLanes(lanes);
 loadStateFromUrl(shareDeps);
 
-// Phase 6: Show help modal for first-time visitors
+// Phase 8: Show help modal for first-time visitors
 if (shouldAutoOpenHelpModal()) {
     openHelpModal(ui);
 } else {
     closeHelpModal(ui, { remember: false });
 }
 
-// Phase 7: Start the animation loop
+// Phase 9: Start the animation loop
 startAnimation({
     canvas,
     ctx,

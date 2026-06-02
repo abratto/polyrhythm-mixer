@@ -1,13 +1,14 @@
 /**
- * lanes.js — Sequencer lane management.
+ * lanes.js — Sequencer lane management with multi-voice support.
  *
- * Each "lane" represents a row of step buttons in the mixer UI:
+ * Each "lane group" represents a row of step buttons in the mixer UI:
  *   - master: the master wheel sequence (one step per tooth)
  *   - Aphrase / Bphrase: phrase sequencers for meters A and B
  *   - Awheel / Bwheel: wheel lanes showing equal placements within one cycle
  *
- * Lanes are defined as configuration objects, then built into DOM buttons
- * and wired for interaction (toggle steps, clear all).
+ * Master, Aphrase, and Bphrase support multiple independent voices.
+ * Each voice has its own selected[] pattern, DOM buttons, and audio channel.
+ * Awheel and Bwheel remain single-voice (no pattern to layer).
  */
 import { reduceFraction } from './math.js';
 
@@ -17,103 +18,158 @@ function masterRateLabelForMeter(state, meterValue) {
 }
 
 /**
- * Creates the lane configuration objects. Each lane defines:
- *   - container: the DOM element to hold step buttons
- *   - count(): how many steps this lane has
- *   - label(): descriptive text shown above the lane
- *   - textForStep(i): label for each individual step button
- *   - boundary(i): whether step i should have a visual bar-line separator
+ * Creates a single voice object with empty selected pattern and no DOM refs yet.
+ */
+function createVoice() {
+    return {
+        selected: [],
+        buttons: [],
+        channel: null // populated by audio.js when voice is added
+    };
+}
+
+/**
+ * Creates the lane configuration objects. Multi-voice lanes (master, Aphrase, Bphrase)
+ * have a `voices` array. Single-voice lanes (Awheel, Bwheel) have a flat structure.
  */
 export function createLanes(ui, state) {
     return {
         master: {
             container: ui.masterGrid,
-            clearBtn: ui.clearMasterBtn,
-            selected: [],
+            headerContainer: ui.masterHeaderContainer,
+            addVoiceBtn: ui.addMasterVoiceBtn,
             className: 'master-btn',
             stepId: 'master-step',
             count: () => state.mainTeeth,
             label: () => `Master Wheel Sequence (${state.mainTeeth} steps / ${state.mainTeeth} teeth • one full cycle)`,
             titleEl: ui.masterTitle,
             textForStep: i => i + 1,
-            boundary: i => i % Math.max(1, Math.floor(state.mainTeeth / 4)) === 0
+            boundary: i => i % Math.max(1, Math.floor(state.mainTeeth / 4)) === 0,
+            voices: [createVoice()],
+            isMultiVoice: true,
+            color: '#ff9100',
+            channelPrefix: 'master'
         },
         Aphrase: {
             container: ui.meterAPhraseGrid,
-            clearBtn: ui.clearAPhraseBtn,
-            selected: [],
+            headerContainer: ui.meterAPhraseHeaderContainer,
+            addVoiceBtn: ui.addAPhraseVoiceBtn,
             className: 'meterA-btn',
             stepId: 'meterA-phrase-step',
             count: () => state.phraseStepsA,
             label: () => `Meter A Phrase Sequencer (${state.phraseCyclesA} master cycle phrase • ${state.phraseStepsA} steps • clocked at ${masterRateLabelForMeter(state, state.A)} master rate)`,
             titleEl: ui.titleAPhrase,
             textForStep: i => (i % state.A) + 1,
-            boundary: i => i % state.A === 0
+            boundary: i => i % state.A === 0,
+            voices: [createVoice()],
+            isMultiVoice: true,
+            color: '#ff3366',
+            channelPrefix: 'A'
         },
         Awheel: {
             container: ui.meterAWheelGrid,
-            clearBtn: ui.clearAWheelBtn,
-            selected: [],
             className: 'meterA-wheel-btn',
             stepId: 'meterA-wheel-step',
             count: () => state.A,
             label: () => `Meter A Wheel Lane (${state.A} equal placements within one master cycle)`,
             titleEl: ui.titleAWheel,
             textForStep: i => i + 1,
-            boundary: () => false
+            boundary: () => false,
+            selected: [],
+            buttons: [],
+            isMultiVoice: false,
+            color: '#ff6b8f',
+            channelPrefix: 'Awheel'
         },
         Bphrase: {
             container: ui.meterBPhraseGrid,
-            clearBtn: ui.clearBPhraseBtn,
-            selected: [],
+            headerContainer: ui.meterBPhraseHeaderContainer,
+            addVoiceBtn: ui.addBPhraseVoiceBtn,
             className: 'meterB-btn',
             stepId: 'meterB-phrase-step',
             count: () => state.phraseStepsB,
             label: () => `Meter B Phrase Sequencer (${state.phraseCyclesB} master cycle phrase • ${state.phraseStepsB} steps • clocked at ${masterRateLabelForMeter(state, state.B)} master rate)`,
             titleEl: ui.titleBPhrase,
             textForStep: i => (i % state.B) + 1,
-            boundary: i => i % state.B === 0
+            boundary: i => i % state.B === 0,
+            voices: [createVoice()],
+            isMultiVoice: true,
+            color: '#00e5ff',
+            channelPrefix: 'B'
         },
         Bwheel: {
             container: ui.meterBWheelGrid,
-            clearBtn: ui.clearBWheelBtn,
-            selected: [],
             className: 'meterB-wheel-btn',
             stepId: 'meterB-wheel-step',
             count: () => state.B,
             label: () => `Meter B Wheel Lane (${state.B} equal placements within one master cycle)`,
             titleEl: ui.titleBWheel,
             textForStep: i => i + 1,
-            boundary: () => false
+            boundary: () => false,
+            selected: [],
+            buttons: [],
+            isMultiVoice: false,
+            color: '#6ef2ff',
+            channelPrefix: 'Bwheel'
         }
     };
 }
 
 /**
  * Resets all lane patterns to their defaults:
- *   - Master and phrase lanes start empty
+ *   - Master and phrase lanes start empty (all voices)
  *   - Wheel lanes start fully active (every step triggers)
  *   - First step of each phrase lane is enabled by default
  */
 export function resetPatterns(state, lanes) {
-    lanes.master.selected = new Array(state.mainTeeth).fill(false);
-    lanes.Aphrase.selected = new Array(state.phraseStepsA).fill(false);
-    lanes.Bphrase.selected = new Array(state.phraseStepsB).fill(false);
+    lanes.master.voices.forEach(v => {
+        v.selected = new Array(state.mainTeeth).fill(false);
+    });
+    lanes.Aphrase.voices.forEach(v => {
+        v.selected = new Array(state.phraseStepsA).fill(false);
+    });
+    lanes.Bphrase.voices.forEach(v => {
+        v.selected = new Array(state.phraseStepsB).fill(false);
+    });
     lanes.Awheel.selected = new Array(state.A).fill(true);
     lanes.Bwheel.selected = new Array(state.B).fill(true);
 
-    if (lanes.Aphrase.selected.length > 0) lanes.Aphrase.selected[0] = true;
-    if (lanes.Bphrase.selected.length > 0) lanes.Bphrase.selected[0] = true;
+    if (lanes.Aphrase.voices[0]?.selected.length > 0) lanes.Aphrase.voices[0].selected[0] = true;
+    if (lanes.Bphrase.voices[0]?.selected.length > 0) lanes.Bphrase.voices[0].selected[0] = true;
 
     state.lastActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };
 }
 
 /**
- * Resizes a lane's selected array while preserving existing pattern data.
+ * Resizes a voice's selected array while preserving existing pattern data.
  * If growing, new slots are empty (false). If shrinking, excess is truncated.
- * Wheel lanes are treated specially: new slots are active (true).
  */
-export function resizeLane(lane, newLength, isWheel = false) {
+function resizeVoice(voice, newLength) {
+    const old = voice.selected;
+    const resized = new Array(newLength).fill(false);
+    const copyCount = Math.min(old.length, newLength);
+    for (let i = 0; i < copyCount; i++) {
+        resized[i] = old[i];
+    }
+    voice.selected = resized;
+}
+
+/**
+ * Resizes all lanes to match current derived state while preserving patterns.
+ */
+export function resizeAllLanes(state, lanes) {
+    lanes.master.voices.forEach(v => resizeVoice(v, state.mainTeeth));
+    lanes.Aphrase.voices.forEach(v => resizeVoice(v, state.phraseStepsA));
+    lanes.Bphrase.voices.forEach(v => resizeVoice(v, state.phraseStepsB));
+    resizeSingleLane(lanes.Awheel, state.A, true);
+    resizeSingleLane(lanes.Bwheel, state.B, true);
+
+    if (lanes.Aphrase.voices[0]?.selected.length > 0) lanes.Aphrase.voices[0].selected[0] = true;
+    if (lanes.Bphrase.voices[0]?.selected.length > 0) lanes.Bphrase.voices[0].selected[0] = true;
+}
+
+/** Resizes a single-voice lane (wheel lanes). */
+function resizeSingleLane(lane, newLength, isWheel = false) {
     const old = lane.selected;
     const resized = new Array(newLength).fill(isWheel);
     const copyCount = Math.min(old.length, newLength);
@@ -123,24 +179,100 @@ export function resizeLane(lane, newLength, isWheel = false) {
     lane.selected = resized;
 }
 
-/**
- * Resizes all lanes to match current derived state while preserving patterns.
- * Called when meter or phrase length changes — keeps existing steps intact.
- */
-export function resizeAllLanes(state, lanes) {
-    resizeLane(lanes.master, state.mainTeeth);
-    resizeLane(lanes.Aphrase, state.phraseStepsA);
-    resizeLane(lanes.Bphrase, state.phraseStepsB);
-    resizeLane(lanes.Awheel, state.A, true);
-    resizeLane(lanes.Bwheel, state.B, true);
-
-    // Ensure first phrase step is enabled if lane has steps
-    if (lanes.Aphrase.selected.length > 0) lanes.Aphrase.selected[0] = true;
-    if (lanes.Bphrase.selected.length > 0) lanes.Bphrase.selected[0] = true;
+/** Adds a new voice to a multi-voice lane. */
+export function addVoice(lane) {
+    if (!lane.isMultiVoice) return;
+    lane.voices.push(createVoice());
 }
 
-/** Creates a single step button for a lane with click-to-toggle behavior. */
-function createStepButton(lane, i) {
+/** Removes a voice from a multi-voice lane (minimum 1 voice). */
+export function removeVoice(lane, index) {
+    if (!lane.isMultiVoice || lane.voices.length <= 1) return;
+    lane.voices.splice(index, 1);
+}
+
+/** Creates a single step button for a voice with click-to-toggle behavior. */
+function createStepButton(lane, voice, i) {
+    const btn = document.createElement('button');
+    btn.className = `step-btn ${lane.className}`;
+    btn.id = `${lane.stepId}-${i}`;
+    btn.textContent = lane.textForStep(i);
+
+    if (lane.boundary(i)) btn.classList.add('bar-boundary');
+    if (voice.selected[i]) btn.classList.add('active');
+
+    btn.addEventListener('click', () => {
+        voice.selected[i] = !voice.selected[i];
+        btn.classList.toggle('active', voice.selected[i]);
+    });
+
+    return btn;
+}
+
+/** Builds all step buttons for a single voice, replacing any existing content. */
+function buildVoiceButtons(lane, voice, voiceIndex) {
+    const row = document.createElement('div');
+    row.className = 'voice-row';
+    row.dataset.voiceIndex = voiceIndex;
+
+    // Voice label
+    const label = document.createElement('span');
+    label.className = 'voice-label';
+    label.textContent = `Voice ${voiceIndex + 1}`;
+    label.style.color = lane.color;
+    row.appendChild(label);
+
+    // Remove button (not for first voice)
+    if (voiceIndex > 0) {
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-voice-btn';
+        removeBtn.textContent = '×';
+        removeBtn.title = `Remove Voice ${voiceIndex + 1}`;
+        removeBtn.addEventListener('click', () => {
+            removeVoice(lane, voiceIndex);
+            buildMultiVoiceLane(lane);
+        });
+        row.appendChild(removeBtn);
+    }
+
+    // Step buttons container
+    const stepsContainer = document.createElement('div');
+    stepsContainer.className = 'voice-steps';
+    voice.buttons = [];
+    for (let i = 0; i < lane.count(); i++) {
+        const btn = createStepButton(lane, voice, i);
+        stepsContainer.appendChild(btn);
+        voice.buttons.push(btn);
+    }
+    row.appendChild(stepsContainer);
+
+    return row;
+}
+
+/** Builds all voice rows for a multi-voice lane. */
+function buildMultiVoiceLane(lane) {
+    lane.container.innerHTML = '';
+    lane.titleEl.textContent = lane.label();
+    lane.voices.forEach((voice, idx) => {
+        const row = buildVoiceButtons(lane, voice, idx);
+        lane.container.appendChild(row);
+    });
+}
+
+/** Builds a single-voice lane. */
+function buildSingleLane(lane) {
+    lane.container.innerHTML = '';
+    lane.titleEl.textContent = lane.label();
+    lane.buttons = [];
+    for (let i = 0; i < lane.count(); i++) {
+        const btn = createStepButtonForSingle(lane, i);
+        lane.container.appendChild(btn);
+        lane.buttons.push(btn);
+    }
+}
+
+/** Creates a step button for a single-voice lane. */
+function createStepButtonForSingle(lane, i) {
     const btn = document.createElement('button');
     btn.className = `step-btn ${lane.className}`;
     btn.id = `${lane.stepId}-${i}`;
@@ -157,15 +289,12 @@ function createStepButton(lane, i) {
     return btn;
 }
 
-/** Builds all step buttons for a single lane, replacing any existing content. */
+/** Builds all step buttons for a lane, replacing any existing content. */
 export function buildLane(lane) {
-    lane.container.innerHTML = '';
-    lane.titleEl.textContent = lane.label();
-    lane.buttons = [];
-    for (let i = 0; i < lane.count(); i++) {
-        const btn = createStepButton(lane, i);
-        lane.container.appendChild(btn);
-        lane.buttons.push(btn);
+    if (lane.isMultiVoice) {
+        buildMultiVoiceLane(lane);
+    } else {
+        buildSingleLane(lane);
     }
 }
 
@@ -177,27 +306,38 @@ export function buildAllLanes(lanes) {
 /** Attaches click handlers to all lane clear buttons. */
 export function wireLaneClearButtons(lanes) {
     Object.values(lanes).forEach((lane) => {
-        lane.clearBtn.addEventListener('click', () => {
-            lane.selected.fill(false);
-            buildLane(lane);
-        });
+        if (lane.clearBtn) {
+            lane.clearBtn.addEventListener('click', () => {
+                if (lane.isMultiVoice) {
+                    lane.voices.forEach(v => v.selected.fill(false));
+                } else {
+                    lane.selected.fill(false);
+                }
+                buildLane(lane);
+            });
+        }
     });
 }
 
 /**
- * Highlights the currently active step button across all lanes
- * by adding the "current" class and removing it from all others.
- * Uses cached button references to avoid DOM queries.
+ * Highlights the currently active step button across all lanes.
+ * For multi-voice lanes, highlights the active step in each voice.
  */
 export function markCurrentButtons(lanes, active) {
-    // Remove "current" class from all cached buttons
     for (const lane of Object.values(lanes)) {
-        for (const btn of lane.buttons) {
-            btn.classList.remove('current');
+        if (lane.isMultiVoice) {
+            for (const voice of lane.voices) {
+                for (const btn of voice.buttons) {
+                    btn.classList.remove('current');
+                }
+            }
+        } else {
+            for (const btn of lane.buttons) {
+                btn.classList.remove('current');
+            }
         }
     }
 
-    // Add "current" class to the active step in each lane
     const mappings = [
         [lanes.master, active.master],
         [lanes.Aphrase, active.Aphrase],
@@ -207,7 +347,14 @@ export function markCurrentButtons(lanes, active) {
     ];
 
     for (const [lane, index] of mappings) {
-        const btn = lane.buttons[index];
-        if (btn) btn.classList.add('current');
+        if (lane.isMultiVoice) {
+            for (const voice of lane.voices) {
+                const btn = voice.buttons[index];
+                if (btn) btn.classList.add('current');
+            }
+        } else {
+            const btn = lane.buttons[index];
+            if (btn) btn.classList.add('current');
+        }
     }
 }
