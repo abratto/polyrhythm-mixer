@@ -53,6 +53,21 @@ function createVoiceStripDOM(container, prefix, voiceIndex, color, label) {
 }
 
 /**
+ * Rebuilds voice mixer strips to match the current voice count.
+ * Used after loading a share URL with multiple voices.
+ */
+function rebuildVoiceMixerStrips(prefix, container, color, label) {
+    const lane = prefix === 'master' ? lanes.master : prefix === 'A' ? lanes.Aphrase : lanes.Bphrase;
+    container.innerHTML = '';
+    channels[`${prefix}voices`] = [];
+    lane.voices.forEach((_, idx) => {
+        createVoiceStripDOM(container, prefix, idx, color, label);
+        const channel = addVoiceChannel(channels, prefix, container, idx);
+        lane.voices[idx].channel = channel;
+    });
+}
+
+/**
  * Initializes voice channels for all multi-voice groups.
  */
 function initVoiceChannels() {
@@ -201,7 +216,14 @@ wireControls({
 resetPatterns(state, lanes);
 updatePhaseUI(state, ui);
 buildAllLanes(lanes);
-loadStateFromUrl(shareDeps);
+const loadedFromUrl = loadStateFromUrl(shareDeps);
+
+// If loaded from URL, rebuild voice mixer strips to match restored voices
+if (loadedFromUrl) {
+    rebuildVoiceMixerStrips('master', ui.masterVoiceContainer, '#ff9100', 'Master');
+    rebuildVoiceMixerStrips('A', ui.AVoiceContainer, '#ff3366', 'A Phrase');
+    rebuildVoiceMixerStrips('B', ui.BVoiceContainer, '#00e5ff', 'B Phrase');
+}
 
 // Phase 8: Show help modal for first-time visitors
 if (shouldAutoOpenHelpModal()) {

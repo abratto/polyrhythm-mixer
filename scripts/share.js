@@ -289,22 +289,13 @@ function restoreFromPayload(payload, deps) {
         // Multi-voice lanes: restore each voice
         const restoreVoiceLane = (lane, voiceData, prefix, container, color, label) => {
             if (!Array.isArray(voiceData)) return;
-            // Resize voices to match payload
-            while (lane.voices.length < voiceData.length) {
-                lane.voices.push({ selected: [], buttons: [], channel: null });
-            }
+            // Clear existing voices and rebuild from payload
+            lane.voices.length = 0;
             voiceData.forEach((vd, idx) => {
-                const voice = lane.voices[idx];
-                if (voice) {
-                    // Resize selected array to current lane length
-                    voice.selected = new Array(lane.count()).fill(false);
-                    applySelectedIndexes(voice.selected, vd.s);
-
-                    // Restore channel state if channel exists
-                    if (voice.channel) {
-                        applyVoiceChannelState(voice.channel, vd);
-                    }
-                }
+                const voice = { selected: [], buttons: [], channel: null };
+                voice.selected = new Array(lane.count()).fill(false);
+                applySelectedIndexes(voice.selected, vd.s);
+                lane.voices.push(voice);
             });
         };
 
@@ -368,10 +359,15 @@ function pulseShareButton(button, label) {
 
 /** Encodes the current state and copies the share URL to the clipboard. */
 export async function copyShareLink(deps) {
-    const payload = serializeState(deps);
-    const url = createShareUrl(payload);
-    await copyToClipboard(url);
-    pulseShareButton(deps.ui.shareBtn, 'Copied');
+    try {
+        const payload = serializeState(deps);
+        const url = createShareUrl(payload);
+        await copyToClipboard(url);
+        pulseShareButton(deps.ui.shareBtn, 'Copied');
+    } catch (err) {
+        console.error('Share failed:', err);
+        pulseShareButton(deps.ui.shareBtn, 'Error');
+    }
 }
 
 /**
