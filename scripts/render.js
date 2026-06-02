@@ -124,18 +124,21 @@ function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop
         ctx.restore();
     }
 
-    // Top position indicator dot
+    // Top position indicator dot — marks the reference tooth (start of rotation)
     ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 6;
+    ctx.shadowColor = color;
     ctx.beginPath();
-    ctx.arc(0, -rOuter + (rOuter * 0.08), Math.max(2, rOuter * 0.04), 0, 2 * Math.PI);
+    ctx.arc(0, -rOuter + (rOuter * 0.12), Math.max(3, rOuter * 0.08), 0, 2 * Math.PI);
     ctx.fill();
+    ctx.shadowBlur = 0;
     ctx.restore();
 
-    // Flash indicator above the gear (glows when triggered)
+    // Reference dot above the gear — always visible in the gear's color
     if (highlightTop) {
         ctx.save();
         ctx.translate(cx, cy - rOuter - 18);
-        ctx.fillStyle = flashIntensity > 0 ? '#ffffff' : '#171721';
+        ctx.fillStyle = flashIntensity > 0 ? '#ffffff' : color;
         if (flashIntensity > 0) {
             ctx.shadowBlur = 25;
             ctx.shadowColor = color;
@@ -144,6 +147,7 @@ function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop
         ctx.arc(0, 0, 9, 0, 2 * Math.PI);
         ctx.fill();
         ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
         ctx.stroke();
         ctx.restore();
     }

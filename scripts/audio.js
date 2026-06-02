@@ -16,6 +16,8 @@
 export const instrumentCatalog = [
     { value: 'agogo', label: 'Agogo Bell Accent' },
     { value: 'cowbell', label: 'Analog Cowbell' },
+    { value: 'bata_low', label: 'Batá Drum (Low)' },
+    { value: 'bata_high', label: 'Batá Drum (High)' },
     { value: 'kick', label: 'Bass Drum (Kick)' },
     { value: 'bongo_high', label: 'Bongo (High)' },
     { value: 'bongo_low', label: 'Bongo (Low)' },
@@ -25,6 +27,8 @@ export const instrumentCatalog = [
     { value: 'conga_high', label: 'Conga (High)' },
     { value: 'conga_low', label: 'Conga (Low)' },
     { value: 'conga_slap', label: 'Conga Slap' },
+    { value: 'cajon_bass', label: 'Cajón Bass' },
+    { value: 'cajon_slap', label: 'Cajón Slap' },
     { value: 'crash', label: 'Crash Cymbal' },
     { value: 'ping', label: 'Crystal High Ping' },
     { value: 'synth_kick', label: 'EDM Synth Kick' },
@@ -401,30 +405,118 @@ function playTambourine(state, now, vol) {
     osc.start(now); osc.stop(now + 0.15);
 }
 
-/** Conga low: sine oscillator with deep pitch sweep, frequency varies by channel. */
+/** Conga low (Tumba): deep open tone with additive overtones and parabolic pitch drop. */
 function playCongaLow(state, now, vol, channelName) {
-    const osc = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(channelName.startsWith('A') ? 240 : 200, now);
-    osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
-    gain.gain.setValueAtTime(vol * 0.85, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-    osc.connect(gain); gain.connect(state.audioCtx.destination);
-    osc.start(now); osc.stop(now + 0.18);
+    const baseFreq = channelName.startsWith('A') ? 140 : 130;
+    const decay = 0.2;
+    const overtones = [1.5, 2.2];
+
+    const masterGain = state.audioCtx.createGain();
+    masterGain.gain.setValueAtTime(1.0, now);
+    masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
+    masterGain.connect(state.audioCtx.destination);
+
+    // Fundamental (sine for clean bottom-end warmth)
+    createCongaTone(state, baseFreq, 0.7, 'sine', masterGain, now, decay, 1.2);
+
+    // Shell overtones (triangle for woody rim ring)
+    overtones.forEach((ratio, i) => {
+        const partialDecay = decay * (1 - (i * 0.2));
+        createCongaTone(state, baseFreq * ratio, 0.25 / (i + 1), 'triangle', masterGain, now, partialDecay, 1.1);
+    });
+
+    // Gentle palm-impact transient puff
+    createCongaOpenNoise(state, masterGain, now, 0.03);
 }
 
-/** Conga high: higher-pitched sine sweep, frequency varies by channel. */
+/** Conga high (Quinto): bright open tone with sharper pitch drop and shorter decay. */
 function playCongaHigh(state, now, vol, channelName) {
+    const baseFreq = channelName.startsWith('A') ? 220 : 200;
+    const decay = 0.14;
+    const overtones = [1.6, 2.4];
+
+    const masterGain = state.audioCtx.createGain();
+    masterGain.gain.setValueAtTime(1.0, now);
+    masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
+    masterGain.connect(state.audioCtx.destination);
+
+    // Fundamental
+    createCongaTone(state, baseFreq, 0.7, 'sine', masterGain, now, decay, 1.3);
+
+    // Shell overtones
+    overtones.forEach((ratio, i) => {
+        const partialDecay = decay * (1 - (i * 0.2));
+        createCongaTone(state, baseFreq * ratio, 0.25 / (i + 1), 'triangle', masterGain, now, partialDecay, 1.1);
+    });
+
+    // Gentle palm-impact transient puff
+    createCongaOpenNoise(state, masterGain, now, 0.03);
+}
+
+/** Conga slap: sharp high-frequency skin crack with resonant rim ring and heavy noise. */
+function playCongaSlap(state, now, vol, channelName) {
+    const baseFreq = channelName.startsWith('A') ? 480 : 420;
+    const slapFreq = baseFreq * 2.2;
+    const slapDecay = 0.05;
+
+    const masterGain = state.audioCtx.createGain();
+    masterGain.gain.setValueAtTime(1.0, now);
+    masterGain.gain.exponentialRampToValueAtTime(0.001, now + slapDecay);
+    masterGain.connect(state.audioCtx.destination);
+
+    // Sharp resonant oscillator ring for rim edge
+    createCongaTone(state, slapFreq, 0.4, 'triangle', masterGain, now, slapDecay, 2.0);
+
+    // High-frequency skin snap transient
+    createCongaSlapNoise(state, masterGain, now, slapDecay);
+}
+
+/** Helper: synthesizes a tonal component with precise pitch drops for congas. */
+function createCongaTone(state, freq, volume, waveType, target, startTime, duration, pitchBendFactor) {
     const osc = state.audioCtx.createOscillator();
     const gain = state.audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(channelName.startsWith('A') ? 340 : 300, now);
-    osc.frequency.exponentialRampToValueAtTime(120, now + 0.12);
-    gain.gain.setValueAtTime(vol * 0.75, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
-    osc.connect(gain); gain.connect(state.audioCtx.destination);
-    osc.start(now); osc.stop(now + 0.14);
+    osc.type = waveType;
+    osc.frequency.setValueAtTime(freq * pitchBendFactor, startTime);
+    osc.frequency.exponentialRampToValueAtTime(freq, startTime + 0.035);
+    gain.gain.setValueAtTime(volume, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    osc.connect(gain);
+    gain.connect(target);
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+}
+
+/** Helper: generates high-frequency burst for conga slap strokes. */
+function createCongaSlapNoise(state, target, startTime, duration) {
+    const noise = getNoiseSource(state);
+    if (!noise) return;
+    const filter = state.audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1400, startTime);
+    filter.Q.setValueAtTime(4.0, startTime);
+    const gain = state.audioCtx.createGain();
+    gain.gain.setValueAtTime(0.9, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(target);
+    noise.start(startTime);
+}
+
+/** Helper: generates soft palm-impact air puff for conga open strokes. */
+function createCongaOpenNoise(state, target, startTime, duration) {
+    const noise = getNoiseSource(state);
+    if (!noise) return;
+    const filter = state.audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(350, startTime);
+    const gain = state.audioCtx.createGain();
+    gain.gain.setValueAtTime(0.2, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(target);
+    noise.start(startTime);
 }
 
 /** Bongo low: short sine sweep, frequency varies by channel. */
@@ -659,60 +751,6 @@ function playElectronicSnare(state, now, vol) {
     noise.start(now);
 }
 
-/** Conga slap: broadband noise transient + pitch-rising fundamental + second harmonic + finger pop. */
-function playCongaSlap(state, now, vol, channelName) {
-    const baseFreq = channelName.startsWith('A') ? 300 : 260;
-
-    // Sharp broadband transient for finger strike on skin
-    const noise = getNoiseSource(state);
-    if (!noise) return;
-    const noiseFilter = state.audioCtx.createBiquadFilter();
-    noiseFilter.type = 'bandpass';
-    noiseFilter.frequency.setValueAtTime(4000, now);
-    noiseFilter.Q.setValueAtTime(1.5, now);
-    const noiseGain = state.audioCtx.createGain();
-    noiseGain.gain.setValueAtTime(vol * 0.55, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
-    noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
-    noise.start(now);
-
-    // Fundamental: pitch rises on impact (skin tension increases)
-    const osc = state.audioCtx.createOscillator();
-    const oscGain = state.audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(baseFreq * 0.8, now);
-    osc.frequency.exponentialRampToValueAtTime(baseFreq, now + 0.02);
-    oscGain.gain.setValueAtTime(vol * 0.75, now);
-    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
-    osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
-    osc.start(now); osc.stop(now + 0.14);
-
-    // Second harmonic for skin-like brightness
-    const osc2 = state.audioCtx.createOscillator();
-    const osc2Gain = state.audioCtx.createGain();
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(baseFreq * 1.76, now);
-    osc2.frequency.exponentialRampToValueAtTime(baseFreq * 1.9, now + 0.025);
-    osc2Gain.gain.setValueAtTime(vol * 0.2, now);
-    osc2Gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-    osc2.connect(osc2Gain); osc2Gain.connect(state.audioCtx.destination);
-    osc2.start(now); osc2.stop(now + 0.1);
-
-    // High-frequency pop layer for the finger release "click"
-    const popNoise = getNoiseSource(state);
-    if (!popNoise) return;
-    const popFilter = state.audioCtx.createBiquadFilter();
-    popFilter.type = 'bandpass';
-    popFilter.frequency.setValueAtTime(8000, now + 0.025);
-    popFilter.Q.setValueAtTime(3, now);
-    const popGain = state.audioCtx.createGain();
-    popGain.gain.setValueAtTime(0.001, now + 0.025);
-    popGain.gain.linearRampToValueAtTime(vol * 0.3, now + 0.028);
-    popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
-    popNoise.connect(popFilter); popFilter.connect(popGain); popGain.connect(state.audioCtx.destination);
-    popNoise.start(now + 0.025);
-}
-
 /** Foot tap: very short bandpass noise click at 180 Hz. */
 function playFootTap(state, now, vol) {
     const noise = getNoiseSource(state);
@@ -752,6 +790,141 @@ function playSlap(state, now, vol) {
     osc.start(now); osc.stop(now + 0.05);
 }
 
+/** Batá low (Iyá bass head): deep bass with additive overtones, pitch envelope, and warm decay. */
+function playBataLow(state, now, vol) {
+    const fundamental = 60;
+    const overtones = [1.4, 2.0, 2.5];
+    const decay = 0.35;
+    const slapMix = 0.2;
+
+    const masterGain = state.audioCtx.createGain();
+    masterGain.gain.setValueAtTime(1.0, now);
+    masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
+    masterGain.connect(state.audioCtx.destination);
+
+    // Fundamental
+    createBataTone(state, fundamental, 0.6, masterGain, now, decay);
+
+    // Overtone partials (higher overtones decay slower for more sustain)
+    overtones.forEach((ratio, index) => {
+        const partialDecay = decay * (1 - (index * 0.08));
+        createBataTone(state, fundamental * ratio, 0.35 / (index + 1), masterGain, now, partialDecay);
+    });
+
+    // Transient slap component
+    if (slapMix > 0) {
+        createBataSlap(state, slapMix, masterGain, now, decay * 0.3);
+    }
+}
+
+/** Batá high (Enú head): higher pitch, sharper attack, shorter decay with additive overtones. */
+function playBataHigh(state, now, vol) {
+    const fundamental = 160;
+    const overtones = [1.6, 2.3, 3.1];
+    const decay = 0.25;
+    const slapMix = 0.4;
+
+    const masterGain = state.audioCtx.createGain();
+    masterGain.gain.setValueAtTime(1.0, now);
+    masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
+    masterGain.connect(state.audioCtx.destination);
+
+    // Fundamental
+    createBataTone(state, fundamental, 0.6, masterGain, now, decay);
+
+    // Overtone partials
+    overtones.forEach((ratio, index) => {
+        const partialDecay = decay * (1 - (index * 0.08));
+        createBataTone(state, fundamental * ratio, 0.35 / (index + 1), masterGain, now, partialDecay);
+    });
+
+    // Transient slap component
+    if (slapMix > 0) {
+        createBataSlap(state, slapMix, masterGain, now, decay * 0.3);
+    }
+}
+
+/** Helper: creates an individual frequency component for Batá drums. */
+function createBataTone(state, freq, volume, targetNode, startTime, duration) {
+    const osc = state.audioCtx.createOscillator();
+    const gain = state.audioCtx.createGain();
+    osc.type = freq < 100 ? 'sine' : 'triangle';
+    osc.frequency.setValueAtTime(freq * 1.15, startTime);
+    osc.frequency.exponentialRampToValueAtTime(freq, startTime + 0.04);
+    gain.gain.setValueAtTime(volume, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    osc.connect(gain);
+    gain.connect(targetNode);
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+}
+
+/** Helper: generates a hand-impact slap transient using white noise through a high-pass filter. */
+function createBataSlap(state, volume, targetNode, startTime, duration) {
+    const noise = getNoiseSource(state);
+    if (!noise) return;
+    const noiseFilter = state.audioCtx.createBiquadFilter();
+    noiseFilter.type = 'highpass';
+    noiseFilter.frequency.setValueAtTime(1200, startTime);
+    const noiseGain = state.audioCtx.createGain();
+    noiseGain.gain.setValueAtTime(volume, startTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(targetNode);
+    noise.start(startTime);
+}
+
+/** Cajón bass: low-frequency thump from center slap, short decay. */
+function playCajonBass(state, now, vol) {
+    const osc = state.audioCtx.createOscillator();
+    const gain = state.audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(90, now);
+    osc.frequency.exponentialRampToValueAtTime(45, now + 0.1);
+    gain.gain.setValueAtTime(vol, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    osc.connect(gain); gain.connect(state.audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.15);
+
+    // Box body resonance
+    const osc2 = state.audioCtx.createOscillator();
+    const osc2Gain = state.audioCtx.createGain();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(150, now);
+    osc2.frequency.exponentialRampToValueAtTime(80, now + 0.06);
+    osc2Gain.gain.setValueAtTime(vol * 0.25, now);
+    osc2Gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    osc2.connect(osc2Gain); osc2Gain.connect(state.audioCtx.destination);
+    osc2.start(now); osc2.stop(now + 0.08);
+}
+
+/** Cajón slap: sharp edge strike with snare-like crack and high-frequency content. */
+function playCajonSlap(state, now, vol) {
+    // High-frequency wood crack
+    const noise = getNoiseSource(state);
+    if (!noise) return;
+    const filter = state.audioCtx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.setValueAtTime(3000, now);
+    const noiseGain = state.audioCtx.createGain();
+    noiseGain.gain.setValueAtTime(vol * 0.5, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+    noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
+    noise.start(now);
+
+    // Mid-frequency slap tone
+    const osc = state.audioCtx.createOscillator();
+    const oscGain = state.audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(500, now);
+    osc.frequency.exponentialRampToValueAtTime(250, now + 0.03);
+    oscGain.gain.setValueAtTime(vol * 0.4, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+    osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.05);
+}
+
 /** Dispatch table mapping instrument value keys to their synthesis functions. */
 const instruments = {
     kick: playKick,
@@ -782,7 +955,11 @@ const instruments = {
     electronic_snare: playElectronicSnare,
     foot_tap: playFootTap,
     conga_slap: playCongaSlap,
-    slap: playSlap
+    slap: playSlap,
+    bata_low: playBataLow,
+    bata_high: playBataHigh,
+    cajon_bass: playCajonBass,
+    cajon_slap: playCajonSlap
 };
 
 /**
