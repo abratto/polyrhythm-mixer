@@ -353,6 +353,7 @@
         .voice-groups-row {
             display: flex;
             gap: 12px;
+            align-items: flex-start;
         }
         .voice-group {
             flex: 1;

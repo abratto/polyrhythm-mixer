@@ -132,12 +132,16 @@ function handleRemoveVoice(lane, prefix, voiceIndex) {
     const color = prefix === 'master' ? '#ff9100' : prefix === 'A' ? '#ff3366' : '#00e5ff';
     const label = prefix === 'master' ? 'Master' : prefix === 'A' ? 'A Phrase' : 'B Phrase';
 
+    console.log(`handleRemoveVoice: prefix=${prefix}, voiceIndex=${voiceIndex}, remaining voices=${lane.voices.length}, container children before clear=${container.children.length}`);
+
     container.innerHTML = '';
     lane.voices.forEach((_, idx) => {
         createVoiceStripDOM(container, prefix, idx, color, label);
         const channel = addVoiceChannel(channels, prefix, container, idx);
         lane.voices[idx].channel = channel;
     });
+
+    console.log(`handleRemoveVoice: container children after rebuild=${container.children.length}`);
 
     buildAllLanes(lanes);
 }
