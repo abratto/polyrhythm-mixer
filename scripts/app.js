@@ -121,10 +121,10 @@ function handleAddVoice(lane, prefix, container, color, label) {
 }
 
 /**
- * Removes a voice from a lane group and its channel/strip.
+ * Removes a voice's mixer strip and channel (called by lane's onRemoveVoice callback).
+ * The lane data and sequencer buttons are already handled by lanes.js.
  */
-function handleRemoveVoice(lane, prefix, voiceIndex) {
-    removeVoice(lane, voiceIndex);
+function handleRemoveVoiceChannel(prefix, voiceIndex) {
     removeVoiceChannel(channels, prefix, voiceIndex);
 
     // Rebuild DOM strips with updated indices
@@ -132,18 +132,13 @@ function handleRemoveVoice(lane, prefix, voiceIndex) {
     const color = prefix === 'master' ? '#ff9100' : prefix === 'A' ? '#ff3366' : '#00e5ff';
     const label = prefix === 'master' ? 'Master' : prefix === 'A' ? 'A Phrase' : 'B Phrase';
 
-    console.log(`handleRemoveVoice: prefix=${prefix}, voiceIndex=${voiceIndex}, remaining voices=${lane.voices.length}, container children before clear=${container.children.length}`);
-
     container.innerHTML = '';
+    const lane = prefix === 'master' ? lanes.master : prefix === 'A' ? lanes.Aphrase : lanes.Bphrase;
     lane.voices.forEach((_, idx) => {
         createVoiceStripDOM(container, prefix, idx, color, label);
         const channel = addVoiceChannel(channels, prefix, container, idx);
         lane.voices[idx].channel = channel;
     });
-
-    console.log(`handleRemoveVoice: container children after rebuild=${container.children.length}`);
-
-    buildAllLanes(lanes);
 }
 
 // Shared dependency bag passing to share and animation functions
@@ -167,6 +162,17 @@ wireLaneClearButtons(lanes);
 
 // Phase 4: Initialize voice channels
 initVoiceChannels();
+
+// Set up remove callbacks for each lane
+lanes.master.onRemoveVoice = (voiceIndex) => {
+    handleRemoveVoiceChannel('master', voiceIndex);
+};
+lanes.Aphrase.onRemoveVoice = (voiceIndex) => {
+    handleRemoveVoiceChannel('A', voiceIndex);
+};
+lanes.Bphrase.onRemoveVoice = (voiceIndex) => {
+    handleRemoveVoiceChannel('B', voiceIndex);
+};
 
 // Phase 5: Wire add/remove voice buttons
 ui.addMasterVoiceBtn.addEventListener('click', () => {

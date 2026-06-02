@@ -48,7 +48,8 @@ export function createLanes(ui, state) {
             voices: [createVoice()],
             isMultiVoice: true,
             color: '#ff9100',
-            channelPrefix: 'master'
+            channelPrefix: 'master',
+            onRemoveVoice: null
         },
         Aphrase: {
             container: ui.meterAPhraseGrid,
@@ -64,7 +65,8 @@ export function createLanes(ui, state) {
             voices: [createVoice()],
             isMultiVoice: true,
             color: '#ff3366',
-            channelPrefix: 'A'
+            channelPrefix: 'A',
+            onRemoveVoice: null
         },
         Awheel: {
             container: ui.meterAWheelGrid,
@@ -95,7 +97,8 @@ export function createLanes(ui, state) {
             voices: [createVoice()],
             isMultiVoice: true,
             color: '#00e5ff',
-            channelPrefix: 'B'
+            channelPrefix: 'B',
+            onRemoveVoice: null
         },
         Bwheel: {
             container: ui.meterBWheelGrid,
@@ -233,6 +236,9 @@ function buildVoiceButtons(lane, voice, voiceIndex) {
         removeBtn.title = `Remove Voice ${voiceIndex + 1}`;
         removeBtn.addEventListener('click', () => {
             removeVoice(lane, voiceIndex);
+            if (lane.onRemoveVoice) {
+                lane.onRemoveVoice(voiceIndex);
+            }
             buildMultiVoiceLane(lane);
         });
         labelArea.appendChild(removeBtn);
