@@ -111,11 +111,6 @@ function serializeState({ state, lanes, channels }) {
                 v: channels.driver.volume,
                 u: channels.driver.muted ? 1 : 0
             },
-            custom: {
-                s: channels.custom.soundEl.value,
-                v: channels.custom.volume,
-                u: channels.custom.muted ? 1 : 0
-            },
             awheel: {
                 s: channels.Awheel.soundEl.value,
                 v: channels.Awheel.volume,
@@ -176,7 +171,7 @@ function migrateV1toV2(payload) {
     // Migrate channel arrays to named objects
     const c = payload.c;
     if (c && Array.isArray(c.s) && Array.isArray(c.v) && Array.isArray(c.u)) {
-        const channelOrder = ['driver', 'custom', 'A', 'Awheel', 'B', 'Bwheel'];
+        const channelOrder = ['driver', 'A', 'Awheel', 'B', 'Bwheel'];
         payload.c = {};
         channelOrder.forEach((name, idx) => {
             // Skip A and B — they become voice arrays in v2
@@ -323,7 +318,7 @@ function restoreFromPayload(payload, deps) {
     }
 
     // Restore fixed channel state
-    const fixedChannels = ['driver', 'custom', 'awheel', 'bwheel'];
+    const fixedChannels = ['driver', 'awheel', 'bwheel'];
     if (payload.c && typeof payload.c === 'object') {
         fixedChannels.forEach(name => {
             const channelState = payload.c[name];

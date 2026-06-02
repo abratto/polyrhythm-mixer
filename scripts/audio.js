@@ -51,7 +51,7 @@ export const instrumentCatalog = [
 
 /**
  * Creates channel objects that hold the state and DOM references for each
- * audio lane. Fixed channels (driver, custom, Awheel, Bwheel) have static
+ * audio lane. Fixed channels (driver, Awheel, Bwheel) have static
  * DOM elements. Multi-voice channels (master, A, B) have dynamic voice arrays.
  */
 export function createChannels() {
@@ -61,14 +61,6 @@ export function createChannels() {
             volEl: document.getElementById('volDriver'),
             muteEl: document.getElementById('muteDriver'),
             volume: 0.6,
-            muted: false,
-            gainScale: 0.6
-        },
-        custom: {
-            soundEl: document.getElementById('soundCustom'),
-            volEl: document.getElementById('volCustom'),
-            muteEl: document.getElementById('muteCustom'),
-            volume: 0.7,
             muted: false,
             gainScale: 0.6
         },
@@ -135,45 +127,6 @@ const voiceDefaults = {
     B: 'cowbell'
 };
 
-/** Adds a new voice channel to a multi-voice group. */
-export function addVoiceChannel(channels, prefix, container, voiceIndex) {
-    const gainScale = prefix === 'master' ? 0.6 : prefix === 'A' ? 0.5 : 0.4;
-    const channel = createVoiceChannel(container, voiceIndex, prefix, voiceDefaults, gainScale);
-    const key = `${prefix}voices`;
-    if (!channels[key]) channels[key] = [];
-    channels[key].push(channel);
-
-    // Wire volume and mute handlers
-    if (channel.volEl) {
-        channel.volEl.addEventListener('input', () => {
-            channel.volume = parseFloat(channel.volEl.value);
-        });
-    }
-    if (channel.muteEl) {
-        channel.muteEl.addEventListener('click', () => {
-            channel.muted = !channel.muted;
-            channel.muteEl.classList.toggle('muted', channel.muted);
-            channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
-        });
-    }
-
-    return channel;
-}
-
-/** Removes a voice channel from a multi-voice group. */
-export function removeVoiceChannel(channels, prefix, voiceIndex) {
-    const key = `${prefix}voices`;
-    const voiceArray = channels[key];
-    if (!voiceArray || voiceArray.length <= 1) return;
-
-    // Remove DOM elements
-    const channel = voiceArray[voiceIndex];
-    const stripEl = document.getElementById(`strip_${prefix}_${voiceIndex}`);
-    if (stripEl) stripEl.remove();
-
-    voiceArray.splice(voiceIndex, 1);
-}
-
 /**
  * Populates each fixed channel's sound selector dropdown with the instrument catalog.
  * Sets the default instrument for each channel.
@@ -181,12 +134,11 @@ export function removeVoiceChannel(channels, prefix, voiceIndex) {
 export function populateMenus(channels) {
     const defaults = {
         driver: 'kick',
-        custom: 'rimshot',
         Awheel: 'shaker',
         Bwheel: 'shaker'
     };
 
-    const fixedChannels = ['driver', 'custom', 'Awheel', 'Bwheel'];
+    const fixedChannels = ['driver', 'Awheel', 'Bwheel'];
     fixedChannels.forEach(name => {
         const channel = channels[name];
         if (!channel || !channel.soundEl) return;
@@ -203,7 +155,7 @@ export function populateMenus(channels) {
 
 /** Attaches input/click handlers to each fixed channel's volume fader and mute button. */
 export function wireChannels(channels) {
-    const fixedChannels = ['driver', 'custom', 'Awheel', 'Bwheel'];
+    const fixedChannels = ['driver', 'Awheel', 'Bwheel'];
     fixedChannels.forEach(name => {
         const channel = channels[name];
         if (!channel) return;
