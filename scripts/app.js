@@ -59,10 +59,16 @@ function createVoiceStripDOM(container, prefix, voiceIndex, color, label) {
 function initVoiceChannels() {
     // Master voices
     const masterContainer = ui.masterVoiceContainer;
+    console.log('masterVoiceContainer exists:', !!masterContainer);
+    console.log('master voices count:', lanes.master.voices.length);
     if (masterContainer) {
         lanes.master.voices.forEach((_, idx) => {
             createVoiceStripDOM(masterContainer, 'master', idx, '#ff9100', 'Master');
             addVoiceChannel(channels, 'master', masterContainer, idx);
+        });
+        console.log('masterVoices after init:', channels.masterVoices.length);
+        channels.masterVoices.forEach((ch, i) => {
+            console.log(`master voice ${i}: soundEl=${!!ch.soundEl}, volEl=${!!ch.volEl}, muteEl=${!!ch.muteEl}`);
         });
     }
 

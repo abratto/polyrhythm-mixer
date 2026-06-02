@@ -20,6 +20,7 @@ function processTriggers(state, lanes, playChannelSound, active) {
     // Master lane: multi-voice
     if (active.master !== state.lastActive.master) {
         const anyActive = lanes.master.voices.some(v => v.selected[active.master]);
+        console.log(`master trigger: step=${active.master}, anyActive=${anyActive}, voices=${lanes.master.voices.length}`);
         if (anyActive) {
             state.flash.custom = 12;
             playChannelSound('master');

@@ -1034,7 +1034,10 @@ export function playChannelSound(state, channels, channelName, globalVolume = 1)
 
     // Multi-voice channels: iterate over all voices
     if (channelName === 'master') {
-        (channels.masterVoices || []).forEach(channel => {
+        const voices = channels.masterVoices || [];
+        console.log(`playChannelSound('master'): ${voices.length} voices, enabled=${state.audioEnabled}`);
+        voices.forEach((channel, i) => {
+            console.log(`  voice ${i}: muted=${channel.muted}, vol=${channel.volume}, soundEl=${!!channel.soundEl}, sound=${channel.soundEl?.value}`);
             playSingleChannel(state, channel, globalVolume);
         });
     } else if (channelName === 'A') {
