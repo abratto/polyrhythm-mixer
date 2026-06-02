@@ -292,7 +292,7 @@ function restoreFromPayload(payload, deps) {
             // Clear existing voices and rebuild from payload
             lane.voices.length = 0;
             voiceData.forEach((vd, idx) => {
-                const voice = { selected: [], buttons: [], channel: null };
+                const voice = { selected: [], buttons: [], channel: null, _channelState: vd };
                 voice.selected = new Array(lane.count()).fill(false);
                 applySelectedIndexes(voice.selected, vd.s);
                 lane.voices.push(voice);

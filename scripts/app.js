@@ -61,11 +61,42 @@ function rebuildVoiceMixerStrips(prefix, container, color, label) {
     const key = prefix === 'master' ? 'masterVoices' : prefix === 'A' ? 'Avoices' : 'Bvoices';
     container.innerHTML = '';
     channels[key] = [];
-    lane.voices.forEach((_, idx) => {
+    lane.voices.forEach((voice, idx) => {
         createVoiceStripDOM(container, prefix, idx, color, label);
         const channel = addVoiceChannel(channels, prefix, container, idx);
-        lane.voices[idx].channel = channel;
+        voice.channel = channel;
+        // Restore channel state from payload if present
+        if (voice._channelState && channel) {
+            applyVoiceChannelState(channel, voice._channelState);
+            delete voice._channelState;
+        }
     });
+}
+
+/**
+ * Applies voice channel state (instrument, volume, mute) from a share payload.
+ * Exported for use by share.js.
+ */
+function applyVoiceChannelState(channel, voiceState) {
+    if (!channel || !voiceState) return;
+
+    if (voiceState.instrument && channel.soundEl) {
+        const hasSoundOption = Array.from(channel.soundEl.options).some(opt => opt.value === voiceState.instrument);
+        if (hasSoundOption) channel.soundEl.value = voiceState.instrument;
+    }
+
+    if (typeof voiceState.volume === 'number' && Number.isFinite(voiceState.volume)) {
+        channel.volume = Math.max(0, Math.min(1, voiceState.volume));
+        if (channel.volEl) channel.volEl.value = String(channel.volume);
+    }
+
+    if (voiceState.muted !== undefined) {
+        channel.muted = !!voiceState.muted;
+        if (channel.muteEl) {
+            channel.muteEl.classList.toggle('muted', channel.muted);
+            channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
+        }
+    }
 }
 
 /**
