@@ -132,7 +132,7 @@ export function addVoiceChannel(channels, prefix, container, voiceIndex) {
     try {
         const gainScale = prefix === 'master' ? 0.6 : prefix === 'A' ? 0.5 : 0.4;
         const channel = createVoiceChannel(container, voiceIndex, prefix, voiceDefaults, gainScale);
-        const key = `${prefix}voices`;
+        const key = prefix === 'master' ? 'masterVoices' : prefix === 'A' ? 'Avoices' : 'Bvoices';
         if (!channels[key]) channels[key] = [];
         channels[key].push(channel);
         console.log(`addVoiceChannel: prefix=${prefix}, idx=${voiceIndex}, key=${key}, channels[key].length=${channels[key].length}`);
@@ -160,7 +160,7 @@ export function addVoiceChannel(channels, prefix, container, voiceIndex) {
 
 /** Removes a voice channel from a multi-voice group. */
 export function removeVoiceChannel(channels, prefix, voiceIndex) {
-    const key = `${prefix}voices`;
+    const key = prefix === 'master' ? 'masterVoices' : prefix === 'A' ? 'Avoices' : 'Bvoices';
     const voiceArray = channels[key];
     if (!voiceArray || voiceArray.length <= 1) return;
 
