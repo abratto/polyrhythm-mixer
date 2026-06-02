@@ -58,8 +58,9 @@ function createVoiceStripDOM(container, prefix, voiceIndex, color, label) {
  */
 function rebuildVoiceMixerStrips(prefix, container, color, label) {
     const lane = prefix === 'master' ? lanes.master : prefix === 'A' ? lanes.Aphrase : lanes.Bphrase;
+    const key = prefix === 'master' ? 'masterVoices' : prefix === 'A' ? 'Avoices' : 'Bvoices';
     container.innerHTML = '';
-    channels[`${prefix}voices`] = [];
+    channels[key] = [];
     lane.voices.forEach((_, idx) => {
         createVoiceStripDOM(container, prefix, idx, color, label);
         const channel = addVoiceChannel(channels, prefix, container, idx);
@@ -146,8 +147,10 @@ function handleRemoveVoiceChannel(prefix, voiceIndex) {
     const container = prefix === 'master' ? ui.masterVoiceContainer : prefix === 'A' ? ui.AVoiceContainer : ui.BVoiceContainer;
     const color = prefix === 'master' ? '#ff9100' : prefix === 'A' ? '#ff3366' : '#00e5ff';
     const label = prefix === 'master' ? 'Master' : prefix === 'A' ? 'A Phrase' : 'B Phrase';
+    const key = prefix === 'master' ? 'masterVoices' : prefix === 'A' ? 'Avoices' : 'Bvoices';
 
     container.innerHTML = '';
+    channels[key] = [];
     const lane = prefix === 'master' ? lanes.master : prefix === 'A' ? lanes.Aphrase : lanes.Bphrase;
     lane.voices.forEach((_, idx) => {
         createVoiceStripDOM(container, prefix, idx, color, label);
