@@ -135,7 +135,6 @@ export function addVoiceChannel(channels, prefix, container, voiceIndex) {
         const key = prefix === 'master' ? 'masterVoices' : prefix === 'A' ? 'Avoices' : 'Bvoices';
         if (!channels[key]) channels[key] = [];
         channels[key].push(channel);
-        console.log(`addVoiceChannel: prefix=${prefix}, idx=${voiceIndex}, key=${key}, channels[key].length=${channels[key].length}`);
 
         // Wire volume and mute handlers
         if (channel.volEl) {
@@ -1035,25 +1034,38 @@ const instruments = {
  * mute state, gain scale, and the global volume multiplier.
  * For multi-voice channels (master, A, B), plays all active voices.
  */
-export function playChannelSound(state, channels, channelName, globalVolume = 1) {
+export function playChannelSound(state, channels, channelName, globalVolume = 1, voiceIndex = null) {
     if (!state.audioEnabled || !state.audioCtx) return;
 
-    // Multi-voice channels: iterate over all voices
+    // Multi-voice channels: play specific voice or all voices
     if (channelName === 'master') {
         const voices = channels.masterVoices || [];
-        console.log(`playChannelSound('master'): ${voices.length} voices, enabled=${state.audioEnabled}`);
-        voices.forEach((channel, i) => {
-            console.log(`  voice ${i}: muted=${channel.muted}, vol=${channel.volume}, soundEl=${!!channel.soundEl}, sound=${channel.soundEl?.value}`);
-            playSingleChannel(state, channel, globalVolume);
-        });
+        if (voiceIndex !== null) {
+            // Play only the specified voice
+            if (voices[voiceIndex]) playSingleChannel(state, voices[voiceIndex], globalVolume);
+        } else {
+            voices.forEach(channel => {
+                playSingleChannel(state, channel, globalVolume);
+            });
+        }
     } else if (channelName === 'A') {
-        (channels.Avoices || []).forEach(channel => {
-            playSingleChannel(state, channel, globalVolume);
-        });
+        const voices = channels.Avoices || [];
+        if (voiceIndex !== null) {
+            if (voices[voiceIndex]) playSingleChannel(state, voices[voiceIndex], globalVolume);
+        } else {
+            voices.forEach(channel => {
+                playSingleChannel(state, channel, globalVolume);
+            });
+        }
     } else if (channelName === 'B') {
-        (channels.Bvoices || []).forEach(channel => {
-            playSingleChannel(state, channel, globalVolume);
-        });
+        const voices = channels.Bvoices || [];
+        if (voiceIndex !== null) {
+            if (voices[voiceIndex]) playSingleChannel(state, voices[voiceIndex], globalVolume);
+        } else {
+            voices.forEach(channel => {
+                playSingleChannel(state, channel, globalVolume);
+            });
+        }
     } else {
         // Fixed single-voice channels
         const channel = channels[channelName];

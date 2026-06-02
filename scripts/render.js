@@ -17,24 +17,25 @@ import { getActivePhraseStep, getActiveWheelStep } from './math.js';
  * For multi-voice lanes, checks each voice independently.
  */
 function processTriggers(state, lanes, playChannelSound, active) {
-    // Master lane: multi-voice
+    // Master lane: multi-voice — play each voice independently
     if (active.master !== state.lastActive.master) {
-        const anyActive = lanes.master.voices.some(v => v.selected[active.master]);
-        console.log(`master trigger: step=${active.master}, anyActive=${anyActive}, voices=${lanes.master.voices.length}`);
-        if (anyActive) {
-            state.flash.custom = 12;
-            playChannelSound('master');
-        }
+        lanes.master.voices.forEach((voice, vi) => {
+            if (voice.selected[active.master]) {
+                state.flash.custom = 12;
+                playChannelSound('master', vi);
+            }
+        });
         state.lastActive.master = active.master;
     }
 
-    // A phrase: multi-voice
+    // A phrase: multi-voice — play each voice independently
     if (active.Aphrase !== state.lastActive.Aphrase) {
-        const anyActive = lanes.Aphrase.voices.some(v => v.selected[active.Aphrase]);
-        if (anyActive) {
-            state.flash.A = 12;
-            playChannelSound('A');
-        }
+        lanes.Aphrase.voices.forEach((voice, vi) => {
+            if (voice.selected[active.Aphrase]) {
+                state.flash.A = 12;
+                playChannelSound('A', vi);
+            }
+        });
         state.lastActive.Aphrase = active.Aphrase;
     }
 
@@ -47,13 +48,14 @@ function processTriggers(state, lanes, playChannelSound, active) {
         state.lastActive.Awheel = active.Awheel;
     }
 
-    // B phrase: multi-voice
+    // B phrase: multi-voice — play each voice independently
     if (active.Bphrase !== state.lastActive.Bphrase) {
-        const anyActive = lanes.Bphrase.voices.some(v => v.selected[active.Bphrase]);
-        if (anyActive) {
-            state.flash.B = 12;
-            playChannelSound('B');
-        }
+        lanes.Bphrase.voices.forEach((voice, vi) => {
+            if (voice.selected[active.Bphrase]) {
+                state.flash.B = 12;
+                playChannelSound('B', vi);
+            }
+        });
         state.lastActive.Bphrase = active.Bphrase;
     }
 
