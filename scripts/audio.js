@@ -127,6 +127,45 @@ const voiceDefaults = {
     B: 'cowbell'
 };
 
+/** Adds a new voice channel to a multi-voice group. */
+export function addVoiceChannel(channels, prefix, container, voiceIndex) {
+    const gainScale = prefix === 'master' ? 0.6 : prefix === 'A' ? 0.5 : 0.4;
+    const channel = createVoiceChannel(container, voiceIndex, prefix, voiceDefaults, gainScale);
+    const key = `${prefix}voices`;
+    if (!channels[key]) channels[key] = [];
+    channels[key].push(channel);
+
+    // Wire volume and mute handlers
+    if (channel.volEl) {
+        channel.volEl.addEventListener('input', () => {
+            channel.volume = parseFloat(channel.volEl.value);
+        });
+    }
+    if (channel.muteEl) {
+        channel.muteEl.addEventListener('click', () => {
+            channel.muted = !channel.muted;
+            channel.muteEl.classList.toggle('muted', channel.muted);
+            channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
+        });
+    }
+
+    return channel;
+}
+
+/** Removes a voice channel from a multi-voice group. */
+export function removeVoiceChannel(channels, prefix, voiceIndex) {
+    const key = `${prefix}voices`;
+    const voiceArray = channels[key];
+    if (!voiceArray || voiceArray.length <= 1) return;
+
+    // Remove DOM elements
+    const channel = voiceArray[voiceIndex];
+    const stripEl = document.getElementById(`strip_${prefix}_${voiceIndex}`);
+    if (stripEl) stripEl.remove();
+
+    voiceArray.splice(voiceIndex, 1);
+}
+
 /**
  * Populates each fixed channel's sound selector dropdown with the instrument catalog.
  * Sets the default instrument for each channel.
