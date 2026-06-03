@@ -452,17 +452,24 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, playChannelSound
         const prevMainAngle = state.mainAngle;
         state.mainAngle += angleDelta;
 
-        // Calculate gear geometry
-        const cx = canvas.width / 2;
-        const cy = 205;
-        const baseScale = 145;
+          // Calculate gear geometry
+          // All gears share the same module (tooth size) so teeth mesh properly.
+          // The master gear has a fixed size, and smaller gears are scaled proportionally
+          // but with a compression factor so they remain visible even at extreme ratios.
+         const cx = canvas.width / 2;
+         const cy = 205;
+         const masterRadius = 145;           // fixed master wheel radius
+         const compressionRatio = 0.55;      // compress size ratio for visibility
 
-        const rMainOuter = baseScale;
-        const rMainInner = rMainOuter * 0.86;
-        const rAOuter = baseScale * (state.teethA / state.mainTeeth);
-        const rAInner = rAOuter * 0.72;
-        const rBOuter = baseScale * (state.teethB / state.mainTeeth);
-        const rBInner = rBOuter * 0.72;
+          // Master gear (fixed size)
+         const rMainOuter = masterRadius;
+         const rMainInner = rMainOuter * 0.86;
+
+          // Smaller gears: proportional to master, compressed for visibility
+         const rAOuter = masterRadius * (0.3 + 0.7 * (state.teethA / state.mainTeeth) * compressionRatio);
+         const rAInner = rAOuter * 0.72;
+         const rBOuter = masterRadius * (0.3 + 0.7 * (state.teethB / state.mainTeeth) * compressionRatio);
+         const rBInner = rBOuter * 0.72;
 
         const cxA = cx - (rMainOuter + rAOuter) + 6;
         const cxB = cx + (rMainOuter + rBOuter) - 6;
