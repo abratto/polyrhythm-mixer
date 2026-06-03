@@ -268,12 +268,12 @@ function applyVoiceChannelState(channel, voiceState) {
             channel.soundEl.value = voiceState.instrument;
             channel.sound = voiceState.instrument;
         }
-    }
+      }
 
     if (typeof voiceState.volume === 'number' && Number.isFinite(voiceState.volume)) {
         channel.volume = Math.max(0, Math.min(1, voiceState.volume));
         if (channel.volEl) channel.volEl.value = String(channel.volume);
-    }
+      }
 
     if (voiceState.muted !== undefined) {
         channel.muted = !!voiceState.muted;
@@ -281,7 +281,37 @@ function applyVoiceChannelState(channel, voiceState) {
             channel.muteEl.classList.toggle('muted', channel.muted);
             channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
         }
-    }
+      }
+}
+
+/** Applies a fixed channel's state (driver, Awheel, Bwheel) using compact s/v/u format. */
+function applyFixedChannelState(channel, channelState) {
+    if (!channel || !channelState) return;
+
+    const sound = channelState.s ?? channelState.instrument;
+    const volume = channelState.v ?? channelState.volume;
+    const muted = channelState.u ?? channelState.muted;
+
+    if (sound && channel.soundEl) {
+        const hasSoundOption = Array.from(channel.soundEl.options).some(opt => opt.value === sound);
+        if (hasSoundOption) {
+            channel.soundEl.value = sound;
+            channel.sound = sound;
+        }
+      }
+
+    if (typeof volume === 'number' && Number.isFinite(volume)) {
+        channel.volume = Math.max(0, Math.min(1, volume));
+        if (channel.volEl) channel.volEl.value = String(channel.volume);
+      }
+
+    if (muted !== undefined) {
+        channel.muted = !!muted;
+        if (channel.muteEl) {
+            channel.muteEl.classList.toggle('muted', channel.muted);
+            channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
+        }
+      }
 }
 
 /**
@@ -353,15 +383,15 @@ function restoreFromPayload(payload, deps) {
         if (payload.p.bw) applySelectedIndexes(lanes.Bwheel.selected, payload.p.bw.s);
     }
 
-    // Restore fixed channel state
-    const fixedChannels = ['driver', 'awheel', 'bwheel'];
+     // Restore fixed channel state
+    const fixedChannelMap = {
+        driver: 'driver',
+        awheel: 'Awheel',
+        bwheel: 'Bwheel'
+    };
     if (payload.c && typeof payload.c === 'object') {
-        fixedChannels.forEach(name => {
-            const channelState = payload.c[name];
-            if (!channelState) return;
-            const channel = channels[name];
-            if (!channel) return;
-            applyVoiceChannelState(channel, channelState);
+        Object.entries(fixedChannelMap).forEach(([payloadKey, channelKey]) => {
+            applyFixedChannelState(channels[channelKey], payload.c[payloadKey]);
         });
     }
 
