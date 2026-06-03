@@ -80,21 +80,25 @@ function rebuildVoiceMixerStrips(prefix, container, color, label) {
 function applyVoiceChannelState(channel, voiceState) {
     if (!channel || !voiceState) return;
 
-    if (voiceState.instrument && channel.soundEl) {
-        const hasSoundOption = Array.from(channel.soundEl.options).some(opt => opt.value === voiceState.instrument);
+    const sound = voiceState.i ?? voiceState.instrument;
+    const volume = voiceState.v ?? voiceState.volume;
+    const muted = voiceState.u ?? voiceState.muted;
+
+    if (sound && channel.soundEl) {
+        const hasSoundOption = Array.from(channel.soundEl.options).some(opt => opt.value === sound);
         if (hasSoundOption) {
-            channel.soundEl.value = voiceState.instrument;
-            channel.sound = voiceState.instrument;
+            channel.soundEl.value = sound;
+            channel.sound = sound;
         }
     }
 
-    if (typeof voiceState.volume === 'number' && Number.isFinite(voiceState.volume)) {
-        channel.volume = Math.max(0, Math.min(1, voiceState.volume));
+    if (typeof volume === 'number' && Number.isFinite(volume)) {
+        channel.volume = Math.max(0, Math.min(1, volume));
         if (channel.volEl) channel.volEl.value = String(channel.volume);
     }
 
-    if (voiceState.muted !== undefined) {
-        channel.muted = !!voiceState.muted;
+    if (muted !== undefined) {
+        channel.muted = !!muted;
         if (channel.muteEl) {
             channel.muteEl.classList.toggle('muted', channel.muted);
             channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
@@ -218,7 +222,8 @@ const shareDeps = {
     updatePhaseUI,
     resetPatterns,
     buildAllLanes,
-    resetFlashState
+    resetFlashState,
+    applyVoiceChannelState
 };
 
 // Phase 3: Initialize derived state and populate UI

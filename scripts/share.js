@@ -14,6 +14,46 @@
 
 const SHARE_VERSION = 3;
 
+/** Converts a Uint8Array to a binary string using chunked spread to avoid argument count limits. */
+function bytesToBinary(bytes) {
+    const chunkSize = 0x8000;
+    let binary = '';
+
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode(...chunk);
+    }
+
+    return binary;
+}
+
+/** Converts a binary string to a Uint8Array. */
+function binaryToBytes(binary) {
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+
+/** Encodes a Uint8Array to a Base64URL string. */
+function base64UrlEncodeBytes(bytes) {
+    return btoa(bytesToBinary(bytes))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/g, '');
+}
+
+/** Decodes a Base64URL string to a Uint8Array. */
+function base64UrlDecodeToBytes(encoded) {
+    const base64 = encoded
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const binary = atob(padded);
+    return binaryToBytes(binary);
+}
+
 /** Compresses a Uint8Array using DEFLATE via the Compression Streams API. */
 async function deflateBytes(bytes) {
     const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate'));
@@ -24,6 +64,12 @@ async function deflateBytes(bytes) {
 async function inflateBytes(bytes) {
     const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate'));
     return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+/** Checks if CompressionStream/DecompressionStream APIs are available. */
+function supportsCompressionStreams() {
+    return typeof CompressionStream !== 'undefined' &&
+           typeof DecompressionStream !== 'undefined';
 }
 
 /** Clamps a value to an integer range, returning null for invalid input. */
@@ -67,19 +113,11 @@ async function encodePayload(payload) {
     // v3+ payloads are compressed with a z: prefix
     if (payload.v >= SHARE_VERSION) {
         const compressed = await deflateBytes(bytes);
-        const binary = String.fromCharCode.apply(null, compressed);
-        return 'z:' + btoa(binary)
-             .replace(/\+/g, '-')
-             .replace(/\//g, '_')
-             .replace(/=+$/g, '');
+        return 'z:' + base64UrlEncodeBytes(compressed);
     }
 
     // Legacy v2 and below: uncompressed
-    const binary = String.fromCharCode.apply(null, bytes);
-    return btoa(binary)
-         .replace(/\+/g, '-')
-         .replace(/\//g, '_')
-         .replace(/=+$/g, '');
+    return base64UrlEncodeBytes(bytes);
 }
 
 /**
@@ -91,35 +129,25 @@ async function decodePayload(encoded) {
     let bytes;
 
     if (encoded.startsWith('z:')) {
-         // Compressed payload: strip prefix, decode base64, then decompress
-        const base64 = encoded.slice(2)
-              .replace(/-/g, '+')
-              .replace(/_/g, '/');
-        const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
-        const binary = atob(padded);
-        bytes = Uint8Array.from(binary, ch => ch.charCodeAt(0));
+          // Compressed payload: strip prefix, decode base64URL, then decompress
+        bytes = base64UrlDecodeToBytes(encoded.slice(2));
         bytes = await inflateBytes(bytes);
     } else {
-         // Legacy uncompressed payload
-        const base64 = encoded
-              .replace(/-/g, '+')
-              .replace(/_/g, '/');
-        const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
-        const binary = atob(padded);
-        bytes = Uint8Array.from(binary, ch => ch.charCodeAt(0));
+          // Legacy uncompressed payload
+        bytes = base64UrlDecodeToBytes(encoded);
     }
 
     const json = new TextDecoder().decode(bytes);
     return JSON.parse(json);
 }
 
-/** Serializes a single voice's pattern and channel state. */
+/** Serializes a single voice's pattern and channel state using compact field names. */
 function serializeVoice(voice, channel) {
     return {
         s: selectedIndexes(voice.selected),
-        instrument: channel?.sound || null,
-        volume: channel?.volume ?? 0.5,
-        muted: channel?.muted ? 1 : 0
+        i: channel?.sound || null,
+        v: channel?.volume ?? 0.5,
+        u: channel?.muted ? 1 : 0
     };
 }
 
@@ -258,30 +286,35 @@ function migratePayload(payload) {
     return payload;
 }
 
-/** Applies a single voice's channel state (instrument, volume, mute). */
+/** Applies a single voice's channel state (instrument, volume, mute).
+ * Accepts both compact (i/v/u) and legacy (instrument/volume/muted) field names. */
 function applyVoiceChannelState(channel, voiceState) {
     if (!channel || !voiceState) return;
 
-    if (voiceState.instrument && channel.soundEl) {
-        const hasSoundOption = Array.from(channel.soundEl.options).some(opt => opt.value === voiceState.instrument);
+    const sound = voiceState.i ?? voiceState.instrument;
+    const volume = voiceState.v ?? voiceState.volume;
+    const muted = voiceState.u ?? voiceState.muted;
+
+    if (sound && channel.soundEl) {
+        const hasSoundOption = Array.from(channel.soundEl.options).some(opt => opt.value === sound);
         if (hasSoundOption) {
-            channel.soundEl.value = voiceState.instrument;
-            channel.sound = voiceState.instrument;
-        }
-      }
+            channel.soundEl.value = sound;
+            channel.sound = sound;
+         }
+       }
 
-    if (typeof voiceState.volume === 'number' && Number.isFinite(voiceState.volume)) {
-        channel.volume = Math.max(0, Math.min(1, voiceState.volume));
+    if (typeof volume === 'number' && Number.isFinite(volume)) {
+        channel.volume = Math.max(0, Math.min(1, volume));
         if (channel.volEl) channel.volEl.value = String(channel.volume);
-      }
+       }
 
-    if (voiceState.muted !== undefined) {
-        channel.muted = !!voiceState.muted;
+    if (muted !== undefined) {
+        channel.muted = !!muted;
         if (channel.muteEl) {
             channel.muteEl.classList.toggle('muted', channel.muted);
             channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
-        }
-      }
+         }
+       }
 }
 
 /** Applies a fixed channel's state (driver, Awheel, Bwheel) using compact s/v/u format. */
@@ -319,7 +352,7 @@ function applyFixedChannelState(channel, channelState) {
  * Applies meter settings, phrase patterns, lane patterns, and channel audio settings.
  */
 function restoreFromPayload(payload, deps) {
-    const { state, ui, lanes, channels, updateDerivedState, updatePhaseUI, resetPatterns, buildAllLanes, resetFlashState } = deps;
+    const { state, ui, lanes, channels, updateDerivedState, updatePhaseUI, resetPatterns, buildAllLanes, resetFlashState, applyVoiceChannelState } = deps;
 
     const meters = payload.m;
     if (!meters || typeof meters !== 'object') return;
@@ -361,22 +394,22 @@ function restoreFromPayload(payload, deps) {
     resetPatterns(state, lanes);
 
     if (payload.p && typeof payload.p === 'object') {
-        // Multi-voice lanes: restore each voice
-        const restoreVoiceLane = (lane, voiceData, prefix, container, color, label) => {
-            if (!Array.isArray(voiceData)) return;
-            // Clear existing voices and rebuild from payload
-            lane.voices.length = 0;
-            voiceData.forEach((vd, idx) => {
-                const voice = { selected: [], buttons: [], channel: null, _channelState: vd };
-                voice.selected = new Array(lane.count()).fill(false);
-                applySelectedIndexes(voice.selected, vd.s);
-                lane.voices.push(voice);
-            });
-        };
+         // Multi-voice lanes: restore each voice
+         const restoreVoiceLane = (lane, voiceData) => {
+             if (!Array.isArray(voiceData)) return;
+              // Clear existing voices and rebuild from payload
+             lane.voices.length = 0;
+             voiceData.forEach((vd) => {
+                 const voice = { selected: [], buttons: [], channel: null, _channelState: vd };
+                 voice.selected = new Array(lane.count()).fill(false);
+                 applySelectedIndexes(voice.selected, vd.s);
+                 lane.voices.push(voice);
+             });
+         };
 
-        restoreVoiceLane(lanes.master, payload.p.m, 'master', ui.masterVoiceContainer, '#ff9100', 'Master');
-        restoreVoiceLane(lanes.Aphrase, payload.p.ap, 'A', ui.AVoiceContainer, '#ff3366', 'A Phrase');
-        restoreVoiceLane(lanes.Bphrase, payload.p.bp, 'B', ui.BVoiceContainer, '#00e5ff', 'B Phrase');
+         restoreVoiceLane(lanes.master, payload.p.m);
+         restoreVoiceLane(lanes.Aphrase, payload.p.ap);
+         restoreVoiceLane(lanes.Bphrase, payload.p.bp);
 
         // Single-voice lanes
         if (payload.p.aw) applySelectedIndexes(lanes.Awheel.selected, payload.p.aw.s);
