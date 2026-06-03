@@ -274,34 +274,38 @@ wireControls({
 resetPatterns(state, lanes);
 updatePhaseUI(state, ui);
 buildAllLanes(lanes);
-const loadedFromUrl = loadStateFromUrl(shareDeps);
 
-// If loaded from URL, rebuild voice mixer strips to match restored voices
-if (loadedFromUrl) {
-    rebuildVoiceMixerStrips('master', ui.masterVoiceContainer, '#ff9100', 'Master');
-    rebuildVoiceMixerStrips('A', ui.AVoiceContainer, '#ff3366', 'A Phrase');
-    rebuildVoiceMixerStrips('B', ui.BVoiceContainer, '#00e5ff', 'B Phrase');
-}
+// Async initialization: load shared state from URL, then start animation
+(async () => {
+    const loadedFromUrl = await loadStateFromUrl(shareDeps);
 
-// Phase 8: Show help modal for first-time visitors
-if (shouldAutoOpenHelpModal()) {
-    openHelpModal(ui);
-} else {
-    closeHelpModal(ui, { remember: false });
-}
+    // If loaded from URL, rebuild voice mixer strips to match restored voices
+    if (loadedFromUrl) {
+        rebuildVoiceMixerStrips('master', ui.masterVoiceContainer, '#ff9100', 'Master');
+        rebuildVoiceMixerStrips('A', ui.AVoiceContainer, '#ff3366', 'A Phrase');
+        rebuildVoiceMixerStrips('B', ui.BVoiceContainer, '#00e5ff', 'B Phrase');
+    }
 
-// Phase 9: Start the animation loop
-startAnimation({
-    canvas,
-    ctx,
-    ui,
-    state,
-    lanes,
-    playChannelSound: (channelName, voiceIndex) => {
-        return playChannelSound(state, channels, channelName, cachedGlobalVolume, voiceIndex);
-    },
-    markCurrentButtons: (active) => markCurrentButtons(state, lanes, active)
-});
+    // Phase 8: Show help modal for first-time visitors
+    if (shouldAutoOpenHelpModal()) {
+        openHelpModal(ui);
+    } else {
+        closeHelpModal(ui, { remember: false });
+    }
+
+    // Phase 9: Start the animation loop
+    startAnimation({
+        canvas,
+        ctx,
+        ui,
+        state,
+        lanes,
+        playChannelSound: (channelName, voiceIndex) => {
+            return playChannelSound(state, channels, channelName, cachedGlobalVolume, voiceIndex);
+         },
+        markCurrentButtons: (active) => markCurrentButtons(state, lanes, active)
+    });
+})();
 
 // Handle viewport resize and orientation change on mobile devices.
 // The canvas scales via CSS (width:100%; height:auto), so the render loop

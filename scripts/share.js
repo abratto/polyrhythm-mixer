@@ -12,7 +12,19 @@
  * Future versions (v > current) are rejected.
  */
 
-const SHARE_VERSION = 2;
+const SHARE_VERSION = 3;
+
+/** Compresses a Uint8Array using DEFLATE via the Compression Streams API. */
+async function deflateBytes(bytes) {
+    const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+/** Decompresses a DEFLATE-compressed Uint8Array. */
+async function inflateBytes(bytes) {
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+}
 
 /** Clamps a value to an integer range, returning null for invalid input. */
 function clampInteger(value, min, max) {
@@ -45,26 +57,58 @@ function applySelectedIndexes(target, indexes) {
 
 /**
  * Encodes a payload object into a URL-safe Base64 string.
- * Uses JSON → UTF-8 bytes → Base64 with URL-safe character replacement.
+ * For v3+: JSON → UTF-8 bytes → DEFLATE compress → Base64URL with z: prefix.
+ * For v2 and below: JSON → UTF-8 bytes → Base64URL (legacy format).
  */
-function encodePayload(payload) {
+async function encodePayload(payload) {
     const json = JSON.stringify(payload);
     const bytes = new TextEncoder().encode(json);
+
+    // v3+ payloads are compressed with a z: prefix
+    if (payload.v >= SHARE_VERSION) {
+        const compressed = await deflateBytes(bytes);
+        const binary = String.fromCharCode.apply(null, compressed);
+        return 'z:' + btoa(binary)
+             .replace(/\+/g, '-')
+             .replace(/\//g, '_')
+             .replace(/=+$/g, '');
+    }
+
+    // Legacy v2 and below: uncompressed
     const binary = String.fromCharCode.apply(null, bytes);
     return btoa(binary)
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/g, '');
+         .replace(/\+/g, '-')
+         .replace(/\//g, '_')
+         .replace(/=+$/g, '');
 }
 
-/** Decodes a URL-safe Base64 string back into a parsed JSON object. */
-function decodePayload(encoded) {
-    const base64 = encoded
-        .replace(/-/g, '+')
-        .replace(/_/g, '/');
-    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
-    const binary = atob(padded);
-    const bytes = Uint8Array.from(binary, ch => ch.charCodeAt(0));
+/**
+ * Decodes a URL-safe Base64 string back into a parsed JSON object.
+ * Detects z: prefix for compressed (v3+) payloads and decompresses them.
+ * Falls back to legacy uncompressed decoding for older payloads.
+ */
+async function decodePayload(encoded) {
+    let bytes;
+
+    if (encoded.startsWith('z:')) {
+         // Compressed payload: strip prefix, decode base64, then decompress
+        const base64 = encoded.slice(2)
+              .replace(/-/g, '+')
+              .replace(/_/g, '/');
+        const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+        const binary = atob(padded);
+        bytes = Uint8Array.from(binary, ch => ch.charCodeAt(0));
+        bytes = await inflateBytes(bytes);
+    } else {
+         // Legacy uncompressed payload
+        const base64 = encoded
+              .replace(/-/g, '+')
+              .replace(/_/g, '/');
+        const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+        const binary = atob(padded);
+        bytes = Uint8Array.from(binary, ch => ch.charCodeAt(0));
+    }
+
     const json = new TextDecoder().decode(bytes);
     return JSON.parse(json);
 }
@@ -327,8 +371,8 @@ function restoreFromPayload(payload, deps) {
 }
 
 /** Builds a full share URL with the encoded state as a query parameter. */
-function createShareUrl(shareData) {
-    const encoded = encodePayload(shareData);
+async function createShareUrl(shareData) {
+    const encoded = await encodePayload(shareData);
     const url = new URL(window.location.href);
     url.search = '';
     url.searchParams.set('s', encoded);
@@ -362,13 +406,13 @@ function pulseShareButton(button, label) {
 export async function copyShareLink(deps) {
     try {
         const payload = serializeState(deps);
-        const url = createShareUrl(payload);
+        const url = await createShareUrl(payload);
         await copyToClipboard(url);
         pulseShareButton(deps.ui.shareBtn, 'Copied');
-    } catch (err) {
+     } catch (err) {
         console.error('Share failed:', err);
         pulseShareButton(deps.ui.shareBtn, 'Error');
-    }
+     }
 }
 
 /**
@@ -376,17 +420,17 @@ export async function copyShareLink(deps) {
  * then restores the app state. Returns false if no share param or if the
  * payload is invalid (app falls back to defaults in that case).
  */
-export function loadStateFromUrl(deps) {
+export async function loadStateFromUrl(deps) {
     const params = new URLSearchParams(window.location.search);
     const encoded = params.get('s');
     if (!encoded) return false;
 
     try {
-        const raw = decodePayload(encoded);
+        const raw = await decodePayload(encoded);
         const payload = migratePayload(raw);
         restoreFromPayload(payload, deps);
         return true;
-    } catch {
+     } catch {
         return false;
-    }
+     }
 }
