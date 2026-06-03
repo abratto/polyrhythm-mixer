@@ -60,9 +60,9 @@ export function createChannels() {
             soundEl: document.getElementById('soundDriver'),
             volEl: document.getElementById('volDriver'),
             muteEl: document.getElementById('muteDriver'),
-            sound: 'kick',
+            sound: 'shaker',
             volume: 0.6,
-            muted: false,
+            muted: true,
             gainScale: 0.6
         },
         Awheel: {
@@ -185,7 +185,7 @@ export function removeVoiceChannel(channels, prefix, voiceIndex) {
  */
 export function populateMenus(channels) {
     const defaults = {
-        driver: 'kick',
+        driver: 'shaker',
         Awheel: 'shaker',
         Bwheel: 'shaker'
     };
