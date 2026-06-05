@@ -6,6 +6,7 @@
  */
 
 const HELP_MODAL_STORAGE_KEY = 'alans-polyrhythm-mixer-help-dismissed';
+const MOBILE_LAYOUT_QUERY = '(max-width: 720px)';
 
 /** Shows the help modal. */
 export function openHelpModal(ui) {
@@ -41,6 +42,19 @@ export function shouldAutoOpenHelpModal() {
  * Each selector/slider updates the shared state and triggers a rebuild when needed.
  */
 export function wireControls({ ui, state, rebuildSystem, resetAndRebuild, toggleAudio, onShare, onOpenSaveRhythm, onConfirmSaveRhythm, onCloseSaveRhythm, onOpenSavedRhythms, onCloseSavedRhythms }) {
+    const advancedRhythm = document.getElementById('advancedRhythm');
+    const polyrhythmView = document.getElementById('polyrhythmView');
+    const mobileLayout = globalThis.matchMedia(MOBILE_LAYOUT_QUERY);
+    const syncResponsiveDisclosureState = () => {
+        if (!advancedRhythm) return;
+        const shouldOpen = !mobileLayout.matches;
+        advancedRhythm.open = shouldOpen;
+        if (polyrhythmView) polyrhythmView.open = shouldOpen;
+    };
+
+    syncResponsiveDisclosureState();
+    mobileLayout.addEventListener('change', syncResponsiveDisclosureState);
+
     // Meter A/B selectors — changing either recalculates the entire polyrhythm
     ui.selectA.addEventListener('change', () => {
         state.A = parseInt(ui.selectA.value, 10);

@@ -82,6 +82,18 @@ export function getDomRefs() {
         titleBPhrase: document.getElementById('titleBPhrase'),
         titleBWheel: document.getElementById('titleBWheel'),
 
+        // Lane explanation toggles and copy
+        masterInfoBtn: document.getElementById('masterInfoBtn'),
+        aPhraseInfoBtn: document.getElementById('aPhraseInfoBtn'),
+        aWheelInfoBtn: document.getElementById('aWheelInfoBtn'),
+        bPhraseInfoBtn: document.getElementById('bPhraseInfoBtn'),
+        bWheelInfoBtn: document.getElementById('bWheelInfoBtn'),
+        masterDescription: document.getElementById('masterDescription'),
+        aPhraseDescription: document.getElementById('aPhraseDescription'),
+        aWheelDescription: document.getElementById('aWheelDescription'),
+        bPhraseDescription: document.getElementById('bPhraseDescription'),
+        bWheelDescription: document.getElementById('bWheelDescription'),
+
         // Mixer console containers for dynamic voice strips
         masterVoiceContainer: document.getElementById('masterVoiceContainer'),
         AVoiceContainer: document.getElementById('AVoiceContainer'),

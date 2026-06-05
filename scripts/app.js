@@ -15,8 +15,8 @@
  */
 import { getDomRefs } from './dom.js';
 import { createState, resetFlashState, updateDerivedState, updatePhaseUI } from './state.js';
-import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, markCurrentButtons, addVoice, removeVoice } from './lanes.js';
-import { createChannels, populateMenus, wireChannels, toggleAudio, playChannelSound, addVoiceChannel, removeVoiceChannel } from './audio.js';
+import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons, addVoice } from './lanes.js';
+import { createChannels, populateMenus, wireChannels, toggleAudio, playChannelSound, addVoiceChannel } from './audio.js';
 import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } from './controls.js';
 import { copyShareLink, loadStateFromUrl } from './share.js';
 import { closeSaveRhythmModal, closeSavedRhythmsModal, openSaveRhythmModal, openSavedRhythmsModal, saveCurrentRhythm } from './saved-rhythms.js';
@@ -29,6 +29,12 @@ const { canvas, ctx, ui } = getDomRefs();
 const state = createState(ui);
 const lanes = createLanes(ui, state);
 const channels = createChannels();
+
+const MIXER_LABELS = {
+    master: 'Master Cycle',
+    A: 'Meter A Phrase',
+    B: 'Meter B Phrase'
+};
 
 /**
  * Creates the initial voice channel DOM strips for a multi-voice group.
@@ -115,7 +121,7 @@ function initVoiceChannels() {
     const masterContainer = ui.masterVoiceContainer;
     if (masterContainer) {
         lanes.master.voices.forEach((_, idx) => {
-            createVoiceStripDOM(masterContainer, 'master', idx, '#ff9100', 'Master');
+            createVoiceStripDOM(masterContainer, 'master', idx, '#ff9100', MIXER_LABELS.master);
             addVoiceChannel(channels, 'master', masterContainer, idx);
         });
     }
@@ -124,7 +130,7 @@ function initVoiceChannels() {
     const aContainer = ui.AVoiceContainer;
     if (aContainer) {
         lanes.Aphrase.voices.forEach((_, idx) => {
-            createVoiceStripDOM(aContainer, 'A', idx, '#ff3366', 'A Phrase');
+            createVoiceStripDOM(aContainer, 'A', idx, '#ff3366', MIXER_LABELS.A);
             addVoiceChannel(channels, 'A', aContainer, idx);
         });
     }
@@ -133,7 +139,7 @@ function initVoiceChannels() {
     const bContainer = ui.BVoiceContainer;
     if (bContainer) {
         lanes.Bphrase.voices.forEach((_, idx) => {
-            createVoiceStripDOM(bContainer, 'B', idx, '#00e5ff', 'B Phrase');
+            createVoiceStripDOM(bContainer, 'B', idx, '#00e5ff', MIXER_LABELS.B);
             addVoiceChannel(channels, 'B', bContainer, idx);
         });
     }
@@ -164,9 +170,9 @@ function resetAndRebuild() {
 }
 
 function rebuildAllVoiceMixerStrips() {
-    rebuildVoiceMixerStrips('master', ui.masterVoiceContainer, '#ff9100', 'Master');
-    rebuildVoiceMixerStrips('A', ui.AVoiceContainer, '#ff3366', 'A Phrase');
-    rebuildVoiceMixerStrips('B', ui.BVoiceContainer, '#00e5ff', 'B Phrase');
+    rebuildVoiceMixerStrips('master', ui.masterVoiceContainer, '#ff9100', MIXER_LABELS.master);
+    rebuildVoiceMixerStrips('A', ui.AVoiceContainer, '#ff3366', MIXER_LABELS.A);
+    rebuildVoiceMixerStrips('B', ui.BVoiceContainer, '#00e5ff', MIXER_LABELS.B);
 }
 
 /**
@@ -198,9 +204,6 @@ function handleRemoveVoiceChannel(prefix, voiceIndex) {
     voiceArray.splice(voiceIndex, 1);
 
     // Re-index remaining strips' labels
-    const container = prefix === 'master' ? ui.masterVoiceContainer : prefix === 'A' ? ui.AVoiceContainer : ui.BVoiceContainer;
-    const color = prefix === 'master' ? '#ff9100' : prefix === 'A' ? '#ff3366' : '#00e5ff';
-    const label = prefix === 'master' ? 'Master' : prefix === 'A' ? 'A Phrase' : 'B Phrase';
     const lane = prefix === 'master' ? lanes.master : prefix === 'A' ? lanes.Aphrase : lanes.Bphrase;
 
     // Update channel references and strip IDs
@@ -238,6 +241,7 @@ updateDerivedState(state);
 populateMenus(channels);
 wireChannels(channels);
 wireLaneClearButtons(lanes);
+wireLaneInfoButtons(lanes);
 
 // Cache global volume to avoid parseInt per trigger
 let cachedGlobalVolume = parseInt(ui.masterVolumeSlider.value, 10) / 100;
@@ -261,15 +265,15 @@ lanes.Bphrase.onRemoveVoice = (voiceIndex) => {
 
 // Phase 5: Wire add/remove voice buttons
 ui.addMasterVoiceBtn.addEventListener('click', () => {
-    handleAddVoice(lanes.master, 'master', ui.masterVoiceContainer, '#ff9100', 'Master');
+    handleAddVoice(lanes.master, 'master', ui.masterVoiceContainer, '#ff9100', MIXER_LABELS.master);
 });
 
 ui.addAPhraseVoiceBtn.addEventListener('click', () => {
-    handleAddVoice(lanes.Aphrase, 'A', ui.AVoiceContainer, '#ff3366', 'A Phrase');
+    handleAddVoice(lanes.Aphrase, 'A', ui.AVoiceContainer, '#ff3366', MIXER_LABELS.A);
 });
 
 ui.addBPhraseVoiceBtn.addEventListener('click', () => {
-    handleAddVoice(lanes.Bphrase, 'B', ui.BVoiceContainer, '#00e5ff', 'B Phrase');
+    handleAddVoice(lanes.Bphrase, 'B', ui.BVoiceContainer, '#00e5ff', MIXER_LABELS.B);
 });
 
 // Phase 6: Wire all user controls

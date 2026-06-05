@@ -42,8 +42,11 @@ export function createLanes(ui, state) {
             className: 'master-btn',
             stepId: 'master-step',
             count: () => state.mainTeeth,
-            label: () => `Master Wheel Sequence (${state.mainTeeth} steps / ${state.mainTeeth} teeth • one full cycle)`,
+            label: () => 'Master Cycle Pattern',
+            description: () => `${state.mainTeeth} steps / ${state.mainTeeth} teeth • one full cycle`,
             titleEl: ui.masterTitle,
+            descriptionEl: ui.masterDescription,
+            infoBtn: ui.masterInfoBtn,
             textForStep: i => i + 1,
             boundary: i => i % Math.max(1, Math.floor(state.mainTeeth / 4)) === 0,
             voices: [createVoice()],
@@ -60,8 +63,11 @@ export function createLanes(ui, state) {
             className: 'meterA-btn',
             stepId: 'meterA-phrase-step',
             count: () => state.phraseStepsA,
-            label: () => `Meter A Phrase Sequencer (${state.phraseCyclesA} master cycle phrase • ${state.phraseStepsA} steps • clocked at ${masterRateLabelForMeter(state, state.A)} master rate)`,
+            label: () => 'Meter A Phrase Pattern',
+            description: () => `${state.phraseCyclesA} master cycle phrase • ${state.phraseStepsA} steps • clocked at ${masterRateLabelForMeter(state, state.A)} master rate`,
             titleEl: ui.titleAPhrase,
+            descriptionEl: ui.aPhraseDescription,
+            infoBtn: ui.aPhraseInfoBtn,
             textForStep: i => (i % state.A) + 1,
             boundary: i => i % state.A === 0,
             voices: [createVoice()],
@@ -76,8 +82,11 @@ export function createLanes(ui, state) {
             className: 'meterA-wheel-btn',
             stepId: 'meterA-wheel-step',
             count: () => state.A,
-            label: () => `Meter A Wheel Lane (${state.A} equal placements within one master cycle)`,
+            label: () => 'Meter A Cycle Pattern',
+            description: () => `${state.A} equal placements within one master cycle`,
             titleEl: ui.titleAWheel,
+            descriptionEl: ui.aWheelDescription,
+            infoBtn: ui.aWheelInfoBtn,
             textForStep: i => i + 1,
             boundary: () => false,
             selected: [],
@@ -94,8 +103,11 @@ export function createLanes(ui, state) {
             className: 'meterB-btn',
             stepId: 'meterB-phrase-step',
             count: () => state.phraseStepsB,
-            label: () => `Meter B Phrase Sequencer (${state.phraseCyclesB} master cycle phrase • ${state.phraseStepsB} steps • clocked at ${masterRateLabelForMeter(state, state.B)} master rate)`,
+            label: () => 'Meter B Phrase Pattern',
+            description: () => `${state.phraseCyclesB} master cycle phrase • ${state.phraseStepsB} steps • clocked at ${masterRateLabelForMeter(state, state.B)} master rate`,
             titleEl: ui.titleBPhrase,
+            descriptionEl: ui.bPhraseDescription,
+            infoBtn: ui.bPhraseInfoBtn,
             textForStep: i => (i % state.B) + 1,
             boundary: i => i % state.B === 0,
             voices: [createVoice()],
@@ -110,8 +122,11 @@ export function createLanes(ui, state) {
             className: 'meterB-wheel-btn',
             stepId: 'meterB-wheel-step',
             count: () => state.B,
-            label: () => `Meter B Wheel Lane (${state.B} equal placements within one master cycle)`,
+            label: () => 'Meter B Cycle Pattern',
+            description: () => `${state.B} equal placements within one master cycle`,
             titleEl: ui.titleBWheel,
+            descriptionEl: ui.bWheelDescription,
+            infoBtn: ui.bWheelInfoBtn,
             textForStep: i => i + 1,
             boundary: () => false,
             selected: [],
@@ -121,6 +136,13 @@ export function createLanes(ui, state) {
             channelPrefix: 'Bwheel'
         }
     };
+}
+
+function updateLaneHeader(lane) {
+    lane.titleEl.textContent = lane.label();
+    if (lane.descriptionEl && lane.description) {
+        lane.descriptionEl.textContent = lane.description();
+    }
 }
 
 /**
@@ -268,7 +290,7 @@ function buildVoiceButtons(lane, voice, voiceIndex) {
 /** Builds all voice rows for a multi-voice lane. */
 function buildMultiVoiceLane(lane) {
     lane.container.innerHTML = '';
-    lane.titleEl.textContent = lane.label();
+    updateLaneHeader(lane);
     lane.voices.forEach((voice, idx) => {
         const row = buildVoiceButtons(lane, voice, idx);
         lane.container.appendChild(row);
@@ -278,13 +300,26 @@ function buildMultiVoiceLane(lane) {
 /** Builds a single-voice lane. */
 function buildSingleLane(lane) {
     lane.container.innerHTML = '';
-    lane.titleEl.textContent = lane.label();
+    updateLaneHeader(lane);
     lane.buttons = [];
     for (let i = 0; i < lane.count(); i++) {
         const btn = createStepButtonForSingle(lane, i);
         lane.container.appendChild(btn);
         lane.buttons.push(btn);
     }
+}
+
+/** Attaches click handlers to each lane's inline explanation toggle. */
+export function wireLaneInfoButtons(lanes) {
+    Object.values(lanes).forEach((lane) => {
+        if (!lane.infoBtn || !lane.descriptionEl) return;
+
+        lane.infoBtn.addEventListener('click', () => {
+            const shouldShow = lane.descriptionEl.hidden;
+            lane.descriptionEl.hidden = !shouldShow;
+            lane.infoBtn.setAttribute('aria-expanded', String(shouldShow));
+        });
+    });
 }
 
 /** Creates a step button for a single-voice lane. */

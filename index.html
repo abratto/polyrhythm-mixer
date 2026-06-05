@@ -11,17 +11,13 @@
         <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
             <div id="helpModalTitle" class="modal-title">Welcome to Alan's Polyrhythm Mixer</div>
             <div class="modal-subtitle">
-                This mixer works at two rhythmic scales: wheel lanes divide one master cycle, while phrase sequencers run at each meter's own pulse and unfold across multiple master cycles. You can also layer multiple independent voices on each sequencer lane.
+                Start with two repeating counts, tap in a simple pattern, then add extra voices to build a layered groove.
             </div>
             <div class="modal-help-grid">
-                <div class="modal-help-item"><strong>1.</strong> Pick <strong>Meter A</strong> and <strong>Meter B</strong> to choose the polyrhythm.</div>
-                <div class="modal-help-item"><strong>2.</strong> Set each phrase sequencer's length in <strong>master cycles</strong>. Patterns are preserved when you change lengths.</div>
-                <div class="modal-help-item"><strong>3.</strong> <strong>Click step boxes</strong> to activate them. They trigger when the playhead reaches them.</div>
-                <div class="modal-help-item"><strong>4.</strong> Click <strong>+ Voice</strong> on any sequencer lane to layer an independent pattern with its own instrument, volume, and mute.</div>
-                <div class="modal-help-item"><strong>5.</strong> The <strong>center gear</strong> is the master wheel (LCM of A and B). One rotation = one full polyrhythmic cycle.</div>
-                <div class="modal-help-item"><strong>6.</strong> <strong>Wheel lanes</strong> show evenly-spaced placements within one cycle. <strong>Phrase sequencers</strong> unfold across multiple cycles.</div>
-                <div class="modal-help-item"><strong>7.</strong> The <strong>timelines</strong> below the gears show one cycle and the full repeating pattern, with markers for every voice.</div>
-                <div class="modal-help-item"><strong>8.</strong> <strong>Enable audio</strong>, then pick instruments and adjust volume/mute for each lane and voice in the mixer console.</div>
+                <div class="modal-help-item"><strong>1.</strong> Choose the feel in <strong>Polyrhythm Controls</strong>. Pick <strong>Meter A</strong>, <strong>Meter B</strong>, and a tempo. Try 3 against 4 or 5 against 4 to hear the two counts weave together.</div>
+                <div class="modal-help-item"><strong>2.</strong> Tap boxes to make a rhythm. Start with the <strong>Master Cycle Pattern</strong>, then add notes to the <strong>Meter A</strong> and <strong>Meter B</strong> patterns underneath.</div>
+                <div class="modal-help-item"><strong>3.</strong> Add layers with <strong>+ Voice</strong>. Each voice is another rhythm line with its own sound, so you can build from a simple pulse into a fuller groove.</div>
+                <div class="modal-help-item"><strong>4.</strong> Shape the sound in the <strong>Sound Mixer</strong>. Change instruments, mute parts, adjust volume, then <strong>Save</strong> or <strong>Share</strong> the rhythm when it feels good.</div>
             </div>
             <div class="modal-actions">
                 <button id="closeHelpModalBtn" class="modal-close-btn">Got It</button>
@@ -54,170 +50,221 @@
 
     <h1>Alan's Polyrhythm Mixer</h1>
 
-    <div class="rack-unit">
+    <div class="rack-unit config-panel">
         <div class="config-layout">
-            <div class="config-row action-row">
+            <div class="action-row">
                 <button id="audioBtn">Enable Audio</button>
-                <button id="helpBtn">Help</button>
-                <button id="saveRhythmBtn">Save Rhythm</button>
-                <button id="loadRhythmBtn">Load Rhythm</button>
-                <button id="shareBtn">Share Groove</button>
+                <div class="secondary-actions">
+                    <button id="saveRhythmBtn">Save</button>
+                    <button id="loadRhythmBtn">Load</button>
+                    <button id="shareBtn">Share</button>
+                    <button id="helpBtn">Help</button>
+                </div>
             </div>
 
-            <div class="config-row controls-row">
-                <div class="control-group">
-                    <label>Meter A</label>
-                      <select id="rhythmA">
-                          <option value="2">2</option>
-                          <option value="3">3</option>
-                          <option value="4">4</option>
-                          <option value="5">5</option>
-                          <option value="6" selected>6</option>
-                        <option value="7">7</option>
-                        <option value="8">8</option>
-                        <option value="9">9</option>
-                        <option value="10">10</option>
-                        <option value="12">12</option>
-                        <option value="16">16</option>
-                    </select>
-                </div>
+            <details id="polyrhythmControls" class="polyrhythm-controls" open>
+                <summary id="polyrhythmControlsTitle" class="section-label">Polyrhythm Controls</summary>
 
-                <div class="control-group">
-                    <label>Phrase A Length</label>
-                      <select id="phraseCyclesA">
-                          <option value="1">1 cycle</option>
-                          <option value="2" selected>2 cycles</option>
-                          <option value="3">3 cycles</option>
-                          <option value="4">4 cycles</option>
-                      </select>
-                </div>
+                <div class="config-row controls-row core-controls-row">
+                    <div class="control-group">
+                        <label>Meter A</label>
+                          <select id="rhythmA">
+                              <option value="2">2</option>
+                              <option value="3">3</option>
+                              <option value="4">4</option>
+                              <option value="5">5</option>
+                              <option value="6" selected>6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                            <option value="12">12</option>
+                            <option value="16">16</option>
+                        </select>
+                    </div>
 
-                <div class="control-group">
-                    <label>Phase Shift A</label>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="range" id="phaseA" min="0" max="47" value="0" style="width:85px;">
-                        <span id="phaseALabel" style="font-size: 13px; font-weight: bold; width: 24px; color: #ff3366;">0</span>
+                    <div class="control-group">
+                        <label>Meter B</label>
+                        <select id="rhythmB">
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4" selected>4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                            <option value="12">12</option>
+                            <option value="16">16</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group tempo-control-group">
+                        <label>Tempo</label>
+                        <div class="tempo-display">
+                            <input type="range" id="tempoSlider" min="30" max="180" value="90" />
+                            <span class="tempo-value" id="tempoLabel">90</span>
+                            <span class="tempo-unit">BPM</span>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="config-row controls-row">
-                <div class="control-group">
-                    <label>Meter B</label>
-                    <select id="rhythmB">
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4" selected>4</option>
-                        <option value="5">5</option>
-                        <option value="6">6</option>
-                        <option value="7">7</option>
-                        <option value="8">8</option>
-                        <option value="9">9</option>
-                        <option value="10">10</option>
-                        <option value="12">12</option>
-                        <option value="16">16</option>
-                    </select>
-                </div>
+                <details id="advancedRhythm" class="advanced-rhythm" open>
+                    <summary>Phrase &amp; Offset</summary>
+                    <div class="advanced-control-grid controls-row">
+                        <div class="advanced-meter-group advanced-meter-a">
+                            <div class="control-group">
+                                <label>A Phrase Length</label>
+                                <select id="phraseCyclesA">
+                                    <option value="1">1 cycle</option>
+                                    <option value="2" selected>2 cycles</option>
+                                    <option value="3">3 cycles</option>
+                                    <option value="4">4 cycles</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label>A Offset</label>
+                                <div class="phase-display">
+                                    <input type="range" id="phaseA" min="0" max="47" value="0">
+                                    <span id="phaseALabel" class="phase-value phase-a-value">0</span>
+                                </div>
+                            </div>
+                        </div>
 
-                <div class="control-group">
-                    <label>Phrase B Length</label>
-                      <select id="phraseCyclesB">
-                          <option value="1">1 cycle</option>
-                          <option value="2" selected>2 cycles</option>
-                          <option value="3">3 cycles</option>
-                          <option value="4">4 cycles</option>
-                      </select>
-                </div>
-
-                <div class="control-group">
-                    <label>Phase Shift B</label>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="range" id="phaseB" min="0" max="47" value="0" style="width:85px;">
-                        <span id="phaseBLabel" style="font-size: 13px; font-weight: bold; width: 24px; color: #00e5ff;">0</span>
+                        <div class="advanced-meter-group advanced-meter-b">
+                            <div class="control-group">
+                                <label>B Phrase Length</label>
+                                <select id="phraseCyclesB">
+                                    <option value="1">1 cycle</option>
+                                    <option value="2" selected>2 cycles</option>
+                                    <option value="3">3 cycles</option>
+                                    <option value="4">4 cycles</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label>B Offset</label>
+                                <div class="phase-display">
+                                    <input type="range" id="phaseB" min="0" max="47" value="0">
+                                    <span id="phaseBLabel" class="phase-value phase-b-value">0</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                </details>
+            </details>
+
+            <section class="playback-controls" aria-label="Playback controls">
+                <div class="global-controls-row">
+                    <div class="control-group master-volume-group">
+                        <label>Master Volume</label>
+                        <div class="volume-display">
+                            <input type="range" id="masterVolumeSlider" min="0" max="100" value="80" />
+                            <span class="volume-value" id="masterVolumeLabel">80</span>
+                            <span class="volume-unit">%</span>
+                        </div>
+                    </div>
+                    <button id="resetBtn" class="reset-action-btn">Clear Rhythms</button>
                 </div>
-            </div>
+            </section>
 
         </div>
     </div>
 
-    <div id="canvasContainer">
-        <canvas id="simCanvas" width="960" height="580"></canvas>
-    </div>
-
-    <div class="rack-unit utility-panel">
-        <div class="utility-row">
-            <div class="control-group">
-                <label>Global Tempo</label>
-                <div class="tempo-display">
-                    <input type="range" id="tempoSlider" min="30" max="180" value="90" />
-                    <span class="tempo-value" id="tempoLabel">90</span>
-                    <span class="tempo-unit">BPM</span>
-                </div>
-            </div>
-            <div class="v-divider"></div>
-            <div class="control-group">
-                <label>Master Volume</label>
-                <div class="volume-display">
-                    <input type="range" id="masterVolumeSlider" min="0" max="100" value="80" />
-                    <span class="volume-value" id="masterVolumeLabel">80</span>
-                    <span class="volume-unit">%</span>
-                </div>
-            </div>
-            <button id="resetBtn">Clear All</button>
+    <details id="polyrhythmView" class="visual-guide" open>
+        <summary>Gears + Timelines</summary>
+        <div id="canvasContainer">
+            <canvas id="simCanvas" width="960" height="580"></canvas>
         </div>
-    </div>
+    </details>
 
-    <div class="rack-unit" style="background: #101015; border-color: #2a2a3c; padding-top: 5px; padding-bottom: 5px; margin-top: 12px;">
-        <div class="matrix-row">
+    <div class="rack-unit sequencer-panel" style="background: #101015; border-color: #2a2a3c; padding-top: 5px; padding-bottom: 5px; margin-top: 12px;">
+        <div class="matrix-row master-pattern-row">
             <div class="matrix-header" id="masterHeaderContainer">
-                <label id="masterTitle" style="color: #ff9100;">Master Wheel Sequence</label>
-                <button id="clearMasterBtn" class="clear-btn">Clear</button>
-                <button id="addMasterVoiceBtn" class="add-voice-btn">+ Voice</button>
+                <div class="lane-title-group">
+                    <label id="masterTitle" style="color: #ff9100;">Master Wheel Sequence</label>
+                    <button id="masterInfoBtn" class="lane-info-btn" aria-label="Show master wheel explanation" aria-expanded="false" aria-controls="masterDescription">?</button>
+                </div>
+                <div class="lane-actions">
+                    <button id="clearMasterBtn" class="clear-btn">Clear</button>
+                    <button id="addMasterVoiceBtn" class="add-voice-btn">+ Voice</button>
+                </div>
             </div>
+            <div id="masterDescription" class="lane-description" hidden></div>
             <div id="masterGrid" class="sequencer-container"></div>
         </div>
 
-        <div class="matrix-row">
-            <div class="matrix-header" id="meterAPhraseHeaderContainer">
-                <label id="titleAPhrase" style="color: #ff3366;">Meter A Phrase Sequencer</label>
-                <button id="clearAPhraseBtn" class="clear-btn">Clear</button>
-                <button id="addAPhraseVoiceBtn" class="add-voice-btn">+ Voice</button>
+        <div class="meter-pattern-group meter-a-group">
+            <div class="meter-group-heading" style="color: #ff3366;">Meter A</div>
+            <div class="matrix-row">
+                <div class="matrix-header">
+                    <div class="lane-title-group">
+                        <label id="titleAWheel" style="color: #ff6b8f;">Meter A Wheel Lane</label>
+                        <button id="aWheelInfoBtn" class="lane-info-btn" aria-label="Show Meter A wheel explanation" aria-expanded="false" aria-controls="aWheelDescription">?</button>
+                    </div>
+                    <div class="lane-actions">
+                        <button id="clearAWheelBtn" class="clear-btn">Clear</button>
+                    </div>
+                </div>
+                <div id="aWheelDescription" class="lane-description" hidden></div>
+                <div id="meterAWheelGrid" class="sequencer-container short-lane"></div>
             </div>
-            <div id="meterAPhraseGrid" class="sequencer-container"></div>
+
+            <div class="matrix-row">
+                <div class="matrix-header" id="meterAPhraseHeaderContainer">
+                    <div class="lane-title-group">
+                        <label id="titleAPhrase" style="color: #ff3366;">Meter A Phrase Sequencer</label>
+                        <button id="aPhraseInfoBtn" class="lane-info-btn" aria-label="Show Meter A phrase explanation" aria-expanded="false" aria-controls="aPhraseDescription">?</button>
+                    </div>
+                    <div class="lane-actions">
+                        <button id="clearAPhraseBtn" class="clear-btn">Clear</button>
+                        <button id="addAPhraseVoiceBtn" class="add-voice-btn">+ Voice</button>
+                    </div>
+                </div>
+                <div id="aPhraseDescription" class="lane-description" hidden></div>
+                <div id="meterAPhraseGrid" class="sequencer-container"></div>
+            </div>
         </div>
 
-        <div class="matrix-row">
-            <div class="matrix-header">
-                <label id="titleAWheel" style="color: #ff6b8f;">Meter A Wheel Lane</label>
-                <button id="clearAWheelBtn" class="clear-btn">Clear</button>
+        <div class="meter-pattern-group meter-b-group">
+            <div class="meter-group-heading" style="color: #00e5ff;">Meter B</div>
+            <div class="matrix-row">
+                <div class="matrix-header">
+                    <div class="lane-title-group">
+                        <label id="titleBWheel" style="color: #6ef2ff;">Meter B Wheel Lane</label>
+                        <button id="bWheelInfoBtn" class="lane-info-btn" aria-label="Show Meter B wheel explanation" aria-expanded="false" aria-controls="bWheelDescription">?</button>
+                    </div>
+                    <div class="lane-actions">
+                        <button id="clearBWheelBtn" class="clear-btn">Clear</button>
+                    </div>
+                </div>
+                <div id="bWheelDescription" class="lane-description" hidden></div>
+                <div id="meterBWheelGrid" class="sequencer-container short-lane"></div>
             </div>
-            <div id="meterAWheelGrid" class="sequencer-container short-lane"></div>
-        </div>
 
-        <div class="matrix-row">
-            <div class="matrix-header" id="meterBPhraseHeaderContainer">
-                <label id="titleBPhrase" style="color: #00e5ff;">Meter B Phrase Sequencer</label>
-                <button id="clearBPhraseBtn" class="clear-btn">Clear</button>
-                <button id="addBPhraseVoiceBtn" class="add-voice-btn">+ Voice</button>
+            <div class="matrix-row">
+                <div class="matrix-header" id="meterBPhraseHeaderContainer">
+                    <div class="lane-title-group">
+                        <label id="titleBPhrase" style="color: #00e5ff;">Meter B Phrase Sequencer</label>
+                        <button id="bPhraseInfoBtn" class="lane-info-btn" aria-label="Show Meter B phrase explanation" aria-expanded="false" aria-controls="bPhraseDescription">?</button>
+                    </div>
+                    <div class="lane-actions">
+                        <button id="clearBPhraseBtn" class="clear-btn">Clear</button>
+                        <button id="addBPhraseVoiceBtn" class="add-voice-btn">+ Voice</button>
+                    </div>
+                </div>
+                <div id="bPhraseDescription" class="lane-description" hidden></div>
+                <div id="meterBPhraseGrid" class="sequencer-container"></div>
             </div>
-            <div id="meterBPhraseGrid" class="sequencer-container"></div>
-        </div>
-
-        <div class="matrix-row">
-            <div class="matrix-header">
-                <label id="titleBWheel" style="color: #6ef2ff;">Meter B Wheel Lane</label>
-                <button id="clearBWheelBtn" class="clear-btn">Clear</button>
-            </div>
-            <div id="meterBWheelGrid" class="sequencer-container short-lane"></div>
         </div>
     </div>
 
       <div class="rack-unit mixer-console">
+          <div class="section-label">Sound Mixer</div>
           <!-- Row 1: Fixed controls (horizontal) -->
           <div class="fixed-controls-row">
               <div class="mixer-strip">
-                  <div class="strip-header" style="color: #7a8a9e;">4-Beat Click</div>
+                  <div class="strip-header" style="color: #7a8a9e;">Reference Click</div>
                   <select id="soundDriver" style="padding: 4px; width: 100%; font-size:12px;"></select>
                   <div class="fader-area">
                       <button id="muteDriver" class="mute-btn">Mute</button>
@@ -228,7 +275,7 @@
               </div>
 
               <div class="mixer-strip">
-                  <div class="strip-header" style="color: #ff6b8f;">Meter A Wheel</div>
+                  <div class="strip-header" style="color: #ff6b8f;">Meter A Cycle</div>
                   <select id="soundAWheel" style="padding: 4px; width: 100%; font-size:12px;"></select>
                   <div class="fader-area">
                       <button id="muteAWheel" class="mute-btn">Mute</button>
@@ -239,7 +286,7 @@
               </div>
 
               <div class="mixer-strip">
-                  <div class="strip-header" style="color: #6ef2ff;">Meter B Wheel</div>
+                  <div class="strip-header" style="color: #6ef2ff;">Meter B Cycle</div>
                   <select id="soundBWheel" style="padding: 4px; width: 100%; font-size:12px;"></select>
                   <div class="fader-area">
                       <button id="muteBWheel" class="mute-btn">Mute</button>
