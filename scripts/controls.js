@@ -42,13 +42,10 @@ export function shouldAutoOpenHelpModal() {
  * Each selector/slider updates the shared state and triggers a rebuild when needed.
  */
 export function wireControls({ ui, state, rebuildSystem, resetAndRebuild, toggleAudio, onShare, onOpenSaveRhythm, onConfirmSaveRhythm, onCloseSaveRhythm, onOpenSavedRhythms, onCloseSavedRhythms }) {
-    const advancedRhythm = document.getElementById('advancedRhythm');
     const polyrhythmView = document.getElementById('polyrhythmView');
     const mobileLayout = globalThis.matchMedia(MOBILE_LAYOUT_QUERY);
     const syncResponsiveDisclosureState = () => {
-        if (!advancedRhythm) return;
         const shouldOpen = !mobileLayout.matches;
-        advancedRhythm.open = shouldOpen;
         if (polyrhythmView) polyrhythmView.open = shouldOpen;
     };
 
@@ -75,17 +72,6 @@ export function wireControls({ ui, state, rebuildSystem, resetAndRebuild, toggle
     ui.phraseCyclesB.addEventListener('change', () => {
         state.phraseCyclesB = parseInt(ui.phraseCyclesB.value, 10);
         rebuildSystem();
-    });
-
-    // Phase offset sliders — update state and label in real-time
-    ui.phaseSliderA.addEventListener('input', () => {
-        state.phaseA = parseInt(ui.phaseSliderA.value, 10);
-        ui.phaseLabelA.textContent = String(state.phaseA);
-    });
-
-    ui.phaseSliderB.addEventListener('input', () => {
-        state.phaseB = parseInt(ui.phaseSliderB.value, 10);
-        ui.phaseLabelB.textContent = String(state.phaseB);
     });
 
     // Tempo slider — linear BPM range (30–180), slider value equals BPM directly

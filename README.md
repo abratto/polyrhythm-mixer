@@ -74,6 +74,33 @@ All sounds are synthesized in real-time using Web Audio oscillators, noise buffe
 - **Local persistence** — Saved rhythms use the same versioned payload format and are stored in `localStorage`
 - **Performance** — Pre-generated noise buffer, reusable selection buffers, cached channel values, and incremental DOM updates
 
+## Regression Smoke Test
+
+The reusable browser smoke harness lives at `scripts/regression-smoke.js`. It is heavily commented for future agents and covers the flows most likely to regress: default first-pulse selections, Master Click, help text, save/load from a fresh page, current share links, legacy saved payloads, and legacy share links.
+
+One-time setup:
+
+```bash
+npm install --save-dev playwright
+npx playwright install chromium
+```
+
+Run:
+
+```bash
+node scripts/regression-smoke.js
+```
+
+Useful options:
+
+```bash
+HEADFUL=1 node scripts/regression-smoke.js
+PORT=8010 node scripts/regression-smoke.js
+BASE_URL=http://localhost:8000 node scripts/regression-smoke.js
+```
+
+The harness snapshots and restores the saved-rhythms `localStorage` key, so it should not leave test rhythms behind. When UI labels, selectors, or persistence fields change, update the smoke harness in the same commit.
+
 ## Share Links
 
 The **Share Groove** button encodes the current state into a URL-safe Base64 string appended as an `s` query parameter. The payload includes:

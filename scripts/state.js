@@ -1,7 +1,7 @@
 /**
  * state.js — Application state management.
  *
- * Holds both user-facing state (meters, phrase lengths, phase offsets, tempo)
+ * Holds both user-facing state (meters, phrase lengths, tempo)
  * and derived state (master wheel size, teeth counts, phrase step counts).
  * Derived values are recalculated whenever the user changes A, B, or phrase cycles.
  */
@@ -20,9 +20,9 @@ export function createState(ui) {
         // Number of master cycles each phrase spans
         phraseCyclesA: parseInt(ui.phraseCyclesA.value, 10),
         phraseCyclesB: parseInt(ui.phraseCyclesB.value, 10),
-        // Phase offset in master teeth (shifts the starting position)
-        phaseA: parseInt(ui.phaseSliderA.value, 10),
-        phaseB: parseInt(ui.phaseSliderB.value, 10),
+        // Legacy timeline phase values are fixed at zero; visible nudging edits rows directly.
+        phaseA: 0,
+        phaseB: 0,
 
         // Derived values — computed by updateDerivedState
         mainTeeth: 0,       // LCM(A, B) — total teeth on the master wheel
@@ -61,24 +61,17 @@ export function updateDerivedState(state) {
 }
 
 /**
- * Updates the phase slider max values and resets the phase offset
- * if it exceeds the new master wheel size after a meter change.
+ * Keeps legacy phase offsets neutral after meter changes.
  */
-export function updatePhaseUI(state, ui) {
-    ui.phaseSliderA.max = state.mainTeeth - 1;
-    ui.phaseSliderB.max = state.mainTeeth - 1;
-
+export function updatePhaseUI(state) {
     if (state.phaseA >= state.mainTeeth) {
         state.phaseA = 0;
-        ui.phaseSliderA.value = '0';
     }
     if (state.phaseB >= state.mainTeeth) {
         state.phaseB = 0;
-        ui.phaseSliderB.value = '0';
     }
-
-    ui.phaseLabelA.textContent = String(state.phaseA);
-    ui.phaseLabelB.textContent = String(state.phaseB);
+    state.phaseA = 0;
+    state.phaseB = 0;
 }
 
 /** Resets all flash intensity counters to zero. */

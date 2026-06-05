@@ -16,11 +16,6 @@ export function getDomRefs() {
         // Phrase length selectors (number of master cycles per phrase)
         phraseCyclesA: document.getElementById('phraseCyclesA'),
         phraseCyclesB: document.getElementById('phraseCyclesB'),
-        // Phase offset sliders and their numeric labels
-        phaseSliderA: document.getElementById('phaseA'),
-        phaseSliderB: document.getElementById('phaseB'),
-        phaseLabelA: document.getElementById('phaseALabel'),
-        phaseLabelB: document.getElementById('phaseBLabel'),
         // Global tempo slider (BPM) and its display label
         tempoSlider: document.getElementById('tempoSlider'),
         tempoLabel: document.getElementById('tempoLabel'),

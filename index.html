@@ -14,10 +14,10 @@
                 Start with two repeating counts, tap in a simple pattern, then add extra voices to build a layered groove.
             </div>
             <div class="modal-help-grid">
-                <div class="modal-help-item"><strong>1.</strong> Choose the feel in <strong>Polyrhythm Controls</strong>. Pick <strong>Meter A</strong>, <strong>Meter B</strong>, and a tempo. Try 3 against 4 or 5 against 4 to hear the two counts weave together.</div>
-                <div class="modal-help-item"><strong>2.</strong> Tap boxes to make a rhythm. Start with the <strong>Master Cycle Pattern</strong>, then add notes to the <strong>Meter A</strong> and <strong>Meter B</strong> patterns underneath.</div>
-                <div class="modal-help-item"><strong>3.</strong> Add layers with <strong>+ Voice</strong>. Each voice is another rhythm line with its own sound, so you can build from a simple pulse into a fuller groove.</div>
-                <div class="modal-help-item"><strong>4.</strong> Shape the sound in the <strong>Sound Mixer</strong>. Change instruments, mute parts, adjust volume, then <strong>Save</strong> or <strong>Share</strong> the rhythm when it feels good.</div>
+                <div class="modal-help-item"><strong>1. Choose the feel in Polyrhythm Controls.</strong> Pick <strong>Meter A</strong>, <strong>Meter B</strong>, and a tempo. Try 3 against 4 or 5 against 4 to hear the two counts weave together.</div>
+                <div class="modal-help-item"><strong>2. Tap boxes to make a rhythm.</strong> The first pulse starts selected for the <strong>Master Cycle</strong>, <strong>Meter A</strong>, and <strong>Meter B</strong> so you can hear the groove right away.</div>
+                <div class="modal-help-item"><strong>3. Add layers with + Voice.</strong> Use <strong>Nudge</strong> to slide one rhythm, or <strong>Nudge Group</strong> to move a whole pattern together; the <strong>1</strong> button brings it back to the start.</div>
+                <div class="modal-help-item"><strong>4. Shape the sound in the Sound Mixer.</strong> Change instruments, mute parts, adjust volume, use the <strong>Master Click</strong> as a guide, then <strong>Save</strong> or <strong>Share</strong>.</div>
             </div>
             <div class="modal-actions">
                 <button id="closeHelpModalBtn" class="modal-close-btn">Got It</button>
@@ -65,41 +65,65 @@
             <details id="polyrhythmControls" class="polyrhythm-controls" open>
                 <summary id="polyrhythmControlsTitle" class="section-label">Polyrhythm Controls</summary>
 
-                <div class="config-row controls-row core-controls-row">
-                    <div class="control-group">
-                        <label>Meter A</label>
-                          <select id="rhythmA">
-                              <option value="2">2</option>
-                              <option value="3">3</option>
-                              <option value="4">4</option>
-                              <option value="5">5</option>
-                              <option value="6" selected>6</option>
-                            <option value="7">7</option>
-                            <option value="8">8</option>
-                            <option value="9">9</option>
-                            <option value="10">10</option>
-                            <option value="12">12</option>
-                            <option value="16">16</option>
-                        </select>
+                <div class="meter-setup-grid controls-row">
+                    <div class="meter-setup-row meter-a-setup">
+                        <div class="control-group">
+                            <label>Meter A</label>
+                            <select id="rhythmA">
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6" selected>6</option>
+                                <option value="7">7</option>
+                                <option value="8">8</option>
+                                <option value="9">9</option>
+                                <option value="10">10</option>
+                                <option value="12">12</option>
+                                <option value="16">16</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>A Phrase Length</label>
+                            <select id="phraseCyclesA">
+                                <option value="1">1 cycle</option>
+                                <option value="2" selected>2 cycles</option>
+                                <option value="3">3 cycles</option>
+                                <option value="4">4 cycles</option>
+                            </select>
+                        </div>
                     </div>
 
-                    <div class="control-group">
-                        <label>Meter B</label>
-                        <select id="rhythmB">
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4" selected>4</option>
-                            <option value="5">5</option>
-                            <option value="6">6</option>
-                            <option value="7">7</option>
-                            <option value="8">8</option>
-                            <option value="9">9</option>
-                            <option value="10">10</option>
-                            <option value="12">12</option>
-                            <option value="16">16</option>
-                        </select>
+                    <div class="meter-setup-row meter-b-setup">
+                        <div class="control-group">
+                            <label>Meter B</label>
+                            <select id="rhythmB">
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4" selected>4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                                <option value="7">7</option>
+                                <option value="8">8</option>
+                                <option value="9">9</option>
+                                <option value="10">10</option>
+                                <option value="12">12</option>
+                                <option value="16">16</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>B Phrase Length</label>
+                            <select id="phraseCyclesB">
+                                <option value="1">1 cycle</option>
+                                <option value="2" selected>2 cycles</option>
+                                <option value="3">3 cycles</option>
+                                <option value="4">4 cycles</option>
+                            </select>
+                        </div>
                     </div>
+                </div>
 
+                <div class="timing-control-row controls-row">
                     <div class="control-group tempo-control-group">
                         <label>Tempo</label>
                         <div class="tempo-display">
@@ -108,54 +132,6 @@
                             <span class="tempo-unit">BPM</span>
                         </div>
                     </div>
-                </div>
-
-                <details id="advancedRhythm" class="advanced-rhythm" open>
-                    <summary>Phrase &amp; Offset</summary>
-                    <div class="advanced-control-grid controls-row">
-                        <div class="advanced-meter-group advanced-meter-a">
-                            <div class="control-group">
-                                <label>A Phrase Length</label>
-                                <select id="phraseCyclesA">
-                                    <option value="1">1 cycle</option>
-                                    <option value="2" selected>2 cycles</option>
-                                    <option value="3">3 cycles</option>
-                                    <option value="4">4 cycles</option>
-                                </select>
-                            </div>
-                            <div class="control-group">
-                                <label>A Offset</label>
-                                <div class="phase-display">
-                                    <input type="range" id="phaseA" min="0" max="47" value="0">
-                                    <span id="phaseALabel" class="phase-value phase-a-value">0</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="advanced-meter-group advanced-meter-b">
-                            <div class="control-group">
-                                <label>B Phrase Length</label>
-                                <select id="phraseCyclesB">
-                                    <option value="1">1 cycle</option>
-                                    <option value="2" selected>2 cycles</option>
-                                    <option value="3">3 cycles</option>
-                                    <option value="4">4 cycles</option>
-                                </select>
-                            </div>
-                            <div class="control-group">
-                                <label>B Offset</label>
-                                <div class="phase-display">
-                                    <input type="range" id="phaseB" min="0" max="47" value="0">
-                                    <span id="phaseBLabel" class="phase-value phase-b-value">0</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </details>
-            </details>
-
-            <section class="playback-controls" aria-label="Playback controls">
-                <div class="global-controls-row">
                     <div class="control-group master-volume-group">
                         <label>Master Volume</label>
                         <div class="volume-display">
@@ -166,13 +142,13 @@
                     </div>
                     <button id="resetBtn" class="reset-action-btn">Clear Rhythms</button>
                 </div>
-            </section>
+            </details>
 
         </div>
     </div>
 
     <details id="polyrhythmView" class="visual-guide" open>
-        <summary>Gears + Timelines</summary>
+        <summary>Polyrhythm Visualization</summary>
         <div id="canvasContainer">
             <canvas id="simCanvas" width="960" height="580"></canvas>
         </div>
@@ -264,7 +240,7 @@
           <!-- Row 1: Fixed controls (horizontal) -->
           <div class="fixed-controls-row">
               <div class="mixer-strip">
-                  <div class="strip-header" style="color: #7a8a9e;">Reference Click</div>
+                  <div class="strip-header" style="color: #7a8a9e;">Master Click</div>
                   <select id="soundDriver" style="padding: 4px; width: 100%; font-size:12px;"></select>
                   <div class="fader-area">
                       <button id="muteDriver" class="mute-btn">Mute</button>

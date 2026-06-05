@@ -24,8 +24,52 @@ function createVoice() {
     return {
         selected: [],
         buttons: [],
+        nudgeOffset: 0,
         channel: null // populated by audio.js when voice is added
     };
+}
+
+function normalizeNudgeOffset(offset, length) {
+    if (!Number.isInteger(length) || length < 2) return 0;
+    return ((offset % length) + length) % length;
+}
+
+function rotatePatternBy(selected, steps) {
+    if (!Array.isArray(selected) || selected.length < 2) return;
+
+    const rightSteps = normalizeNudgeOffset(steps, selected.length);
+    if (rightSteps === 0) return;
+
+    selected.unshift(...selected.splice(selected.length - rightSteps, rightSteps));
+}
+
+function rotateVoicePattern(voice, direction) {
+    rotatePatternBy(voice.selected, direction);
+    voice.nudgeOffset = normalizeNudgeOffset((voice.nudgeOffset || 0) + direction, voice.selected.length);
+}
+
+function resetVoicePattern(voice) {
+    const nudgeOffset = normalizeNudgeOffset(voice.nudgeOffset || 0, voice.selected.length);
+    if (nudgeOffset !== 0) {
+        rotatePatternBy(voice.selected, -nudgeOffset);
+        voice.nudgeOffset = 0;
+        return;
+    }
+
+    if (!Array.isArray(voice.selected) || voice.selected.length < 2) return;
+
+    const firstActiveIndex = voice.selected.findIndex(Boolean);
+    if (firstActiveIndex <= 0) return;
+
+    rotatePatternBy(voice.selected, -firstActiveIndex);
+}
+
+function nudgeLaneVoices(lane, direction) {
+    lane.voices.forEach(voice => rotateVoicePattern(voice, direction));
+}
+
+function resetLaneVoices(lane) {
+    lane.voices.forEach(resetVoicePattern);
 }
 
 /**
@@ -51,6 +95,8 @@ export function createLanes(ui, state) {
             boundary: i => i % Math.max(1, Math.floor(state.mainTeeth / 4)) === 0,
             voices: [createVoice()],
             isMultiVoice: true,
+            allowVoiceNudge: true,
+            allowGroupNudge: true,
             color: '#ff9100',
             channelPrefix: 'master',
             onRemoveVoice: null
@@ -72,6 +118,8 @@ export function createLanes(ui, state) {
             boundary: i => i % state.A === 0,
             voices: [createVoice()],
             isMultiVoice: true,
+            allowVoiceNudge: true,
+            allowGroupNudge: true,
             color: '#ff3366',
             channelPrefix: 'A',
             onRemoveVoice: null
@@ -112,6 +160,8 @@ export function createLanes(ui, state) {
             boundary: i => i % state.B === 0,
             voices: [createVoice()],
             isMultiVoice: true,
+            allowVoiceNudge: true,
+            allowGroupNudge: true,
             color: '#00e5ff',
             channelPrefix: 'B',
             onRemoveVoice: null
@@ -143,27 +193,71 @@ function updateLaneHeader(lane) {
     if (lane.descriptionEl && lane.description) {
         lane.descriptionEl.textContent = lane.description();
     }
+    ensureGroupNudgeControl(lane);
+}
+
+function createNudgeButton(label, title, onClick, className = 'voice-nudge-btn') {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    button.textContent = label;
+    button.title = title;
+    button.addEventListener('click', onClick);
+    return button;
+}
+
+function ensureGroupNudgeControl(lane) {
+    if (!lane.allowGroupNudge || !lane.clearBtn || lane.groupNudgeControl) return;
+
+    const nudgeControl = document.createElement('div');
+    nudgeControl.className = 'voice-nudge-control group-nudge-control';
+    nudgeControl.setAttribute('aria-label', `Nudge all ${lane.label()} voices`);
+
+    const nudgeLabel = document.createElement('span');
+    nudgeLabel.className = 'voice-nudge-label';
+    nudgeLabel.textContent = 'Nudge Group';
+
+    const nudgeDown = createNudgeButton('←', `Shift all ${lane.label()} voices left`, () => {
+        nudgeLaneVoices(lane, -1);
+        buildMultiVoiceLane(lane);
+    });
+    const nudgeReset = createNudgeButton('1', `Reset all ${lane.label()} voices to start on 1`, () => {
+        resetLaneVoices(lane);
+        buildMultiVoiceLane(lane);
+    }, 'voice-nudge-reset-btn');
+    const nudgeUp = createNudgeButton('→', `Shift all ${lane.label()} voices right`, () => {
+        nudgeLaneVoices(lane, 1);
+        buildMultiVoiceLane(lane);
+    });
+
+    nudgeControl.append(nudgeLabel, nudgeDown, nudgeReset, nudgeUp);
+    lane.clearBtn.before(nudgeControl);
+    lane.groupNudgeControl = nudgeControl;
 }
 
 /**
  * Resets all lane patterns to their defaults:
  *   - Master and phrase lanes start empty (all voices)
  *   - Wheel lanes start fully active (every step triggers)
- *   - First step of each phrase lane is enabled by default
+ *   - First step of the first master and phrase voices is enabled by default
  */
 export function resetPatterns(state, lanes) {
     lanes.master.voices.forEach(v => {
         v.selected = new Array(state.mainTeeth).fill(false);
+        v.nudgeOffset = 0;
     });
     lanes.Aphrase.voices.forEach(v => {
         v.selected = new Array(state.phraseStepsA).fill(false);
+        v.nudgeOffset = 0;
     });
     lanes.Bphrase.voices.forEach(v => {
         v.selected = new Array(state.phraseStepsB).fill(false);
+        v.nudgeOffset = 0;
     });
     lanes.Awheel.selected = new Array(state.A).fill(true);
     lanes.Bwheel.selected = new Array(state.B).fill(true);
 
+    if (lanes.master.voices[0]?.selected.length > 0) lanes.master.voices[0].selected[0] = true;
     if (lanes.Aphrase.voices[0]?.selected.length > 0) lanes.Aphrase.voices[0].selected[0] = true;
     if (lanes.Bphrase.voices[0]?.selected.length > 0) lanes.Bphrase.voices[0].selected[0] = true;
 
@@ -182,6 +276,7 @@ function resizeVoice(voice, newLength) {
         resized[i] = old[i];
     }
     voice.selected = resized;
+    voice.nudgeOffset = normalizeNudgeOffset(voice.nudgeOffset || 0, newLength);
 }
 
 /**
@@ -194,6 +289,7 @@ export function resizeAllLanes(state, lanes) {
     resizeSingleLane(lanes.Awheel, state.A, true);
     resizeSingleLane(lanes.Bwheel, state.B, true);
 
+    if (lanes.master.voices[0]?.selected.length > 0) lanes.master.voices[0].selected[0] = true;
     if (lanes.Aphrase.voices[0]?.selected.length > 0) lanes.Aphrase.voices[0].selected[0] = true;
     if (lanes.Bphrase.voices[0]?.selected.length > 0) lanes.Bphrase.voices[0].selected[0] = true;
 }
@@ -212,7 +308,9 @@ function resizeSingleLane(lane, newLength, isWheel = false) {
 /** Adds a new voice to a multi-voice lane. */
 export function addVoice(lane) {
     if (!lane.isMultiVoice) return;
-    lane.voices.push(createVoice());
+    const voice = createVoice();
+    voice.selected = new Array(lane.count()).fill(false);
+    lane.voices.push(voice);
 }
 
 /** Removes a voice from a multi-voice lane (minimum 1 voice). */
@@ -269,6 +367,32 @@ function buildVoiceButtons(lane, voice, voiceIndex) {
             buildMultiVoiceLane(lane);
         });
         labelArea.appendChild(removeBtn);
+    }
+
+    if (lane.allowVoiceNudge) {
+        const nudgeControl = document.createElement('div');
+        nudgeControl.className = 'voice-nudge-control';
+        nudgeControl.setAttribute('aria-label', `Nudge Voice ${voiceIndex + 1}`);
+
+        const nudgeLabel = document.createElement('span');
+        nudgeLabel.className = 'voice-nudge-label';
+        nudgeLabel.textContent = 'Nudge';
+
+        const nudgeDown = createNudgeButton('←', `Shift Voice ${voiceIndex + 1} left`, () => {
+            rotateVoicePattern(voice, -1);
+            buildMultiVoiceLane(lane);
+        });
+        const nudgeReset = createNudgeButton('1', `Reset Voice ${voiceIndex + 1} to start on 1`, () => {
+            resetVoicePattern(voice);
+            buildMultiVoiceLane(lane);
+        }, 'voice-nudge-reset-btn');
+        const nudgeUp = createNudgeButton('→', `Shift Voice ${voiceIndex + 1} right`, () => {
+            rotateVoicePattern(voice, 1);
+            buildMultiVoiceLane(lane);
+        });
+
+        nudgeControl.append(nudgeLabel, nudgeDown, nudgeReset, nudgeUp);
+        labelArea.appendChild(nudgeControl);
     }
 
     row.appendChild(labelArea);
@@ -354,13 +478,24 @@ export function buildAllLanes(lanes) {
     Object.values(lanes).forEach(buildLane);
 }
 
+function removeCurrentClass(button) {
+    if (button) button.classList.remove('current');
+}
+
+function addCurrentClass(button) {
+    if (button) button.classList.add('current');
+}
+
 /** Attaches click handlers to all lane clear buttons. */
 export function wireLaneClearButtons(lanes) {
     Object.values(lanes).forEach((lane) => {
         if (lane.clearBtn) {
             lane.clearBtn.addEventListener('click', () => {
                 if (lane.isMultiVoice) {
-                    lane.voices.forEach(v => v.selected.fill(false));
+                    lane.voices.forEach(v => {
+                        v.selected.fill(false);
+                        v.nudgeOffset = 0;
+                    });
                 } else {
                     lane.selected.fill(false);
                 }
@@ -368,6 +503,21 @@ export function wireLaneClearButtons(lanes) {
             });
         }
     });
+}
+
+function markMultiVoiceCurrentButtons(lane, previous, next) {
+    const currentIndexes = Array.isArray(next) ? next : lane.voices.map(() => next);
+
+    lane.voices.forEach((voice, voiceIndex) => {
+        const previousIndex = Array.isArray(previous) ? previous[voiceIndex] : previous;
+        removeCurrentClass(voice.buttons[previousIndex]);
+        addCurrentClass(voice.buttons[currentIndexes[voiceIndex]]);
+    });
+}
+
+function markSingleVoiceCurrentButtons(lane, previous, next) {
+    removeCurrentClass(lane.buttons[previous]);
+    addCurrentClass(lane.buttons[next]);
 }
 
 /**
@@ -385,29 +535,10 @@ export function markCurrentButtons(state, lanes, active) {
     ];
 
     for (const [key, lane, index] of mappings) {
-        const prev = state.lastActive[key];
         if (lane.isMultiVoice) {
-            // Remove from previous voice buttons
-            if (prev >= 0) {
-                for (const voice of lane.voices) {
-                    const prevBtn = voice.buttons[prev];
-                    if (prevBtn) prevBtn.classList.remove('current');
-                }
-            }
-            // Add to current voice buttons
-            for (const voice of lane.voices) {
-                const btn = voice.buttons[index];
-                if (btn) btn.classList.add('current');
-            }
+            markMultiVoiceCurrentButtons(lane, state.lastActive[key], index);
         } else {
-            // Remove from previous button
-            if (prev >= 0) {
-                const prevBtn = lane.buttons[prev];
-                if (prevBtn) prevBtn.classList.remove('current');
-            }
-            // Add to current button
-            const btn = lane.buttons[index];
-            if (btn) btn.classList.add('current');
+            markSingleVoiceCurrentButtons(lane, state.lastActive[key], index);
         }
     }
 }

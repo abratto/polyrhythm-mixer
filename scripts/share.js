@@ -143,19 +143,23 @@ async function decodePayload(encoded) {
 
 /** Serializes a single voice's pattern and channel state using compact field names. */
 function serializeVoice(voice, channel) {
-    return {
+    const serialized = {
         s: selectedIndexes(voice.selected),
         i: channel?.sound || null,
         v: channel?.volume ?? 0.5,
         u: channel?.muted ? 1 : 0
     };
+
+    if (voice.nudgeOffset) serialized.n = voice.nudgeOffset;
+
+    return serialized;
 }
 
 /**
  * Serializes the current app state into a shareable payload object.
  * Includes meter settings, phrase patterns, lane patterns, and channel audio settings.
  */
-function serializeState({ state, lanes, channels }) {
+function serializeState({ state, ui, lanes, channels }) {
     return {
         v: SHARE_VERSION,
         m: {
@@ -163,9 +167,10 @@ function serializeState({ state, lanes, channels }) {
             B: state.B,
             phraseA: state.phraseCyclesA,
             phraseB: state.phraseCyclesB,
-            phaseA: state.phaseA,
-            phaseB: state.phaseB,
-            tempo: state.tempo
+            phaseA: 0,
+            phaseB: 0,
+            tempo: state.tempo,
+            masterVolume: Number.parseInt(ui.masterVolumeSlider.value, 10)
         },
         p: {
             m: lanes.master.voices.map((v, i) => serializeVoice(v, channels.masterVoices[i])),
@@ -352,7 +357,7 @@ function applyFixedChannelState(channel, channelState) {
  * Applies meter settings, phrase patterns, lane patterns, and channel audio settings.
  */
 function restoreFromPayload(payload, deps) {
-    const { state, ui, lanes, channels, updateDerivedState, updatePhaseUI, resetPatterns, buildAllLanes, resetFlashState, applyVoiceChannelState } = deps;
+    const { state, ui, lanes, channels, updateDerivedState, updatePhaseUI, resetPatterns, buildAllLanes, resetFlashState } = deps;
 
     const meters = payload.m;
     if (!meters || typeof meters !== 'object') return;
@@ -374,20 +379,21 @@ function restoreFromPayload(payload, deps) {
 
     updateDerivedState(state);
 
-    const phaseA = clampInteger(meters.phaseA, 0, state.mainTeeth - 1);
-    const phaseB = clampInteger(meters.phaseB, 0, state.mainTeeth - 1);
-
-    if (phaseA !== null) state.phaseA = phaseA;
-    if (phaseB !== null) state.phaseB = phaseB;
-
-    ui.phaseSliderA.value = String(state.phaseA);
-    ui.phaseSliderB.value = String(state.phaseB);
+    state.phaseA = 0;
+    state.phaseB = 0;
 
     const tempo = clampInteger(meters.tempo, 30, 180);
     if (tempo !== null) {
         state.tempo = tempo;
         ui.tempoSlider.value = String(tempo);
         ui.tempoLabel.textContent = String(tempo);
+    }
+
+    const masterVolume = clampInteger(meters.masterVolume, 0, 100);
+    if (masterVolume !== null) {
+        ui.masterVolumeSlider.value = String(masterVolume);
+        ui.masterVolumeLabel.textContent = String(masterVolume);
+        ui.masterVolumeSlider.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
     updatePhaseUI(state, ui);
@@ -400,9 +406,10 @@ function restoreFromPayload(payload, deps) {
               // Clear existing voices and rebuild from payload
              lane.voices.length = 0;
              voiceData.forEach((vd) => {
-                 const voice = { selected: [], buttons: [], channel: null, _channelState: vd };
+                 const voice = { selected: [], buttons: [], nudgeOffset: 0, channel: null, _channelState: vd };
                  voice.selected = new Array(lane.count()).fill(false);
                  applySelectedIndexes(voice.selected, vd.s);
+                 voice.nudgeOffset = clampInteger(vd.n, 0, Math.max(0, voice.selected.length - 1)) ?? 0;
                  lane.voices.push(voice);
              });
          };

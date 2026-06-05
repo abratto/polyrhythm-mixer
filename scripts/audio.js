@@ -62,7 +62,7 @@ export function createChannels() {
             muteEl: document.getElementById('muteDriver'),
             sound: 'shaker',
             volume: 0.6,
-            muted: true,
+            muted: false,
             gainScale: 0.6
         },
         Awheel: {
@@ -211,6 +211,9 @@ export function wireChannels(channels) {
     fixedChannels.forEach(name => {
         const channel = channels[name];
         if (!channel) return;
+        channel.muteEl.classList.toggle('muted', channel.muted);
+        channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
+
         channel.volEl.addEventListener('input', () => {
             channel.volume = parseFloat(channel.volEl.value);
         });

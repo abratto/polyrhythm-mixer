@@ -1,0 +1,12 @@
+{
+  "name": "polyrhythm-mixer",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test:smoke": "node scripts/regression-smoke.js",
+    "test:smoke:headed": "HEADFUL=1 node scripts/regression-smoke.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.60.0"
+  }
+}
