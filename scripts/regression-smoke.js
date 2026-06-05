@@ -241,6 +241,36 @@ async function run() {
         assert(initial.mixer.masterClickHeader === 'Master Click', 'Master Click strip should be present.', initial.mixer);
         assert(initial.helpLeads.length === 4, 'Help modal should expose four bold lead sentences.', initial.helpLeads);
         assert(await page.locator('#resetBtn').textContent() === 'Reset Mixer', 'Reset button should clearly describe full mixer reset.');
+        const bataOptions = await page.locator('#soundDriver option').evaluateAll(options => options
+            .map(option => ({ value: option.value, label: option.textContent.trim() }))
+            .filter(option => option.value.startsWith('bata_')));
+        assert(same(bataOptions, [
+            { value: 'bata_low', label: 'Batá Drum (Low)' },
+            { value: 'bata_middle', label: 'Batá Drum (Middle)' },
+            { value: 'bata_high', label: 'Batá Drum (High)' },
+            { value: 'bata_slap', label: 'Batá Slap' }
+        ]), 'Mixer menus should expose low, middle, high, and slap Batá sounds.', bataOptions);
+        const congaOptions = await page.locator('#soundDriver option').evaluateAll(options => options
+            .map(option => ({ value: option.value, label: option.textContent.trim() }))
+            .filter(option => option.value.startsWith('conga_')));
+        assert(same(congaOptions, [
+            { value: 'conga_high', label: 'Conga (High)' },
+            { value: 'conga_low', label: 'Conga (Low)' },
+            { value: 'conga_middle', label: 'Conga (Middle)' },
+            { value: 'conga_slap', label: 'Conga Slap' }
+        ]), 'Mixer menus should expose low, middle, high, and slap conga sounds.', congaOptions);
+        const expandedPercussionOptions = await page.locator('#soundDriver option').evaluateAll(options => options
+            .map(option => ({ value: option.value, label: option.textContent.trim() }))
+            .filter(option => ['cabasa_shekere', 'gankogui', 'guiro', 'talking_drum', 'temple_block', 'triangle', 'udu'].includes(option.value)));
+        assert(same(expandedPercussionOptions, [
+            { value: 'cabasa_shekere', label: 'Cabasa / Shekere' },
+            { value: 'gankogui', label: 'Gankogui Double Bell' },
+            { value: 'guiro', label: 'Guiro Scraper' },
+            { value: 'talking_drum', label: 'Talking Drum' },
+            { value: 'temple_block', label: 'Temple Block' },
+            { value: 'triangle', label: 'Triangle' },
+            { value: 'udu', label: 'Udu Clay Pot' }
+        ]), 'Mixer menus should expose the expanded percussion palette.', expandedPercussionOptions);
 
         // Build a current-format state that exercises recent behavior: extra voices,
         // nudges, mixer instrument changes, Master Click, and Master Volume.

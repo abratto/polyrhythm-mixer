@@ -33,7 +33,7 @@ The phase sliders shift a meter wheel's starting position relative to the master
 - **Multi-voice layering** — Add independent voices to the master sequence, A phrase, and B phrase lanes. Each voice has its own pattern, instrument, volume, and mute control
 - **Phrase sequencers** — Build patterns that span multiple master cycles
 - **Wheel lanes** — Select which evenly-spaced placements within a cycle trigger sound
-- **33 synthesized percussion instruments** — All generated in real-time via Web Audio API (no samples), including Batá drums (low/high), Cajón (bass/slap), and 29 others
+- **43 synthesized percussion instruments** — All generated in real-time via Web Audio API (no samples), including Batá drums (low/middle/high/slap), Conga drums (low/middle/high/slap), Cajón (bass/slap), Cabasa/Shekere, Guiro, and 33 others
 - **Pattern preservation** — Changing phrase lengths or meters preserves existing patterns; new steps are appended, excess is truncated
 - **Per-channel controls** — Sound selection, volume fader, and mute for each lane and voice
 - **Master volume** — Global gain control
@@ -60,9 +60,9 @@ The phase sliders shift a meter wheel's starting position relative to the master
 All sounds are synthesized in real-time using Web Audio oscillators, noise buffers, and filters:
 
 - **Drums**: Kick, Snare, Tom, Rimshot, Handclap, Foot Tap, Electronic Snare, EDM Synth Kick
-- **Hand Drums**: Conga (low/high/slap), Bongo (low/high), Batá (low/high), Cajón (bass/slap), Djembe, Timbale
+- **Hand Drums**: Conga (low/middle/high/slap), Bongo (low/high), Batá (low/middle/high/slap), Cajón (bass/slap), Djembe, Timbale, Talking Drum, Udu
 - **Cymbals & Hats**: Closed Hi-Hat, Open Hi-Hat, Crash, Ride
-- **Percussion**: Shaker, Maraca, Tambourine, Castanets, Claves, Woodblock, Cowbell, Agogo Bell, Crystal Ping, Hand Slap
+- **Percussion**: Shaker, Maraca, Tambourine, Cabasa/Shekere, Guiro, Castanets, Claves, Woodblock, Temple Block, Cowbell, Agogo Bell, Gankogui Double Bell, Triangle, Crystal Ping, Hand Slap
 
 ## Technical Notes
 

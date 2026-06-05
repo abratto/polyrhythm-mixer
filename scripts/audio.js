@@ -17,15 +17,19 @@ export const instrumentCatalog = [
     { value: 'agogo', label: 'Agogo Bell Accent' },
     { value: 'cowbell', label: 'Analog Cowbell' },
     { value: 'bata_low', label: 'Batá Drum (Low)' },
+    { value: 'bata_middle', label: 'Batá Drum (Middle)' },
     { value: 'bata_high', label: 'Batá Drum (High)' },
+    { value: 'bata_slap', label: 'Batá Slap' },
     { value: 'kick', label: 'Bass Drum (Kick)' },
     { value: 'bongo_high', label: 'Bongo (High)' },
     { value: 'bongo_low', label: 'Bongo (Low)' },
     { value: 'castanets', label: 'Castanets' },
+    { value: 'cabasa_shekere', label: 'Cabasa / Shekere' },
     { value: 'claves', label: 'Claves' },
     { value: 'cl_hihat', label: 'Closed Hi-Hat' },
     { value: 'conga_high', label: 'Conga (High)' },
     { value: 'conga_low', label: 'Conga (Low)' },
+    { value: 'conga_middle', label: 'Conga (Middle)' },
     { value: 'conga_slap', label: 'Conga Slap' },
     { value: 'cajon_bass', label: 'Cajón Bass' },
     { value: 'cajon_slap', label: 'Cajón Slap' },
@@ -35,6 +39,8 @@ export const instrumentCatalog = [
     { value: 'electronic_snare', label: 'Electronic Snare' },
     { value: 'foot_tap', label: 'Foot Tap' },
     { value: 'djembe', label: 'Frame Drum / Djembe' },
+    { value: 'gankogui', label: 'Gankogui Double Bell' },
+    { value: 'guiro', label: 'Guiro Scraper' },
     { value: 'slap', label: 'Hand Slap' },
     { value: 'clap', label: 'Handclap' },
     { value: 'maraca', label: 'Maraca' },
@@ -45,7 +51,11 @@ export const instrumentCatalog = [
     { value: 'snare', label: 'Snare Drum' },
     { value: 'tom', label: 'Synth Electronic Tom' },
     { value: 'tambourine', label: 'Tambourine' },
+    { value: 'talking_drum', label: 'Talking Drum' },
+    { value: 'temple_block', label: 'Temple Block' },
     { value: 'timbale', label: 'Timbale' },
+    { value: 'triangle', label: 'Triangle' },
+    { value: 'udu', label: 'Udu Clay Pot' },
     { value: 'woodblock', label: 'Woodblock Clack' }
 ];
 
@@ -495,7 +505,7 @@ function playCongaLow(state, now, vol, channelName) {
     const overtones = [1.5, 2.2];
 
     const masterGain = state.audioCtx.createGain();
-    masterGain.gain.setValueAtTime(1.0, now);
+    masterGain.gain.setValueAtTime(vol, now);
     masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
     masterGain.connect(state.audioCtx.destination);
 
@@ -512,6 +522,27 @@ function playCongaLow(state, now, vol, channelName) {
     createCongaOpenNoise(state, masterGain, now, 0.03);
 }
 
+/** Conga middle: open tone between tumba and quinto with balanced body and brightness. */
+function playCongaMiddle(state, now, vol, channelName) {
+    const baseFreq = channelName.startsWith('A') ? 175 : 160;
+    const decay = 0.17;
+    const overtones = [1.55, 2.3];
+
+    const masterGain = state.audioCtx.createGain();
+    masterGain.gain.setValueAtTime(vol, now);
+    masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
+    masterGain.connect(state.audioCtx.destination);
+
+    createCongaTone(state, baseFreq, 0.7, 'sine', masterGain, now, decay, 1.25);
+
+    overtones.forEach((ratio, i) => {
+        const partialDecay = decay * (1 - (i * 0.2));
+        createCongaTone(state, baseFreq * ratio, 0.25 / (i + 1), 'triangle', masterGain, now, partialDecay, 1.1);
+    });
+
+    createCongaOpenNoise(state, masterGain, now, 0.03);
+}
+
 /** Conga high (Quinto): bright open tone with sharper pitch drop and shorter decay. */
 function playCongaHigh(state, now, vol, channelName) {
     const baseFreq = channelName.startsWith('A') ? 220 : 200;
@@ -519,7 +550,7 @@ function playCongaHigh(state, now, vol, channelName) {
     const overtones = [1.6, 2.4];
 
     const masterGain = state.audioCtx.createGain();
-    masterGain.gain.setValueAtTime(1.0, now);
+    masterGain.gain.setValueAtTime(vol, now);
     masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
     masterGain.connect(state.audioCtx.destination);
 
@@ -543,7 +574,7 @@ function playCongaSlap(state, now, vol, channelName) {
     const slapDecay = 0.05;
 
     const masterGain = state.audioCtx.createGain();
-    masterGain.gain.setValueAtTime(1.0, now);
+    masterGain.gain.setValueAtTime(vol, now);
     masterGain.gain.exponentialRampToValueAtTime(0.001, now + slapDecay);
     masterGain.connect(state.audioCtx.destination);
 
@@ -873,58 +904,65 @@ function playSlap(state, now, vol) {
     osc.start(now); osc.stop(now + 0.05);
 }
 
-/** Batá low (Iyá bass head): deep bass with additive overtones, pitch envelope, and warm decay. */
-function playBataLow(state, now, vol) {
-    const fundamental = 60;
-    const overtones = [1.4, 2.0, 2.5];
-    const decay = 0.35;
-    const slapMix = 0.2;
-
+function playBataTonalDrum(state, now, vol, { fundamental, overtones, decay, slapMix }) {
     const masterGain = state.audioCtx.createGain();
-    masterGain.gain.setValueAtTime(1.0, now);
+    masterGain.gain.setValueAtTime(vol, now);
     masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
     masterGain.connect(state.audioCtx.destination);
 
-    // Fundamental
     createBataTone(state, fundamental, 0.6, masterGain, now, decay);
 
-    // Overtone partials (higher overtones decay slower for more sustain)
     overtones.forEach((ratio, index) => {
         const partialDecay = decay * (1 - (index * 0.08));
         createBataTone(state, fundamental * ratio, 0.35 / (index + 1), masterGain, now, partialDecay);
     });
 
-    // Transient slap component
     if (slapMix > 0) {
         createBataSlap(state, slapMix, masterGain, now, decay * 0.3);
     }
 }
 
-/** Batá high (Enú head): higher pitch, sharper attack, shorter decay with additive overtones. */
-function playBataHigh(state, now, vol) {
-    const fundamental = 160;
-    const overtones = [1.6, 2.3, 3.1];
-    const decay = 0.25;
-    const slapMix = 0.4;
+/** Batá low (Iyá): largest drum voice with the deepest tonal head. */
+function playBataLow(state, now, vol) {
+    playBataTonalDrum(state, now, vol, {
+        fundamental: 58,
+        overtones: [1.38, 1.95, 2.55],
+        decay: 0.38,
+        slapMix: 0.14
+    });
+}
 
+/** Batá middle (Itótele): middle-sized drum voice with a tighter tone. */
+function playBataMiddle(state, now, vol) {
+    playBataTonalDrum(state, now, vol, {
+        fundamental: 95,
+        overtones: [1.45, 2.08, 2.75],
+        decay: 0.31,
+        slapMix: 0.2
+    });
+}
+
+/** Batá high (Okónkolo): smallest drum voice with the highest tonal head. */
+function playBataHigh(state, now, vol) {
+    playBataTonalDrum(state, now, vol, {
+        fundamental: 155,
+        overtones: [1.58, 2.35, 3.15],
+        decay: 0.24,
+        slapMix: 0.28
+    });
+}
+
+/** Batá slap: sharp small-head slap with little sustained tone. */
+function playBataSlap(state, now, vol) {
     const masterGain = state.audioCtx.createGain();
-    masterGain.gain.setValueAtTime(1.0, now);
+    const decay = 0.11;
+    masterGain.gain.setValueAtTime(vol, now);
     masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
     masterGain.connect(state.audioCtx.destination);
 
-    // Fundamental
-    createBataTone(state, fundamental, 0.6, masterGain, now, decay);
-
-    // Overtone partials
-    overtones.forEach((ratio, index) => {
-        const partialDecay = decay * (1 - (index * 0.08));
-        createBataTone(state, fundamental * ratio, 0.35 / (index + 1), masterGain, now, partialDecay);
-    });
-
-    // Transient slap component
-    if (slapMix > 0) {
-        createBataSlap(state, slapMix, masterGain, now, decay * 0.3);
-    }
+    createBataSlap(state, 0.9, masterGain, now, 0.045);
+    createBataTone(state, 260, 0.22, masterGain, now, 0.08);
+    createBataTone(state, 420, 0.12, masterGain, now, 0.045);
 }
 
 /** Helper: creates an individual frequency component for Batá drums. */
@@ -1008,6 +1046,156 @@ function playCajonSlap(state, now, vol) {
     osc.start(now); osc.stop(now + 0.05);
 }
 
+/** Cabasa / Shekere: clustered bead rattle with a hollow body resonance. */
+function playCabasaShekere(state, now, vol) {
+    const bodyFilter = state.audioCtx.createBiquadFilter();
+    bodyFilter.type = 'bandpass';
+    bodyFilter.frequency.setValueAtTime(4200, now);
+    bodyFilter.Q.setValueAtTime(1.7, now);
+    bodyFilter.connect(state.audioCtx.destination);
+
+    const grainCount = 9;
+    for (let grainIndex = 0; grainIndex < grainCount; grainIndex++) {
+        const grainStart = now + grainIndex * 0.012;
+        const noise = getNoiseSource(state);
+        if (!noise) return;
+        const grainGain = state.audioCtx.createGain();
+        const accent = grainIndex % 3 === 0 ? 0.38 : 0.22;
+        grainGain.gain.setValueAtTime(vol * accent, grainStart);
+        grainGain.gain.exponentialRampToValueAtTime(0.001, grainStart + 0.026);
+        noise.connect(grainGain);
+        grainGain.connect(bodyFilter);
+        noise.start(grainStart);
+    }
+}
+
+/** Gankogui double bell: dry high/low iron bell pair with bright partials. */
+function playGankogui(state, now, vol, channelName) {
+    const highFirst = channelName.startsWith('A');
+    const firstFreq = highFirst ? 980 : 620;
+    const secondFreq = highFirst ? 620 : 980;
+    createMetalBellStrike(state, firstFreq, now, vol * 0.65, 0.22);
+    createMetalBellStrike(state, secondFreq, now + 0.055, vol * 0.5, 0.18);
+}
+
+/** Guiro scraper: stepped ratchet of short filtered-noise ridges. */
+function playGuiro(state, now, vol) {
+    const filter = state.audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(2600, now);
+    filter.Q.setValueAtTime(5.5, now);
+    filter.connect(state.audioCtx.destination);
+
+    const ridgeCount = 8;
+    for (let ridgeIndex = 0; ridgeIndex < ridgeCount; ridgeIndex++) {
+        const ridgeStart = now + ridgeIndex * 0.018;
+        const noise = getNoiseSource(state);
+        if (!noise) return;
+        const ridgeGain = state.audioCtx.createGain();
+        const accent = ridgeIndex === 0 || ridgeIndex === ridgeCount - 1 ? 0.45 : 0.3;
+        ridgeGain.gain.setValueAtTime(vol * accent, ridgeStart);
+        ridgeGain.gain.exponentialRampToValueAtTime(0.001, ridgeStart + 0.018);
+        noise.connect(ridgeGain);
+        ridgeGain.connect(filter);
+        noise.start(ridgeStart);
+    }
+}
+
+/** Talking drum: pitched hand drum with an expressive upward bend. */
+function playTalkingDrum(state, now, vol, channelName) {
+    const startFreq = channelName.startsWith('A') ? 145 : 115;
+    const peakFreq = channelName.startsWith('A') ? 310 : 245;
+    const endFreq = channelName.startsWith('A') ? 220 : 175;
+    const osc = state.audioCtx.createOscillator();
+    const gain = state.audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(startFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(peakFreq, now + 0.075);
+    osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.22);
+    gain.gain.setValueAtTime(vol * 0.85, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+    osc.connect(gain); gain.connect(state.audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.24);
+
+    const noise = getNoiseSource(state);
+    if (!noise) return;
+    const filter = state.audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1100, now);
+    const noiseGain = state.audioCtx.createGain();
+    noiseGain.gain.setValueAtTime(vol * 0.28, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+    noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
+    noise.start(now);
+}
+
+/** Temple block: tuned woody strike with a short downward pitch bend. */
+function playTempleBlock(state, now, vol, channelName) {
+    const baseFreq = channelName.startsWith('A') ? 1120 : 780;
+    const osc = state.audioCtx.createOscillator();
+    const gain = state.audioCtx.createGain();
+    const filter = state.audioCtx.createBiquadFilter();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(baseFreq * 1.22, now);
+    osc.frequency.exponentialRampToValueAtTime(baseFreq, now + 0.035);
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(baseFreq, now);
+    filter.Q.setValueAtTime(7, now);
+    gain.gain.setValueAtTime(vol * 0.82, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+    osc.connect(filter); filter.connect(gain); gain.connect(state.audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.1);
+}
+
+/** Triangle: bright metallic ring with a pure sustained decay. */
+function playTriangle(state, now, vol) {
+    createMetalBellStrike(state, 3600, now, vol * 0.5, 0.7);
+    createMetalBellStrike(state, 5400, now, vol * 0.22, 0.45);
+}
+
+/** Udu: hollow clay-pot bass with a soft air transient. */
+function playUdu(state, now, vol, channelName) {
+    const baseFreq = channelName.startsWith('A') ? 155 : 125;
+    const osc = state.audioCtx.createOscillator();
+    const gain = state.audioCtx.createGain();
+    const filter = state.audioCtx.createBiquadFilter();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(baseFreq * 1.35, now);
+    osc.frequency.exponentialRampToValueAtTime(baseFreq, now + 0.07);
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(700, now);
+    gain.gain.setValueAtTime(vol * 0.9, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+    osc.connect(filter); filter.connect(gain); gain.connect(state.audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.3);
+
+    const air = getNoiseSource(state);
+    if (!air) return;
+    const airFilter = state.audioCtx.createBiquadFilter();
+    airFilter.type = 'bandpass';
+    airFilter.frequency.setValueAtTime(260, now);
+    airFilter.Q.setValueAtTime(1.8, now);
+    const airGain = state.audioCtx.createGain();
+    airGain.gain.setValueAtTime(vol * 0.25, now);
+    airGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    air.connect(airFilter); airFilter.connect(airGain); airGain.connect(state.audioCtx.destination);
+    air.start(now);
+}
+
+/** Helper: creates an inharmonic metallic strike with a few bright partials. */
+function createMetalBellStrike(state, frequency, startTime, volume, duration) {
+    [1, 1.48, 2.17].forEach((ratio, partialIndex) => {
+        const osc = state.audioCtx.createOscillator();
+        const gain = state.audioCtx.createGain();
+        osc.type = partialIndex === 0 ? 'triangle' : 'sine';
+        osc.frequency.setValueAtTime(frequency * ratio, startTime);
+        gain.gain.setValueAtTime(volume / (partialIndex + 1), startTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration * (1 - partialIndex * 0.18));
+        osc.connect(gain); gain.connect(state.audioCtx.destination);
+        osc.start(startTime); osc.stop(startTime + duration);
+    });
+}
+
 /** Dispatch table mapping instrument value keys to their synthesis functions. */
 const instruments = {
     kick: playKick,
@@ -1024,6 +1212,7 @@ const instruments = {
     cowbell: playCowbell,
     tambourine: playTambourine,
     conga_low: playCongaLow,
+    conga_middle: playCongaMiddle,
     conga_high: playCongaHigh,
     bongo_low: playBongoLow,
     bongo_high: playBongoHigh,
@@ -1031,16 +1220,25 @@ const instruments = {
     crash: playCrash,
     ride: playRide,
     claves: playClaves,
+    cabasa_shekere: playCabasaShekere,
     djembe: playDjembe,
     timbale: playTimbale,
     castanets: playCastanets,
     synth_kick: playSynthKick,
     electronic_snare: playElectronicSnare,
     foot_tap: playFootTap,
+    gankogui: playGankogui,
+    guiro: playGuiro,
     conga_slap: playCongaSlap,
     slap: playSlap,
+    talking_drum: playTalkingDrum,
+    temple_block: playTempleBlock,
+    triangle: playTriangle,
+    udu: playUdu,
     bata_low: playBataLow,
+    bata_middle: playBataMiddle,
     bata_high: playBataHigh,
+    bata_slap: playBataSlap,
     cajon_bass: playCajonBass,
     cajon_slap: playCajonSlap
 };
