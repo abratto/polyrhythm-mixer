@@ -24,6 +24,7 @@
  *   - default first-pulse selections for Master Cycle, Meter A, and Meter B voice 1
  *   - Master Click label and mixer state
  *   - help modal lead text formatting
+ *   - Reset Mixer restores the startup meter, voice, pattern, and mixer state
  *   - current save/load from a fresh page, including voices, nudges, mixer settings,
  *     and Master Volume
  *   - current share URL restore from a fresh page
@@ -239,6 +240,7 @@ async function run() {
         assert(same(initial.active.B1, [0]), 'Meter B voice 1 should start on pulse 1.', initial.active.B1);
         assert(initial.mixer.masterClickHeader === 'Master Click', 'Master Click strip should be present.', initial.mixer);
         assert(initial.helpLeads.length === 4, 'Help modal should expose four bold lead sentences.', initial.helpLeads);
+        assert(await page.locator('#resetBtn').textContent() === 'Reset Mixer', 'Reset button should clearly describe full mixer reset.');
 
         // Build a current-format state that exercises recent behavior: extra voices,
         // nudges, mixer instrument changes, Master Click, and Master Volume.
@@ -275,6 +277,43 @@ async function run() {
         await page.locator('#meterBPhraseGrid .voice-row:nth-child(2) .voice-nudge-btn[title="Shift Voice 2 left"]').click();
 
         const expectedCurrent = await snapshot();
+
+        await page.locator('#resetBtn').click();
+        await page.waitForFunction(() => document.querySelectorAll('#masterGrid .voice-row').length === 1);
+        assert(same(await snapshot(), initial), 'Reset Mixer should restore the startup state after meter, voice, pattern, nudge, and mixer edits.', { expected: initial, actual: await snapshot() });
+
+        await setSelect('#rhythmA', 5);
+        await setSelect('#rhythmB', 7);
+        await setSelect('#phraseCyclesA', 2);
+        await setSelect('#phraseCyclesB', 2);
+        await setRange('#tempoSlider', 118);
+        await setRange('#masterVolumeSlider', 72);
+        await setSelect('#soundDriver', 'cowbell');
+        await setSelect('#sound_master_0', 'snare');
+        await page.locator('#addMasterVoiceBtn').click();
+        await page.locator('#addAPhraseVoiceBtn').click();
+        await page.locator('#addBPhraseVoiceBtn').click();
+        await setSelect('#sound_master_1', 'claves');
+        await setSelect('#sound_A_0', 'woodblock');
+        await setSelect('#sound_B_0', 'cowbell');
+
+        await clickStep('#masterGrid', 1, 3);
+        await clickStep('#masterGrid', 1, 8);
+        await clickStep('#masterGrid', 2, 2);
+        await clickStep('#masterGrid', 2, 6);
+        await clickStep('#meterAPhraseGrid', 1, 4);
+        await clickStep('#meterAPhraseGrid', 1, 8);
+        await clickStep('#meterAPhraseGrid', 2, 1);
+        await clickStep('#meterAPhraseGrid', 2, 6);
+        await clickStep('#meterBPhraseGrid', 1, 5);
+        await clickStep('#meterBPhraseGrid', 1, 10);
+        await clickStep('#meterBPhraseGrid', 2, 3);
+        await clickStep('#meterBPhraseGrid', 2, 9);
+
+        await page.locator('#masterGrid .voice-row:nth-child(2) .voice-nudge-btn[title="Shift Voice 2 right"]').click();
+        await page.locator('#meterAPhraseGrid .voice-row:nth-child(1) .voice-nudge-btn[title="Shift Voice 1 right"]').click();
+        await page.locator('#meterBPhraseGrid .voice-row:nth-child(2) .voice-nudge-btn[title="Shift Voice 2 left"]').click();
+
         const testName = `Regression Save ${Date.now()}`;
 
         await page.locator('#saveRhythmBtn').click();

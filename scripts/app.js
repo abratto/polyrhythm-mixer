@@ -22,6 +22,20 @@ import { copyShareLink, loadStateFromUrl } from './share.js';
 import { closeSaveRhythmModal, closeSavedRhythmsModal, openSaveRhythmModal, openSavedRhythmsModal, saveCurrentRhythm } from './saved-rhythms.js';
 import { startAnimation } from './render.js';
 
+const STARTING_MIXER_STATE = {
+    A: 6,
+    B: 4,
+    phraseCyclesA: 2,
+    phraseCyclesB: 2,
+    tempo: 90,
+    masterVolume: 80,
+    fixedChannels: {
+        driver: { sound: 'shaker', volume: 0.6, muted: false },
+        Awheel: { sound: 'shaker', volume: 0.45, muted: false },
+        Bwheel: { sound: 'shaker', volume: 0.35, muted: false }
+    }
+};
+
 // Phase 1: Collect all DOM element references
 const { canvas, ctx, ui } = getDomRefs();
 
@@ -169,6 +183,62 @@ function resetAndRebuild() {
     buildAllLanes(lanes);
 }
 
+function resetFixedChannel(channel, defaults) {
+    if (!channel || !defaults) return;
+
+    channel.sound = defaults.sound;
+    channel.volume = defaults.volume;
+    channel.muted = defaults.muted;
+
+    if (channel.soundEl) channel.soundEl.value = defaults.sound;
+    if (channel.volEl) channel.volEl.value = String(defaults.volume);
+    if (channel.muteEl) {
+        channel.muteEl.classList.toggle('muted', defaults.muted);
+        channel.muteEl.textContent = defaults.muted ? 'Muted' : 'Mute';
+    }
+}
+
+function resetLaneVoicesToSingle(lane) {
+    lane.voices = [lane.voices[0] || { selected: [], buttons: [], nudgeOffset: 0, channel: null }];
+    lane.voices[0].channel = null;
+}
+
+function resetMixerToStartingState() {
+    ui.selectA.value = String(STARTING_MIXER_STATE.A);
+    ui.selectB.value = String(STARTING_MIXER_STATE.B);
+    ui.phraseCyclesA.value = String(STARTING_MIXER_STATE.phraseCyclesA);
+    ui.phraseCyclesB.value = String(STARTING_MIXER_STATE.phraseCyclesB);
+    ui.tempoSlider.value = String(STARTING_MIXER_STATE.tempo);
+    ui.tempoLabel.textContent = String(STARTING_MIXER_STATE.tempo);
+    ui.masterVolumeSlider.value = String(STARTING_MIXER_STATE.masterVolume);
+    ui.masterVolumeLabel.textContent = String(STARTING_MIXER_STATE.masterVolume);
+    cachedGlobalVolume = STARTING_MIXER_STATE.masterVolume / 100;
+
+    state.A = STARTING_MIXER_STATE.A;
+    state.B = STARTING_MIXER_STATE.B;
+    state.phraseCyclesA = STARTING_MIXER_STATE.phraseCyclesA;
+    state.phraseCyclesB = STARTING_MIXER_STATE.phraseCyclesB;
+    state.phaseA = 0;
+    state.phaseB = 0;
+    state.tempo = STARTING_MIXER_STATE.tempo;
+
+    resetFixedChannel(channels.driver, STARTING_MIXER_STATE.fixedChannels.driver);
+    resetFixedChannel(channels.Awheel, STARTING_MIXER_STATE.fixedChannels.Awheel);
+    resetFixedChannel(channels.Bwheel, STARTING_MIXER_STATE.fixedChannels.Bwheel);
+
+    resetLaneVoicesToSingle(lanes.master);
+    resetLaneVoicesToSingle(lanes.Aphrase);
+    resetLaneVoicesToSingle(lanes.Bphrase);
+
+    updateDerivedState(state);
+    updatePhaseUI(state, ui);
+    resetFlashState(state);
+    resetPatterns(state, lanes);
+    rebuildAllVoiceMixerStrips();
+    buildAllLanes(lanes);
+    state.mainAngle = 0;
+}
+
 function rebuildAllVoiceMixerStrips() {
     rebuildVoiceMixerStrips('master', ui.masterVoiceContainer, '#ff9100', MIXER_LABELS.master);
     rebuildVoiceMixerStrips('A', ui.AVoiceContainer, '#ff3366', MIXER_LABELS.A);
@@ -281,7 +351,7 @@ wireControls({
     ui,
     state,
     rebuildSystem,
-    resetAndRebuild,
+    resetMixerToStartingState,
     toggleAudio: () => toggleAudio(state, ui),
     onShare: () => copyShareLink(shareDeps),
     onOpenSaveRhythm: () => openSaveRhythmModal(ui, shareDeps),

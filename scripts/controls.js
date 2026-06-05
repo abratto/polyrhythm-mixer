@@ -41,7 +41,7 @@ export function shouldAutoOpenHelpModal() {
  * Wires all UI controls to their corresponding state updates and callbacks.
  * Each selector/slider updates the shared state and triggers a rebuild when needed.
  */
-export function wireControls({ ui, state, rebuildSystem, resetAndRebuild, toggleAudio, onShare, onOpenSaveRhythm, onConfirmSaveRhythm, onCloseSaveRhythm, onOpenSavedRhythms, onCloseSavedRhythms }) {
+export function wireControls({ ui, state, rebuildSystem, resetMixerToStartingState, toggleAudio, onShare, onOpenSaveRhythm, onConfirmSaveRhythm, onCloseSaveRhythm, onOpenSavedRhythms, onCloseSavedRhythms }) {
     const polyrhythmView = document.getElementById('polyrhythmView');
     const mobileLayout = globalThis.matchMedia(MOBILE_LAYOUT_QUERY);
     const syncResponsiveDisclosureState = () => {
@@ -85,8 +85,8 @@ export function wireControls({ ui, state, rebuildSystem, resetAndRebuild, toggle
         ui.masterVolumeLabel.textContent = String(ui.masterVolumeSlider.value);
     });
 
-    // Reset button — resets animation and patterns without changing settings
-    ui.resetBtn.addEventListener('click', resetAndRebuild);
+    // Reset button — restores the mixer to the app's starting state
+    ui.resetBtn.addEventListener('click', resetMixerToStartingState);
 
     // Audio toggle — initializes AudioContext on user gesture
     ui.audioBtn.addEventListener('click', async () => {
