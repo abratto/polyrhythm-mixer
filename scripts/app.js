@@ -19,6 +19,7 @@ import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, w
 import { createChannels, populateMenus, wireChannels, toggleAudio, playChannelSound, addVoiceChannel, removeVoiceChannel } from './audio.js';
 import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } from './controls.js';
 import { copyShareLink, loadStateFromUrl } from './share.js';
+import { closeSaveRhythmModal, closeSavedRhythmsModal, openSaveRhythmModal, openSavedRhythmsModal, saveCurrentRhythm } from './saved-rhythms.js';
 import { startAnimation } from './render.js';
 
 // Phase 1: Collect all DOM element references
@@ -162,6 +163,12 @@ function resetAndRebuild() {
     buildAllLanes(lanes);
 }
 
+function rebuildAllVoiceMixerStrips() {
+    rebuildVoiceMixerStrips('master', ui.masterVoiceContainer, '#ff9100', 'Master');
+    rebuildVoiceMixerStrips('A', ui.AVoiceContainer, '#ff3366', 'A Phrase');
+    rebuildVoiceMixerStrips('B', ui.BVoiceContainer, '#00e5ff', 'B Phrase');
+}
+
 /**
  * Adds a new voice to a lane group and creates its channel/strip.
  */
@@ -272,7 +279,12 @@ wireControls({
     rebuildSystem,
     resetAndRebuild,
     toggleAudio: () => toggleAudio(state, ui),
-    onShare: () => copyShareLink(shareDeps)
+    onShare: () => copyShareLink(shareDeps),
+    onOpenSaveRhythm: () => openSaveRhythmModal(ui, shareDeps),
+    onConfirmSaveRhythm: () => saveCurrentRhythm(shareDeps),
+    onCloseSaveRhythm: () => closeSaveRhythmModal(ui),
+    onOpenSavedRhythms: () => openSavedRhythmsModal(ui, shareDeps, rebuildAllVoiceMixerStrips),
+    onCloseSavedRhythms: () => closeSavedRhythmsModal(ui)
 });
 
 // Phase 7: Build initial lane patterns and attempt to load shared state
@@ -286,9 +298,7 @@ buildAllLanes(lanes);
 
     // If loaded from URL, rebuild voice mixer strips to match restored voices
     if (loadedFromUrl) {
-        rebuildVoiceMixerStrips('master', ui.masterVoiceContainer, '#ff9100', 'Master');
-        rebuildVoiceMixerStrips('A', ui.AVoiceContainer, '#ff3366', 'A Phrase');
-        rebuildVoiceMixerStrips('B', ui.BVoiceContainer, '#00e5ff', 'B Phrase');
+        rebuildAllVoiceMixerStrips();
     }
 
     // Phase 8: Show help modal for first-time visitors

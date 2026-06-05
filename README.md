@@ -39,6 +39,7 @@ The phase sliders shift a meter wheel's starting position relative to the master
 - **Master volume** — Global gain control
 - **Tempo control** — 30–180 BPM, where 1 beat = 1/4 master cycle (quarter note)
 - **Dual timelines** — Master cycle view (one rotation) and full pattern view (complete phrase repetition), both showing multi-voice layers
+- **Local saved rhythms** — Save named grooves in your browser and reload them later without a backend
 - **Share links** — Encode your entire setup (including all voices) into a URL
 
 ## How to Use
@@ -51,7 +52,8 @@ The phase sliders shift a meter wheel's starting position relative to the master
 6. **Set tempo** — Use the BPM slider (30–180, quarter note = beat)
 7. **Enable audio** — Press the green button to hear the mix
 8. **Choose sounds** — Each lane and voice has its own instrument, volume, and mute control in the mixer console below
-9. **Share** — Click "Share Groove" to copy a URL with your current configuration
+9. **Save or load** — Click "Save Rhythm" to store the current groove locally, or "Load Rhythm" to choose from saved grooves
+10. **Share** — Click "Share Groove" to copy a URL with your current configuration
 
 ## Instrument Catalog
 
@@ -69,6 +71,7 @@ All sounds are synthesized in real-time using Web Audio oscillators, noise buffe
 - **Web Audio API** — All instruments are synthesized in real-time using oscillators, noise buffers, and filters
 - **Canvas rendering** — Frame-rate-independent animation using `requestAnimationFrame` with delta-time calculation
 - **Versioned sharing** — Share payloads include a version number with automatic migration from older formats (v0, v1 → v2)
+- **Local persistence** — Saved rhythms use the same versioned payload format and are stored in `localStorage`
 - **Performance** — Pre-generated noise buffer, reusable selection buffers, cached channel values, and incremental DOM updates
 
 ## Share Links

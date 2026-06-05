@@ -433,6 +433,17 @@ function restoreFromPayload(payload, deps) {
     buildAllLanes(lanes);
 }
 
+/** Returns the current app state as a versioned payload for sharing or saving. */
+export function createStatePayload(deps) {
+    return serializeState(deps);
+}
+
+/** Restores a payload object from local storage or another trusted app source. */
+export function restoreStatePayload(payload, deps) {
+    const migrated = migratePayload(structuredClone(payload));
+    restoreFromPayload(migrated, deps);
+}
+
 /** Builds a full share URL with the encoded state as a query parameter. */
 async function createShareUrl(shareData) {
     const encoded = await encodePayload(shareData);

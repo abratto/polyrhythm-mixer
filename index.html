@@ -29,6 +29,29 @@
         </div>
     </div>
 
+    <div id="savedRhythmsModal" class="modal-backdrop hidden" aria-hidden="true">
+        <div class="modal-card saved-rhythms-card" role="dialog" aria-modal="true" aria-labelledby="savedRhythmsModalTitle">
+            <div id="savedRhythmsModalTitle" class="modal-title">Saved Rhythms</div>
+            <div id="savedRhythmsStatus" class="modal-subtitle">No saved rhythms yet.</div>
+            <div id="savedRhythmsList" class="saved-rhythms-list"></div>
+            <div class="modal-actions">
+                <button id="closeSavedRhythmsModalBtn" class="modal-close-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="saveRhythmModal" class="modal-backdrop hidden" aria-hidden="true">
+        <div class="modal-card save-rhythm-card" role="dialog" aria-modal="true" aria-labelledby="saveRhythmModalTitle">
+            <div id="saveRhythmModalTitle" class="modal-title">Save Rhythm</div>
+            <label for="saveRhythmNameInput">Name</label>
+            <input id="saveRhythmNameInput" class="modal-text-input" type="text" maxlength="80" autocomplete="off">
+            <div class="modal-actions">
+                <button id="cancelSaveRhythmBtn">Cancel</button>
+                <button id="confirmSaveRhythmBtn" class="modal-close-btn">Save</button>
+            </div>
+        </div>
+    </div>
+
     <h1>Alan's Polyrhythm Mixer</h1>
 
     <div class="rack-unit">
@@ -36,6 +59,8 @@
             <div class="config-row action-row">
                 <button id="audioBtn">Enable Audio</button>
                 <button id="helpBtn">Help</button>
+                <button id="saveRhythmBtn">Save Rhythm</button>
+                <button id="loadRhythmBtn">Load Rhythm</button>
                 <button id="shareBtn">Share Groove</button>
             </div>
 

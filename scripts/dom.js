@@ -31,11 +31,25 @@ export function getDomRefs() {
         resetBtn: document.getElementById('resetBtn'),
         audioBtn: document.getElementById('audioBtn'),
         helpBtn: document.getElementById('helpBtn'),
+        saveRhythmBtn: document.getElementById('saveRhythmBtn'),
+        loadRhythmBtn: document.getElementById('loadRhythmBtn'),
         shareBtn: document.getElementById('shareBtn'),
 
         // Help modal elements
         helpModal: document.getElementById('helpModal'),
         closeHelpModalBtn: document.getElementById('closeHelpModalBtn'),
+
+        // Saved rhythms modal elements
+        savedRhythmsModal: document.getElementById('savedRhythmsModal'),
+        savedRhythmsStatus: document.getElementById('savedRhythmsStatus'),
+        savedRhythmsList: document.getElementById('savedRhythmsList'),
+        closeSavedRhythmsModalBtn: document.getElementById('closeSavedRhythmsModalBtn'),
+
+        // Save rhythm modal elements
+        saveRhythmModal: document.getElementById('saveRhythmModal'),
+        saveRhythmNameInput: document.getElementById('saveRhythmNameInput'),
+        cancelSaveRhythmBtn: document.getElementById('cancelSaveRhythmBtn'),
+        confirmSaveRhythmBtn: document.getElementById('confirmSaveRhythmBtn'),
 
         // Sequencer grid containers for each lane
         masterGrid: document.getElementById('masterGrid'),

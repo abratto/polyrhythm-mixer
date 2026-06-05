@@ -40,7 +40,7 @@ export function shouldAutoOpenHelpModal() {
  * Wires all UI controls to their corresponding state updates and callbacks.
  * Each selector/slider updates the shared state and triggers a rebuild when needed.
  */
-export function wireControls({ ui, state, rebuildSystem, resetAndRebuild, toggleAudio, onShare }) {
+export function wireControls({ ui, state, rebuildSystem, resetAndRebuild, toggleAudio, onShare, onOpenSaveRhythm, onConfirmSaveRhythm, onCloseSaveRhythm, onOpenSavedRhythms, onCloseSavedRhythms }) {
     // Meter A/B selectors — changing either recalculates the entire polyrhythm
     ui.selectA.addEventListener('change', () => {
         state.A = parseInt(ui.selectA.value, 10);
@@ -97,15 +97,37 @@ export function wireControls({ ui, state, rebuildSystem, resetAndRebuild, toggle
     ui.helpBtn.addEventListener('click', () => openHelpModal(ui));
     ui.closeHelpModalBtn.addEventListener('click', () => closeHelpModal(ui));
 
+    // Saved rhythm controls
+    ui.saveRhythmBtn.addEventListener('click', () => onOpenSaveRhythm());
+    ui.confirmSaveRhythmBtn.addEventListener('click', () => onConfirmSaveRhythm());
+    ui.cancelSaveRhythmBtn.addEventListener('click', () => onCloseSaveRhythm());
+    ui.loadRhythmBtn.addEventListener('click', () => onOpenSavedRhythms());
+    ui.closeSavedRhythmsModalBtn.addEventListener('click', () => onCloseSavedRhythms());
+
     // Close modal when clicking the backdrop
     ui.helpModal.addEventListener('click', (e) => {
         if (e.target === ui.helpModal) closeHelpModal(ui);
+    });
+    ui.savedRhythmsModal.addEventListener('click', (e) => {
+        if (e.target === ui.savedRhythmsModal) onCloseSavedRhythms();
+    });
+    ui.saveRhythmModal.addEventListener('click', (e) => {
+        if (e.target === ui.saveRhythmModal) onCloseSaveRhythm();
     });
 
     // Close modal on Escape key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && !ui.helpModal.classList.contains('hidden')) {
             closeHelpModal(ui);
+        }
+        if (e.key === 'Escape' && !ui.savedRhythmsModal.classList.contains('hidden')) {
+            onCloseSavedRhythms();
+        }
+        if (e.key === 'Escape' && !ui.saveRhythmModal.classList.contains('hidden')) {
+            onCloseSaveRhythm();
+        }
+        if (e.key === 'Enter' && !ui.saveRhythmModal.classList.contains('hidden')) {
+            onConfirmSaveRhythm();
         }
     });
 
