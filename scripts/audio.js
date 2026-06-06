@@ -116,7 +116,8 @@ export function createVoiceChannel(container, voiceIndex, prefix, defaults, gain
         muted: false,
         gainScale,
         voiceIndex,
-        prefix
+        prefix,
+        onInstrumentChange: null
     };
 
     // Populate sound selector
@@ -132,6 +133,7 @@ export function createVoiceChannel(container, voiceIndex, prefix, defaults, gain
         // Cache instrument changes
         soundEl.addEventListener('change', () => {
             channel.sound = soundEl.value;
+            if (channel.onInstrumentChange) channel.onInstrumentChange(channel);
         });
     }
 

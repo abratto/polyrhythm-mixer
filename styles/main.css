@@ -1112,9 +1112,27 @@
             letter-spacing: 1px;
             flex-shrink: 0;
         }
-        .voice-steps {
+        .voice-steps-column {
             display: flex;
             flex: 1;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+        }
+        .voice-instrument-label {
+            color: #d4d4d8;
+            font-size: 10px;
+            font-weight: 800;
+            line-height: 1.2;
+            max-width: 100%;
+            min-height: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .voice-steps {
+            display: flex;
             gap: 4px;
             min-width: 0;
         }
@@ -1145,6 +1163,13 @@
             }
             .voice-steps {
                 flex: none;
+            }
+            .voice-steps-column {
+                flex: none;
+                width: 100%;
+            }
+            .voice-instrument-label {
+                white-space: normal;
             }
             .step-btn,
             .short-lane .step-btn {

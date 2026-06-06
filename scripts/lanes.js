@@ -72,6 +72,22 @@ function resetLaneVoices(lane) {
     lane.voices.forEach(resetVoicePattern);
 }
 
+function voiceInstrumentLabel(voice) {
+    const soundEl = voice.channel?.soundEl;
+    if (soundEl?.selectedOptions?.[0]?.textContent) {
+        return soundEl.selectedOptions[0].textContent;
+    }
+
+    if (voice.channel?.sound) {
+        return voice.channel.sound
+            .split('_')
+            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(' ');
+    }
+
+    return 'Instrument';
+}
+
 /**
  * Creates the lane configuration objects. Multi-voice lanes (master, Aphrase, Bphrase)
  * have a `voices` array. Single-voice lanes (Awheel, Bwheel) have a flat structure.
@@ -397,6 +413,16 @@ function buildVoiceButtons(lane, voice, voiceIndex) {
 
     row.appendChild(labelArea);
 
+    const stepsColumn = document.createElement('div');
+    stepsColumn.className = 'voice-steps-column';
+
+    const instrumentLabel = document.createElement('div');
+    instrumentLabel.className = 'voice-instrument-label';
+    instrumentLabel.textContent = voiceInstrumentLabel(voice);
+    instrumentLabel.title = `Voice ${voiceIndex + 1} instrument: ${instrumentLabel.textContent}`;
+    instrumentLabel.style.color = lane.color;
+    stepsColumn.appendChild(instrumentLabel);
+
     // Step buttons container
     const stepsContainer = document.createElement('div');
     stepsContainer.className = 'voice-steps';
@@ -406,9 +432,25 @@ function buildVoiceButtons(lane, voice, voiceIndex) {
         stepsContainer.appendChild(btn);
         voice.buttons.push(btn);
     }
-    row.appendChild(stepsContainer);
+    stepsColumn.appendChild(stepsContainer);
+    row.appendChild(stepsColumn);
 
     return row;
+}
+
+/** Refreshes displayed instrument labels without rebuilding step buttons. */
+export function updateVoiceInstrumentLabels(lane) {
+    if (!lane.isMultiVoice || !lane.container) return;
+
+    lane.voices.forEach((voice, idx) => {
+        const row = lane.container.querySelector(`.voice-row[data-voice-index="${idx}"]`);
+        const label = row?.querySelector('.voice-instrument-label');
+        if (!label) return;
+
+        const labelText = voiceInstrumentLabel(voice);
+        label.textContent = labelText;
+        label.title = `Voice ${idx + 1} instrument: ${labelText}`;
+    });
 }
 
 /** Builds all voice rows for a multi-voice lane. */

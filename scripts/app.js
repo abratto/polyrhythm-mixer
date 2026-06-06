@@ -15,7 +15,7 @@
  */
 import { getDomRefs } from './dom.js';
 import { createState, resetFlashState, updateDerivedState, updatePhaseUI } from './state.js';
-import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons, addVoice } from './lanes.js';
+import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons, addVoice, updateVoiceInstrumentLabels } from './lanes.js';
 import { createChannels, populateMenus, wireChannels, toggleAudio, playChannelSound, addVoiceChannel } from './audio.js';
 import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } from './controls.js';
 import { copyShareLink, loadStateFromUrl } from './share.js';
@@ -73,25 +73,46 @@ function createVoiceStripDOM(container, prefix, voiceIndex, color, label) {
     container.appendChild(strip);
 }
 
+function laneForPrefix(prefix) {
+    if (prefix === 'master') return lanes.master;
+    if (prefix === 'A') return lanes.Aphrase;
+    return lanes.Bphrase;
+}
+
+function voiceChannelKeyForPrefix(prefix) {
+    if (prefix === 'master') return 'masterVoices';
+    if (prefix === 'A') return 'Avoices';
+    return 'Bvoices';
+}
+
+function bindChannelToVoice(prefix, voiceIndex, channel) {
+    const lane = laneForPrefix(prefix);
+    if (!lane.voices[voiceIndex] || !channel) return null;
+
+    lane.voices[voiceIndex].channel = channel;
+    channel.onInstrumentChange = () => updateVoiceInstrumentLabels(lane);
+    return channel;
+}
+
 /**
  * Rebuilds voice mixer strips to match the current voice count.
  * Used after loading a share URL with multiple voices.
  */
 function rebuildVoiceMixerStrips(prefix, container, color, label) {
-    const lane = prefix === 'master' ? lanes.master : prefix === 'A' ? lanes.Aphrase : lanes.Bphrase;
-    const key = prefix === 'master' ? 'masterVoices' : prefix === 'A' ? 'Avoices' : 'Bvoices';
+    const lane = laneForPrefix(prefix);
+    const key = voiceChannelKeyForPrefix(prefix);
     container.innerHTML = '';
     channels[key] = [];
     lane.voices.forEach((voice, idx) => {
         createVoiceStripDOM(container, prefix, idx, color, label);
-        const channel = addVoiceChannel(channels, prefix, container, idx);
-        voice.channel = channel;
+        const channel = bindChannelToVoice(prefix, idx, addVoiceChannel(channels, prefix, container, idx));
         // Restore channel state from payload if present
         if (voice._channelState && channel) {
             applyVoiceChannelState(channel, voice._channelState);
             delete voice._channelState;
         }
     });
+    updateVoiceInstrumentLabels(lane);
 }
 
 /**
@@ -136,7 +157,7 @@ function initVoiceChannels() {
     if (masterContainer) {
         lanes.master.voices.forEach((_, idx) => {
             createVoiceStripDOM(masterContainer, 'master', idx, '#ff9100', MIXER_LABELS.master);
-            addVoiceChannel(channels, 'master', masterContainer, idx);
+            bindChannelToVoice('master', idx, addVoiceChannel(channels, 'master', masterContainer, idx));
         });
     }
 
@@ -145,7 +166,7 @@ function initVoiceChannels() {
     if (aContainer) {
         lanes.Aphrase.voices.forEach((_, idx) => {
             createVoiceStripDOM(aContainer, 'A', idx, '#ff3366', MIXER_LABELS.A);
-            addVoiceChannel(channels, 'A', aContainer, idx);
+            bindChannelToVoice('A', idx, addVoiceChannel(channels, 'A', aContainer, idx));
         });
     }
 
@@ -154,7 +175,7 @@ function initVoiceChannels() {
     if (bContainer) {
         lanes.Bphrase.voices.forEach((_, idx) => {
             createVoiceStripDOM(bContainer, 'B', idx, '#00e5ff', MIXER_LABELS.B);
-            addVoiceChannel(channels, 'B', bContainer, idx);
+            bindChannelToVoice('B', idx, addVoiceChannel(channels, 'B', bContainer, idx));
         });
     }
 }
@@ -252,8 +273,7 @@ function handleAddVoice(lane, prefix, container, color, label) {
     addVoice(lane);
     const voiceIndex = lane.voices.length - 1;
     createVoiceStripDOM(container, prefix, voiceIndex, color, label);
-    const channel = addVoiceChannel(channels, prefix, container, voiceIndex);
-    lane.voices[voiceIndex].channel = channel;
+    bindChannelToVoice(prefix, voiceIndex, addVoiceChannel(channels, prefix, container, voiceIndex));
     buildLane(lane); // Only rebuild the affected lane, not all lanes
 }
 
@@ -262,7 +282,7 @@ function handleAddVoice(lane, prefix, container, color, label) {
  * The lane data and sequencer buttons are already handled by lanes.js.
  */
 function handleRemoveVoiceChannel(prefix, voiceIndex) {
-    const key = prefix === 'master' ? 'masterVoices' : prefix === 'A' ? 'Avoices' : 'Bvoices';
+    const key = voiceChannelKeyForPrefix(prefix);
     const voiceArray = channels[key];
     if (!voiceArray || voiceArray.length <= 1) return;
 
@@ -274,7 +294,7 @@ function handleRemoveVoiceChannel(prefix, voiceIndex) {
     voiceArray.splice(voiceIndex, 1);
 
     // Re-index remaining strips' labels
-    const lane = prefix === 'master' ? lanes.master : prefix === 'A' ? lanes.Aphrase : lanes.Bphrase;
+    const lane = laneForPrefix(prefix);
 
     // Update channel references and strip IDs
     voiceArray.forEach((ch, idx) => {
@@ -282,6 +302,7 @@ function handleRemoveVoiceChannel(prefix, voiceIndex) {
         const newId = `strip_${prefix}_${idx}`;
         // Update channel voiceIndex
         ch.voiceIndex = idx;
+        ch.onInstrumentChange = () => updateVoiceInstrumentLabels(lane);
         // Update strip ID if it exists
         const strip = document.getElementById(oldId);
         if (strip) strip.id = newId;

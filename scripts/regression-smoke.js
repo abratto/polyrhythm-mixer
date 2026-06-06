@@ -183,6 +183,14 @@ async function run() {
                 AVoice1Sound: selectValue('#sound_A_0'),
                 BVoice1Sound: selectValue('#sound_B_0')
             },
+            voiceLabels: {
+                master1: document.querySelector('#masterGrid .voice-row:nth-child(1) .voice-instrument-label')?.textContent?.trim() ?? null,
+                master2: document.querySelector('#masterGrid .voice-row:nth-child(2) .voice-instrument-label')?.textContent?.trim() ?? null,
+                A1: document.querySelector('#meterAPhraseGrid .voice-row:nth-child(1) .voice-instrument-label')?.textContent?.trim() ?? null,
+                A2: document.querySelector('#meterAPhraseGrid .voice-row:nth-child(2) .voice-instrument-label')?.textContent?.trim() ?? null,
+                B1: document.querySelector('#meterBPhraseGrid .voice-row:nth-child(1) .voice-instrument-label')?.textContent?.trim() ?? null,
+                B2: document.querySelector('#meterBPhraseGrid .voice-row:nth-child(2) .voice-instrument-label')?.textContent?.trim() ?? null
+            },
             helpLeads: Array.from(document.querySelectorAll('#helpModal .modal-help-item > strong:first-child')).map(node => node.textContent.trim())
         };
     });
@@ -239,6 +247,7 @@ async function run() {
         assert(same(initial.active.A1, [0]), 'Meter A voice 1 should start on pulse 1.', initial.active.A1);
         assert(same(initial.active.B1, [0]), 'Meter B voice 1 should start on pulse 1.', initial.active.B1);
         assert(initial.mixer.masterClickHeader === 'Master Click', 'Master Click strip should be present.', initial.mixer);
+        assert(initial.voiceLabels.master1 === 'Bass Drum (Kick)' && initial.voiceLabels.A1 === 'Woodblock Clack' && initial.voiceLabels.B1 === 'Analog Cowbell', 'Voice rows should display their default mixer instruments.', initial.voiceLabels);
         assert(initial.helpLeads.length === 4, 'Help modal should expose four bold lead sentences.', initial.helpLeads);
         assert(await page.locator('#resetBtn').textContent() === 'Reset Mixer', 'Reset button should clearly describe full mixer reset.');
         const bataOptions = await page.locator('#soundDriver option').evaluateAll(options => options
@@ -288,6 +297,9 @@ async function run() {
         await setSelect('#sound_master_1', 'claves');
         await setSelect('#sound_A_0', 'woodblock');
         await setSelect('#sound_B_0', 'cowbell');
+
+        const liveInstrumentLabels = await snapshot();
+        assert(liveInstrumentLabels.voiceLabels.master1 === 'Snare Drum' && liveInstrumentLabels.voiceLabels.master2 === 'Claves' && liveInstrumentLabels.voiceLabels.A1 === 'Woodblock Clack' && liveInstrumentLabels.voiceLabels.B1 === 'Analog Cowbell', 'Voice row instrument labels should update when mixer selections change.', liveInstrumentLabels.voiceLabels);
 
         await clickStep('#masterGrid', 1, 3);
         await clickStep('#masterGrid', 1, 8);
