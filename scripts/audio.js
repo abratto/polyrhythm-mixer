@@ -448,7 +448,7 @@ export function updateWorkerScheduler(state, lanes, channels, globalVolume) {
  * Tries Web Worker first; falls back to main-thread setTimeout.
  */
 export function startAudioScheduler(state, lanes, channels, globalVolume) {
-    if (_schedulerTimer || _workerInstance) return;
+    if (_schedulerTimer) return;
 
     // Seed tracking to current position so only future steps fire
     const rps = state.tempo * Math.PI / 120;
@@ -461,10 +461,8 @@ export function startAudioScheduler(state, lanes, channels, globalVolume) {
     state.lastScheduledQuarter = Math.floor((elapsed + lookahead) / quarterDuration);
     state.lastScheduledActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };
 
-    // Try worker-based scheduler first — runs on separate thread, immune to main-thread stalls
-    if (startWorkerScheduler(state, lanes, channels, globalVolume)) return;
-
-    // Fallback: main-thread setTimeout scheduler
+    // Start worker as parallel enhancement (non-blocking — main scheduler handles audio)
+    startWorkerScheduler(state, lanes, channels, globalVolume);
 
     function tick() {
         if (!state.audioClockActive || !state.audioCtx || !state.audioEnabled) {
