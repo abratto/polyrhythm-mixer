@@ -6,6 +6,27 @@ A web-based tool for visualizing, sequencing, and mixing polyrhythms. Two interl
 
 This project grew out of work at [CNMAT](https://cnmat.berkeley.edu/) (Center for New Music and Audio Technologies) at UC Berkeley, where the author built a MAX/MSP tool for creating polyrhythms for live performance. The web version preserves the same musical concepts — meter relationships, phrase structures, and phase offsets — in a portable, shareable format.
 
+The gear-wheel visualization was inspired by a conversation with a non-musician who could intuitively imagine polyrhythms as resulting from gear ratios — two wheels of different sizes meshing against a common drive wheel, their teeth catching at predictable intervals. The original implementation modeled this literally: a single spinning "master wheel" accumulated angle frame-by-frame from the display refresh rate, and all rhythmic placements were detected by checking where the wheel's teeth landed.
+
+## Architecture
+
+### Original Model (v1)
+
+The first version used a **geometric-first** model: the master wheel's rotation angle was the source of truth for all timing. Each animation frame advanced the angle by `rotationSpeed × frameDelta`, and when the wheel crossed a step boundary, that step's sound was triggered immediately. The visual directly drove the audio.
+
+This worked well but had a fundamental limitation: any delay in the UI thread — heavy rendering, garbage collection, tab switching — delayed the next frame, which delayed the angle advancement, which delayed the sound. Frame jitter (~0–16ms) was permanently baked into the timing.
+
+### Current Model (v2)
+
+The architecture was inverted so that the **audio clock drives the visual**:
+
+1. **Audio-clock angle derivation** — The master wheel angle is computed directly from the Web Audio API's hardware clock (`audioCtx.currentTime`) rather than frame deltas. Even if rendering stalls, the angle remains mathematically exact.
+2. **Precise hit-time scheduling** — Each step's sound is scheduled at its computed boundary time (`audioStartTime + stepIndex × stepDuration`), not at the moment the frame callback fires. A 5ms lookahead floor gives the audio rendering thread time to prepare oscillator graphs.
+3. **Independent scheduling loop** — A self-adjusting `setTimeout` chain runs separately from the animation loop, pre-scheduling future steps at 5–20ms intervals. It catches all intermediate steps (even when many pass between frames at high tooth counts) and deduplicates across master steps that map to the same phrase step.
+4. **Visual as passive reflection** — `requestAnimationFrame` handles only rendering: drawing gears and timelines, highlighting active buttons, and managing flash effects. It no longer triggers any audio.
+
+The geometric formulas (LCM ratios, phase offsets, step-to-phrase mapping) are unchanged — only the question of "what drives what" was inverted.
+
 ## How the Gears Work
 
 The visualization uses a mechanical metaphor to make polyrhythms intuitive:
@@ -26,6 +47,8 @@ Each wheel has a colored dot at its top position. When the dot passes the 12 o'c
 
 ### Phase Offset
 The phase sliders shift a meter wheel's starting position relative to the master wheel, measured in master teeth. This creates rhythmic displacement without changing the underlying meter relationship.
+
+> In the current architecture, the visual wheel position is computed from the audio clock using these same geometric formulas — the wheel reflects precise sample-accurate timing rather than physically driving it.
 
 ## Features
 
@@ -69,7 +92,7 @@ All sounds are synthesized in real-time using Web Audio oscillators, noise buffe
 - **No build step** — Runs as plain ES modules in the browser
 - **Static site** — Hosted on GitHub Pages
 - **Web Audio API** — All instruments are synthesized in real-time using oscillators, noise buffers, and filters
-- **Canvas rendering** — Frame-rate-independent animation using `requestAnimationFrame` with delta-time calculation
+- **Audio-clock master architecture** — The Web Audio API's hardware clock is the source of truth for all rhythmic timing. A self-adjusting scheduling loop pre-schedules synthesized sounds at computed step boundaries, while `requestAnimationFrame` drives only visual rendering (gear animation, step highlighting, flash effects)
 - **Versioned sharing** — Share payloads include a version number with automatic migration from older formats (v0, v1 → v2)
 - **Local persistence** — Saved rhythms use the same versioned payload format and are stored in `localStorage`
 - **Performance** — Pre-generated noise buffer, reusable selection buffers, cached channel values, and incremental DOM updates
