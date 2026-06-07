@@ -1453,7 +1453,7 @@ export function playChannelSound(state, channels, channelName, globalVolume = 1,
     }
 }
 
-/** Plays a sound for a single channel if not muted. Uses a 5ms lookahead floor for audio thread prep. */
+/** Plays a sound for a single channel if not muted. Uses a 25ms lookahead floor for audio thread prep. */
 export function playSingleChannel(state, channel, globalVolume, hitTime) {
     if (!channel || channel.muted) return;
     if (!channel.sound) return;
@@ -1465,7 +1465,7 @@ export function playSingleChannel(state, channel, globalVolume, hitTime) {
     if (!fn) return;
 
     const now = hitTime
-        ? Math.max(hitTime, state.audioCtx.currentTime + 0.005)
+        ? Math.max(hitTime, state.audioCtx.currentTime + 0.025)
         : state.audioCtx.currentTime;
     fn(state, now, vol, channel.prefix || '');
 }
