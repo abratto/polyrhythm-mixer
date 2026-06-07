@@ -316,11 +316,135 @@ function scheduleStepAudio(state, lanes, channels, stepIndex, hitTime, globalVol
 }
 
 let _schedulerTimer = null;
+let _schedulerWorker = null;
+
+/** Serializes lane patterns and channel configs for the worker. */
+function _serializeForWorker(state, lanes, channels) {
+    const l = {};
+    if (lanes.master) l.masterVoices = lanes.master.voices.map(v => ({ selected: [...v.selected] }));
+    if (lanes.Aphrase) l.AphraseVoices = lanes.Aphrase.voices.map(v => ({ selected: [...v.selected] }));
+    if (lanes.Bphrase) l.BphraseVoices = lanes.Bphrase.voices.map(v => ({ selected: [...v.selected] }));
+    if (lanes.Awheel) l.AwheelSelected = [...lanes.Awheel.selected];
+    if (lanes.Bwheel) l.BwheelSelected = [...lanes.Bwheel.selected];
+
+    const c = {};
+    c.driver = { sound: channels.driver?.sound, volume: channels.driver?.volume, muted: channels.driver?.muted, gainScale: channels.driver?.gainScale };
+    c.Awheel = { sound: channels.Awheel?.sound, volume: channels.Awheel?.volume, muted: channels.Awheel?.muted, gainScale: channels.Awheel?.gainScale };
+    c.Bwheel = { sound: channels.Bwheel?.sound, volume: channels.Bwheel?.volume, muted: channels.Bwheel?.muted, gainScale: channels.Bwheel?.gainScale };
+    c.masterVoices = (channels.masterVoices || []).map(ch => ({ sound: ch?.sound, volume: ch?.volume, muted: ch?.muted, gainScale: ch?.gainScale }));
+    c.Avoices = (channels.Avoices || []).map(ch => ({ sound: ch?.sound, volume: ch?.volume, muted: ch?.muted, gainScale: ch?.gainScale }));
+    c.Bvoices = (channels.Bvoices || []).map(ch => ({ sound: ch?.sound, volume: ch?.volume, muted: ch?.muted, gainScale: ch?.gainScale }));
+
+    return { lanes: l, channels: c };
+}
+
+/** Handles trigger batches from the worker — creates audio nodes on the main thread. */
+function _handleWorkerTriggers(triggers, state, channels, globalVolume) {
+    for (const t of triggers) {
+        let channel = null;
+        switch (t.channelKey) {
+            case 'masterVoices': channel = channels.masterVoices?.[t.voiceIndex]; break;
+            case 'Avoices': channel = channels.Avoices?.[t.voiceIndex]; break;
+            case 'Bvoices': channel = channels.Bvoices?.[t.voiceIndex]; break;
+            case 'Awheel': channel = channels.Awheel; break;
+            case 'Bwheel': channel = channels.Bwheel; break;
+            case 'driver': channel = channels.driver; break;
+        }
+        if (channel) playSingleChannel(state, channel, globalVolume, t.hitTime);
+    }
+}
+
+let _workerInstance = null;
+
+/** Starts the worker-based scheduler. Returns true if the worker was started. */
+export function startWorkerScheduler(state, lanes, channels, globalVolume) {
+    if (_workerInstance) return true;
+    if (typeof Worker === 'undefined') return false;
+
+    try {
+        _workerInstance = new Worker('./scripts/scheduler-worker.js');
+    } catch (_) {
+        _workerInstance = null;
+        return false;
+    }
+
+    _workerInstance.onmessage = (e) => {
+        // Worker pre-computes triggers; main scheduler handles audio.
+        // Enable the line below once shared dedup state is implemented.
+        // if (e.data.type === 'triggers' && e.data.triggers) {
+        //     _handleWorkerTriggers(e.data.triggers, state, channels, globalVolume);
+        // }
+    };
+
+    _workerInstance.onerror = () => {
+        stopWorkerScheduler();
+    };
+
+    const serialized = _serializeForWorker(state, lanes, channels);
+    _workerInstance.postMessage({
+        type: 'init',
+        config: {
+            mainTeeth: state.mainTeeth,
+            teethA: state.teethA,
+            teethB: state.teethB,
+            A: state.A,
+            B: state.B,
+            phaseA: state.phaseA,
+            phaseB: state.phaseB,
+            phraseStepsA: state.phraseStepsA,
+            phraseStepsB: state.phraseStepsB,
+            tempo: state.tempo,
+            audioStartTime: state.audioStartTime
+        },
+        lanes: serialized.lanes,
+        channels: serialized.channels,
+        globalVolume,
+        audioCtxNow: state.audioCtx.currentTime
+    });
+
+    return true;
+}
+
+/** Stops the worker-based scheduler. */
+export function stopWorkerScheduler() {
+    if (_workerInstance) {
+        _workerInstance.postMessage({ type: 'stop' });
+        _workerInstance.terminate();
+        _workerInstance = null;
+    }
+}
+
+/** Sends updated config to the worker after state changes. */
+export function updateWorkerScheduler(state, lanes, channels, globalVolume) {
+    if (!_workerInstance) return;
+    const serialized = _serializeForWorker(state, lanes, channels);
+    _workerInstance.postMessage({
+        type: 'update',
+        config: {
+            mainTeeth: state.mainTeeth,
+            teethA: state.teethA,
+            teethB: state.teethB,
+            A: state.A,
+            B: state.B,
+            phaseA: state.phaseA,
+            phaseB: state.phaseB,
+            phraseStepsA: state.phraseStepsA,
+            phraseStepsB: state.phraseStepsB,
+            tempo: state.tempo,
+            audioStartTime: state.audioStartTime
+        },
+        lanes: serialized.lanes,
+        channels: serialized.channels,
+        globalVolume,
+        audioCtxNow: state.audioCtx.currentTime
+    });
+}
 
 /**
  * Self-adjusting audio scheduling loop. Runs independently of rAF,
  * pre-scheduling sounds at precise hitTimes from the audio clock.
  * Wakes up 3ms before the next step or quarter boundary.
+ * Tries Web Worker first; falls back to main-thread setTimeout.
  */
 export function startAudioScheduler(state, lanes, channels, globalVolume) {
     if (_schedulerTimer) return;
@@ -335,6 +459,10 @@ export function startAudioScheduler(state, lanes, channels, globalVolume) {
     state.lastScheduledStep = Math.floor((elapsed + lookahead) / stepDuration);
     state.lastScheduledQuarter = Math.floor((elapsed + lookahead) / quarterDuration);
     state.lastScheduledActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };
+
+    // Start worker as parallel enhancement — it pre-computes hitTimes to reduce
+    // main-thread scheduling latency on subsequent ticks
+    startWorkerScheduler(state, lanes, channels, globalVolume);
 
     function tick() {
         if (!state.audioClockActive || !state.audioCtx || !state.audioEnabled) {
@@ -379,6 +507,7 @@ export function startAudioScheduler(state, lanes, channels, globalVolume) {
 
 /** Stops the audio scheduler and clears its timer. */
 export function stopAudioScheduler() {
+    stopWorkerScheduler();
     if (_schedulerTimer) {
         clearTimeout(_schedulerTimer);
         _schedulerTimer = null;

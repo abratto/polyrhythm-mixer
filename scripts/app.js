@@ -16,7 +16,7 @@
 import { getDomRefs } from './dom.js';
 import { createState, resetFlashState, updateDerivedState, updatePhaseUI } from './state.js';
 import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons, addVoice, updateVoiceInstrumentLabels } from './lanes.js';
-import { createChannels, populateMenus, wireChannels, toggleAudio, playChannelSound, addVoiceChannel, syncAudioStartTime, startAudioScheduler, stopAudioScheduler, resetAudioScheduler } from './audio.js';
+import { createChannels, populateMenus, wireChannels, toggleAudio, playChannelSound, addVoiceChannel, syncAudioStartTime, startAudioScheduler, stopAudioScheduler, resetAudioScheduler, updateWorkerScheduler } from './audio.js';
 import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } from './controls.js';
 import { copyShareLink, loadStateFromUrl } from './share.js';
 import { closeSaveRhythmModal, closeSavedRhythmsModal, openSaveRhythmModal, openSavedRhythmsModal, saveCurrentRhythm } from './saved-rhythms.js';
@@ -193,6 +193,7 @@ function rebuildSystem() {
     state.mainAngle = 0;
     syncAudioStartTime(state);
     resetAudioScheduler(state);
+    updateWorkerScheduler(state, lanes, channels, cachedGlobalVolume);
 }
 
 /**
@@ -203,6 +204,7 @@ function resetAndRebuild() {
     state.mainAngle = 0;
     syncAudioStartTime(state);
     resetAudioScheduler(state);
+    updateWorkerScheduler(state, lanes, channels, cachedGlobalVolume);
     resetFlashState(state);
     resetPatterns(state, lanes);
     buildAllLanes(lanes);
@@ -264,6 +266,7 @@ function resetMixerToStartingState() {
     state.mainAngle = 0;
     syncAudioStartTime(state);
     resetAudioScheduler(state);
+    updateWorkerScheduler(state, lanes, channels, cachedGlobalVolume);
 }
 
 function rebuildAllVoiceMixerStrips() {
