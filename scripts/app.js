@@ -414,10 +414,10 @@ buildAllLanes(lanes);
         ui,
         state,
         lanes,
-        playChannelSound: (channelName, voiceIndex) => {
-            return playChannelSound(state, channels, channelName, cachedGlobalVolume, voiceIndex);
+        playChannelSound: (channelName, voiceIndex, hitTime) => {
+            return playChannelSound(state, channels, channelName, cachedGlobalVolume, voiceIndex, hitTime);
          },
-        markCurrentButtons: (active) => markCurrentButtons(state, lanes, active)
+        markCurrentButtons: (active, previousActive) => markCurrentButtons(state, lanes, active, previousActive)
     });
 })();
 

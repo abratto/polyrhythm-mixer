@@ -567,7 +567,7 @@ function markSingleVoiceCurrentButtons(lane, previous, next) {
  * For multi-voice lanes, highlights the active step in each voice.
  * Tracks previous button indices to avoid O(N) iteration.
  */
-export function markCurrentButtons(state, lanes, active) {
+export function markCurrentButtons(state, lanes, active, previousActive = null) {
     const mappings = [
         ['master', lanes.master, active.master],
         ['Aphrase', lanes.Aphrase, active.Aphrase],
@@ -576,11 +576,13 @@ export function markCurrentButtons(state, lanes, active) {
         ['Bwheel', lanes.Bwheel, active.Bwheel]
     ];
 
+    const prev = previousActive || state.lastActive;
+
     for (const [key, lane, index] of mappings) {
         if (lane.isMultiVoice) {
-            markMultiVoiceCurrentButtons(lane, state.lastActive[key], index);
+            markMultiVoiceCurrentButtons(lane, prev[key], index);
         } else {
-            markSingleVoiceCurrentButtons(lane, state.lastActive[key], index);
+            markSingleVoiceCurrentButtons(lane, prev[key], index);
         }
     }
 }
