@@ -435,8 +435,9 @@ export async function toggleAudio(state, ui) {
  * one buffer and create new BufferSource nodes from it.
  */
 let _noiseBuffer = null;
+let _noisePool = [];
 
-function getNoiseSource(state) {
+function acquireNoiseSource(state) {
     if (!state.audioCtx) return null;
     if (!_noiseBuffer) {
         const duration = 1.0;
@@ -445,9 +446,15 @@ function getNoiseSource(state) {
         const data = _noiseBuffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
     }
-    const source = state.audioCtx.createBufferSource();
-    source.buffer = _noiseBuffer;
-    return source;
+    const source = _noisePool.pop();
+    if (source) {
+        _fillPools(state.audioCtx);
+        return source;
+    }
+    _fillPools(state.audioCtx);
+    const newSource = state.audioCtx.createBufferSource();
+    newSource.buffer = _noiseBuffer;
+    return newSource;
 }
 
 // ===== Instrument synthesis functions =====
@@ -476,7 +483,7 @@ function playSnare(state, now, vol) {
     osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.08);
 
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'highpass';
@@ -490,7 +497,7 @@ function playSnare(state, now, vol) {
 
 /** Closed hi-hat: short bandpass noise burst at 7.5 kHz. */
 function playClosedHiHat(state, now, vol) {
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -504,7 +511,7 @@ function playClosedHiHat(state, now, vol) {
 
 /** Open hi-hat: longer bandpass noise burst at 7.5 kHz. */
 function playOpenHiHat(state, now, vol) {
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -518,7 +525,7 @@ function playOpenHiHat(state, now, vol) {
 
 /** Shaker: bandpass noise with a quick attack envelope to simulate bead movement. */
 function playShaker(state, now, vol) {
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -555,7 +562,7 @@ function playClap(state, now, vol) {
     gain.connect(state.audioCtx.destination);
 
     [0, 0.012, 0.024].forEach((delay) => {
-        const burst = getNoiseSource(state);
+        const burst = acquireNoiseSource(state);
         if (!burst) return;
         const burstGain = acquireGain(state);
         burstGain.gain.setValueAtTime(vol * 0.45, now + delay);
@@ -566,7 +573,7 @@ function playClap(state, now, vol) {
         burst.start(now + delay);
     });
 
-    const mainClap = getNoiseSource(state);
+    const mainClap = acquireNoiseSource(state);
     if (!mainClap) return;
     gain.gain.setValueAtTime(vol * 0.65, now + 0.038);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
@@ -643,7 +650,7 @@ function playCowbell(state, now, vol) {
 
 /** Tambourine: bandpass noise for jingle + sine ring for body. */
 function playTambourine(state, now, vol) {
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const noiseFilter = state.audioCtx.createBiquadFilter();
     noiseFilter.type = 'bandpass';
@@ -769,7 +776,7 @@ function createCongaTone(state, freq, volume, waveType, target, startTime, durat
 
 /** Helper: generates high-frequency burst for conga slap strokes. */
 function createCongaSlapNoise(state, target, startTime, duration) {
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -786,7 +793,7 @@ function createCongaSlapNoise(state, target, startTime, duration) {
 
 /** Helper: generates soft palm-impact air puff for conga open strokes. */
 function createCongaOpenNoise(state, target, startTime, duration) {
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'lowpass';
@@ -828,7 +835,7 @@ function playBongoHigh(state, now, vol, channelName) {
 
 /** Maraca: bandpass noise with amplitude modulation to simulate shaking. */
 function playMaraca(state, now, vol) {
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -847,7 +854,7 @@ function playMaraca(state, now, vol) {
 
 /** Crash cymbal: full highpass noise with sustained sine wash for resonance. */
 function playCrash(state, now, vol) {
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'highpass';
@@ -870,7 +877,7 @@ function playCrash(state, now, vol) {
 
 /** Ride cymbal: bandpass noise ping + sustained sine bell tone. */
 function playRide(state, now, vol) {
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -937,7 +944,7 @@ function playTimbale(state, now, vol, channelName) {
     osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.08);
 
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const noiseFilter = state.audioCtx.createBiquadFilter();
     noiseFilter.type = 'bandpass';
@@ -951,7 +958,7 @@ function playTimbale(state, now, vol, channelName) {
 
 /** Castanets: short bandpass noise burst + resonant wood tone at 3.5 kHz. */
 function playCastanets(state, now, vol) {
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -985,7 +992,7 @@ function playSynthKick(state, now, vol) {
     subOsc.connect(subGain); subGain.connect(state.audioCtx.destination);
     subOsc.start(now); subOsc.stop(now + 0.25);
 
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const noiseFilter = state.audioCtx.createBiquadFilter();
     noiseFilter.type = 'bandpass';
@@ -1019,7 +1026,7 @@ function playElectronicSnare(state, now, vol) {
     osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.1);
 
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -1034,7 +1041,7 @@ function playElectronicSnare(state, now, vol) {
 
 /** Foot tap: very short bandpass noise click at 180 Hz. */
 function playFootTap(state, now, vol) {
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -1049,7 +1056,7 @@ function playFootTap(state, now, vol) {
 
 /** Hand slap: noise burst + medium sine resonance. */
 function playSlap(state, now, vol) {
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const noiseFilter = state.audioCtx.createBiquadFilter();
     noiseFilter.type = 'bandpass';
@@ -1149,7 +1156,7 @@ function createBataTone(state, freq, volume, targetNode, startTime, duration) {
 
 /** Helper: generates a hand-impact slap transient using white noise through a high-pass filter. */
 function createBataSlap(state, volume, targetNode, startTime, duration) {
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const noiseFilter = state.audioCtx.createBiquadFilter();
     noiseFilter.type = 'highpass';
@@ -1190,7 +1197,7 @@ function playCajonBass(state, now, vol) {
 /** Cajón slap: sharp edge strike with snare-like crack and high-frequency content. */
 function playCajonSlap(state, now, vol) {
     // High-frequency wood crack
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'highpass';
@@ -1224,7 +1231,7 @@ function playCabasaShekere(state, now, vol) {
     const grainCount = 9;
     for (let grainIndex = 0; grainIndex < grainCount; grainIndex++) {
         const grainStart = now + grainIndex * 0.012;
-        const noise = getNoiseSource(state);
+        const noise = acquireNoiseSource(state);
         if (!noise) return;
         const grainGain = acquireGain(state);
         const accent = grainIndex % 3 === 0 ? 0.38 : 0.22;
@@ -1256,7 +1263,7 @@ function playGuiro(state, now, vol) {
     const ridgeCount = 8;
     for (let ridgeIndex = 0; ridgeIndex < ridgeCount; ridgeIndex++) {
         const ridgeStart = now + ridgeIndex * 0.018;
-        const noise = getNoiseSource(state);
+        const noise = acquireNoiseSource(state);
         if (!noise) return;
         const ridgeGain = acquireGain(state);
         const accent = ridgeIndex === 0 || ridgeIndex === ridgeCount - 1 ? 0.45 : 0.3;
@@ -1284,7 +1291,7 @@ function playTalkingDrum(state, now, vol, channelName) {
     osc.connect(gain); gain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.24);
 
-    const noise = getNoiseSource(state);
+    const noise = acquireNoiseSource(state);
     if (!noise) return;
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
@@ -1336,7 +1343,7 @@ function playUdu(state, now, vol, channelName) {
     osc.connect(filter); filter.connect(gain); gain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.3);
 
-    const air = getNoiseSource(state);
+    const air = acquireNoiseSource(state);
     if (!air) return;
     const airFilter = state.audioCtx.createBiquadFilter();
     airFilter.type = 'bandpass';
@@ -1375,6 +1382,11 @@ function _fillPools(audioCtx) {
     }
     while (_gainPool.length < NODE_POOL_SIZE) {
         _gainPool.push(audioCtx.createGain());
+    }
+    while (_noisePool.length < NODE_POOL_SIZE / 2) {
+        const src = audioCtx.createBufferSource();
+        if (_noiseBuffer) src.buffer = _noiseBuffer;
+        _noisePool.push(src);
     }
 }
 
