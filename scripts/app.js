@@ -16,7 +16,7 @@
 import { getDomRefs } from './dom.js';
 import { createState, resetFlashState, updateDerivedState, updatePhaseUI } from './state.js';
 import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons, addVoice, updateVoiceInstrumentLabels } from './lanes.js';
-import { createChannels, populateMenus, wireChannels, toggleAudio, playChannelSound, addVoiceChannel } from './audio.js';
+import { createChannels, populateMenus, wireChannels, toggleAudio, playChannelSound, addVoiceChannel, syncAudioStartTime } from './audio.js';
 import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } from './controls.js';
 import { copyShareLink, loadStateFromUrl } from './share.js';
 import { closeSaveRhythmModal, closeSavedRhythmsModal, openSaveRhythmModal, openSavedRhythmsModal, saveCurrentRhythm } from './saved-rhythms.js';
@@ -191,6 +191,7 @@ function rebuildSystem() {
     resizeAllLanes(state, lanes);
     buildAllLanes(lanes);
     state.mainAngle = 0;
+    syncAudioStartTime(state);
 }
 
 /**
@@ -199,6 +200,7 @@ function rebuildSystem() {
  */
 function resetAndRebuild() {
     state.mainAngle = 0;
+    syncAudioStartTime(state);
     resetFlashState(state);
     resetPatterns(state, lanes);
     buildAllLanes(lanes);
@@ -258,6 +260,7 @@ function resetMixerToStartingState() {
     rebuildAllVoiceMixerStrips();
     buildAllLanes(lanes);
     state.mainAngle = 0;
+    syncAudioStartTime(state);
 }
 
 function rebuildAllVoiceMixerStrips() {
@@ -324,7 +327,8 @@ const shareDeps = {
     resetPatterns,
     buildAllLanes,
     resetFlashState,
-    applyVoiceChannelState
+    applyVoiceChannelState,
+    syncAudioStartTime
 };
 
 // Phase 3: Initialize derived state and populate UI

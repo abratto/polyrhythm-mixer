@@ -5,6 +5,8 @@
  * and manages the help modal's visibility and localStorage persistence.
  */
 
+import { syncAudioStartTime } from './audio.js';
+
 const HELP_MODAL_STORAGE_KEY = 'alans-polyrhythm-mixer-help-dismissed';
 const MOBILE_LAYOUT_QUERY = '(max-width: 720px)';
 
@@ -78,6 +80,7 @@ export function wireControls({ ui, state, rebuildSystem, resetMixerToStartingSta
     ui.tempoSlider.addEventListener('input', () => {
         state.tempo = parseInt(ui.tempoSlider.value, 10);
         ui.tempoLabel.textContent = String(state.tempo);
+        syncAudioStartTime(state);
     });
 
     // Master volume slider — updates display label only (read in render loop)

@@ -450,7 +450,13 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, playChannelSound
         const angleDelta = radiansPerSecond * deltaTime;
 
         const prevMainAngle = state.mainAngle;
-        state.mainAngle += angleDelta;
+
+        // Use audio clock for precise timing when active; fall back to frame accumulation
+        if (state.audioClockActive && state.audioCtx) {
+            state.mainAngle = (state.audioCtx.currentTime - state.audioStartTime) * radiansPerSecond;
+        } else {
+            state.mainAngle += angleDelta;
+        }
 
           // Calculate gear geometry
           // All gears share the same module (tooth size) so teeth mesh properly.

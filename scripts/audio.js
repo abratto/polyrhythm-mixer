@@ -244,6 +244,18 @@ export function wireChannels(channels) {
 }
 
 /**
+ * Re-anchors the audio clock reference so derived angle remains continuous
+ * across tempo changes, system resets, and share restores.
+ * No-op when audioClockActive is false or audioCtx is null.
+ */
+export function syncAudioStartTime(state) {
+    if (state.audioClockActive && state.audioCtx) {
+        const rps = state.tempo * Math.PI / 120;
+        state.audioStartTime = state.audioCtx.currentTime - state.mainAngle / rps;
+    }
+}
+
+/**
  * Toggles audio on/off. Creates the AudioContext on first user gesture
  * (required by browser autoplay policies) and resumes it if suspended.
  */
@@ -257,6 +269,14 @@ export async function toggleAudio(state, ui) {
             await state.audioCtx.resume();
         }
         state.audioEnabled = !state.audioEnabled;
+
+        // Activate audio-clock angle derivation on first enable
+        if (state.audioEnabled && !state.audioClockActive) {
+            state.audioClockActive = true;
+            const rps = state.tempo * Math.PI / 120;
+            state.audioStartTime = state.audioCtx.currentTime - state.mainAngle / rps;
+        }
+
         ui.audioBtn.classList.toggle('active', state.audioEnabled);
         ui.audioBtn.textContent = state.audioEnabled ? 'Disable Audio' : 'Enable Audio';
     } catch (err) {

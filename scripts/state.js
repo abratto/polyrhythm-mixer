@@ -38,6 +38,10 @@ export function createState(ui) {
         audioCtx: null,     // Web Audio API context (created on user gesture)
         audioEnabled: false,
 
+        // Audio clock reference for accurate timing (active after first audio enable)
+        audioStartTime: 0,
+        audioClockActive: false,
+
         // Flash counters for visual/audio triggers (count down each frame)
         flash: { driver: 0, custom: 0, A: 0, B: 0 },
         // Tracks the previously active step index per lane to detect transitions
