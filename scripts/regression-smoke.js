@@ -281,8 +281,47 @@ async function run() {
             { value: 'udu', label: 'Udu Clay Pot' }
         ]), 'Mixer menus should expose the expanded percussion palette.', expandedPercussionOptions);
 
-        // Build a current-format state that exercises recent behavior: extra voices,
-        // nudges, mixer instrument changes, Master Click, and Master Volume.
+        // --- Button highlight advancement ---
+        // Enable audio so the animation and scheduler both run, then verify
+        // step highlighting advances over time.
+        await page.locator('#audioBtn').click();
+        await page.waitForTimeout(2500);
+
+        const snapshotHighlight = async () => page.evaluate(() => {
+            const currentClassCount = (gridSelector) => document.querySelectorAll(`${gridSelector} .step-btn.current`).length;
+            const currentBtnIndex = (gridSelector) => {
+                const buttons = document.querySelectorAll(`${gridSelector} .step-btn`);
+                return Array.from(buttons).findIndex(btn => btn.classList.contains('current'));
+            };
+            return {
+                masterCt: currentClassCount('#masterGrid'),
+                AphrCt: currentClassCount('#meterAPhraseGrid'),
+                BphrCt: currentClassCount('#meterBPhraseGrid'),
+                AwheelIdx: currentBtnIndex('#meterAWheelGrid'),
+                BwheelIdx: currentBtnIndex('#meterBWheelGrid'),
+                masterIdx: currentBtnIndex('#masterGrid'),
+                AphrIdx: currentBtnIndex('#meterAPhraseGrid'),
+                BphrIdx: currentBtnIndex('#meterBPhraseGrid')
+            };
+        });
+
+        const hl1 = await snapshotHighlight();
+
+        assert(hl1.masterCt >= 1, 'At least one master step button should be highlighted');
+        assert(hl1.AphrCt >= 1, 'At least one A-phrase step button should be highlighted');
+        assert(hl1.BphrCt >= 1, 'At least one B-phrase step button should be highlighted');
+        assert(hl1.AwheelIdx >= 0, 'A-wheel step button should be highlighted', hl1);
+        assert(hl1.BwheelIdx >= 0, 'B-wheel step button should be highlighted', hl1);
+
+        // Wait more and verify the highlighted step has advanced
+        await page.waitForTimeout(2000);
+        const hl2 = await snapshotHighlight();
+
+        assert(hl2.masterIdx !== hl1.masterIdx,
+            'Master step highlight should advance over time',
+            { before: hl1, after: hl2 });
+
+        // --- Reset restores a single voice per lane ---
         await setSelect('#rhythmA', 5);
         await setSelect('#rhythmB', 7);
         await setSelect('#phraseCyclesA', 2);
