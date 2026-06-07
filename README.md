@@ -95,7 +95,13 @@ All sounds are synthesized in real-time using Web Audio oscillators, noise buffe
 - **Audio-clock master architecture** — The Web Audio API's hardware clock is the source of truth for all rhythmic timing. A self-adjusting scheduling loop pre-schedules synthesized sounds at computed step boundaries, while `requestAnimationFrame` drives only visual rendering (gear animation, step highlighting, flash effects)
 - **Versioned sharing** — Share payloads include a version number with automatic migration from older formats (v0, v1 → v2)
 - **Local persistence** — Saved rhythms use the same versioned payload format and are stored in `localStorage`
-- **Performance** — Pre-generated noise buffer, reusable selection buffers, cached channel values, and incremental DOM updates
+- **Performance** —
+  - 25ms lookahead buffer gives the audio rendering thread margin on busy devices
+  - Pre-allocated oscillator, gain, and noise source node pools (48 each) avoid per-hit allocation
+  - 50ms batch scheduling keeps the audio thread fed ahead of time
+  - Mobile detection throttles canvas rendering to 30fps and simplifies gear drawing
+  - Web Worker scheduler infrastructure runs timing logic on a separate thread
+  - WeakMap-based gain node auto-release for watertight memory management
 
 ## Regression Smoke Test
 
