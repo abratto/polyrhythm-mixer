@@ -406,6 +406,7 @@ export async function toggleAudio(state, ui) {
         if (!state.audioCtx) {
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
             state.audioCtx = new AudioContextClass();
+            primeNodePools(state.audioCtx);
         }
         if (state.audioCtx.state === 'suspended') {
             await state.audioCtx.resume();
@@ -451,8 +452,8 @@ function getNoiseSource(state) {
 
 /** Kick drum: sine oscillator with fast pitch sweep downward. */
 function playKick(state, now, vol) {
-    const osc = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const gain = acquireGain(state);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(135, now);
     osc.frequency.exponentialRampToValueAtTime(38, now + 0.12);
@@ -464,8 +465,8 @@ function playKick(state, now, vol) {
 
 /** Snare: triangle oscillator body + highpass noise for snap. */
 function playSnare(state, now, vol) {
-    const osc = state.audioCtx.createOscillator();
-    const oscGain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const oscGain = acquireGain(state);
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(180, now);
     oscGain.gain.setValueAtTime(vol * 0.35, now);
@@ -478,7 +479,7 @@ function playSnare(state, now, vol) {
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'highpass';
     filter.frequency.setValueAtTime(1200, now);
-    const noiseGain = state.audioCtx.createGain();
+    const noiseGain = acquireGain(state);
     noiseGain.gain.setValueAtTime(vol * 0.65, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
     noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
@@ -492,7 +493,7 @@ function playClosedHiHat(state, now, vol) {
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
     filter.frequency.setValueAtTime(7500, now);
-    const gain = state.audioCtx.createGain();
+    const gain = acquireGain(state);
     gain.gain.setValueAtTime(vol * 0.65, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
     noise.connect(filter); filter.connect(gain); gain.connect(state.audioCtx.destination);
@@ -506,7 +507,7 @@ function playOpenHiHat(state, now, vol) {
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
     filter.frequency.setValueAtTime(7500, now);
-    const gain = state.audioCtx.createGain();
+    const gain = acquireGain(state);
     gain.gain.setValueAtTime(vol * 0.55, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
     noise.connect(filter); filter.connect(gain); gain.connect(state.audioCtx.destination);
@@ -520,7 +521,7 @@ function playShaker(state, now, vol) {
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
     filter.frequency.setValueAtTime(5500, now);
-    const gain = state.audioCtx.createGain();
+    const gain = acquireGain(state);
     gain.gain.setValueAtTime(0.001, now);
     gain.gain.linearRampToValueAtTime(vol * 0.5, now + 0.015);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
@@ -530,8 +531,8 @@ function playShaker(state, now, vol) {
 
 /** Tom: sine oscillator with pitch sweep, frequency varies by channel (A vs B). */
 function playTom(state, now, vol, channelName) {
-    const osc = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const gain = acquireGain(state);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(channelName.startsWith('A') ? 210 : 160, now);
     osc.frequency.exponentialRampToValueAtTime(channelName.startsWith('A') ? 110 : 80, now + 0.2);
@@ -547,14 +548,14 @@ function playClap(state, now, vol) {
     filter.type = 'bandpass';
     filter.frequency.setValueAtTime(1300, now);
 
-    const gain = state.audioCtx.createGain();
+    const gain = acquireGain(state);
     filter.connect(gain);
     gain.connect(state.audioCtx.destination);
 
     [0, 0.012, 0.024].forEach((delay) => {
         const burst = getNoiseSource(state);
         if (!burst) return;
-        const burstGain = state.audioCtx.createGain();
+        const burstGain = acquireGain(state);
         burstGain.gain.setValueAtTime(vol * 0.45, now + delay);
         burstGain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.02);
         burst.connect(filter);
@@ -573,8 +574,8 @@ function playClap(state, now, vol) {
 
 /** Agogo bell: sine oscillator, pitch varies by channel. */
 function playAgogo(state, now, vol, channelName) {
-    const osc = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const gain = acquireGain(state);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(channelName.startsWith('A') ? 880 : 587, now);
     gain.gain.setValueAtTime(vol * 0.7, now);
@@ -585,8 +586,8 @@ function playAgogo(state, now, vol, channelName) {
 
 /** Crystal ping: high-frequency sine tone, pitch varies by channel. */
 function playPing(state, now, vol, channelName) {
-    const osc = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const gain = acquireGain(state);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(channelName.startsWith('A') ? 1400 : 950, now);
     gain.gain.setValueAtTime(vol * 0.6, now);
@@ -597,8 +598,8 @@ function playPing(state, now, vol, channelName) {
 
 /** Rimshot: short triangle oscillator click at 680 Hz. */
 function playRimshot(state, now, vol) {
-    const osc = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const gain = acquireGain(state);
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(680, now);
     gain.gain.setValueAtTime(vol, now);
@@ -609,8 +610,8 @@ function playRimshot(state, now, vol) {
 
 /** Woodblock: sine oscillator with a brief downward pitch sweep. */
 function playWoodblock(state, now, vol) {
-    const osc = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const gain = acquireGain(state);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(920, now);
     osc.frequency.exponentialRampToValueAtTime(680, now + 0.04);
@@ -622,9 +623,9 @@ function playWoodblock(state, now, vol) {
 
 /** Cowbell: two detuned square oscillators through a bandpass filter. */
 function playCowbell(state, now, vol) {
-    const osc1 = state.audioCtx.createOscillator();
-    const osc2 = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
+    const osc1 = acquireOsc(state);
+    const osc2 = acquireOsc(state);
+    const gain = acquireGain(state);
     const filter = state.audioCtx.createBiquadFilter();
     osc1.type = 'square';
     osc2.type = 'square';
@@ -646,14 +647,14 @@ function playTambourine(state, now, vol) {
     noiseFilter.type = 'bandpass';
     noiseFilter.frequency.setValueAtTime(9000, now);
     noiseFilter.Q.setValueAtTime(0.7, now);
-    const noiseGain = state.audioCtx.createGain();
+    const noiseGain = acquireGain(state);
     noiseGain.gain.setValueAtTime(vol * 0.5, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
     noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
     noise.start(now);
 
-    const osc = state.audioCtx.createOscillator();
-    const oscGain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const oscGain = acquireGain(state);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(320, now);
     oscGain.gain.setValueAtTime(vol * 0.3, now);
@@ -668,7 +669,7 @@ function playCongaLow(state, now, vol, channelName) {
     const decay = 0.2;
     const overtones = [1.5, 2.2];
 
-    const masterGain = state.audioCtx.createGain();
+    const masterGain = acquireGain(state);
     masterGain.gain.setValueAtTime(vol, now);
     masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
     masterGain.connect(state.audioCtx.destination);
@@ -692,7 +693,7 @@ function playCongaMiddle(state, now, vol, channelName) {
     const decay = 0.17;
     const overtones = [1.55, 2.3];
 
-    const masterGain = state.audioCtx.createGain();
+    const masterGain = acquireGain(state);
     masterGain.gain.setValueAtTime(vol, now);
     masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
     masterGain.connect(state.audioCtx.destination);
@@ -713,7 +714,7 @@ function playCongaHigh(state, now, vol, channelName) {
     const decay = 0.14;
     const overtones = [1.6, 2.4];
 
-    const masterGain = state.audioCtx.createGain();
+    const masterGain = acquireGain(state);
     masterGain.gain.setValueAtTime(vol, now);
     masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
     masterGain.connect(state.audioCtx.destination);
@@ -737,7 +738,7 @@ function playCongaSlap(state, now, vol, channelName) {
     const slapFreq = baseFreq * 2.2;
     const slapDecay = 0.05;
 
-    const masterGain = state.audioCtx.createGain();
+    const masterGain = acquireGain(state);
     masterGain.gain.setValueAtTime(vol, now);
     masterGain.gain.exponentialRampToValueAtTime(0.001, now + slapDecay);
     masterGain.connect(state.audioCtx.destination);
@@ -751,8 +752,8 @@ function playCongaSlap(state, now, vol, channelName) {
 
 /** Helper: synthesizes a tonal component with precise pitch drops for congas. */
 function createCongaTone(state, freq, volume, waveType, target, startTime, duration, pitchBendFactor) {
-    const osc = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const gain = acquireGain(state);
     osc.type = waveType;
     osc.frequency.setValueAtTime(freq * pitchBendFactor, startTime);
     osc.frequency.exponentialRampToValueAtTime(freq, startTime + 0.035);
@@ -772,7 +773,7 @@ function createCongaSlapNoise(state, target, startTime, duration) {
     filter.type = 'bandpass';
     filter.frequency.setValueAtTime(1400, startTime);
     filter.Q.setValueAtTime(4.0, startTime);
-    const gain = state.audioCtx.createGain();
+    const gain = acquireGain(state);
     gain.gain.setValueAtTime(0.9, startTime);
     gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
     noise.connect(filter);
@@ -788,7 +789,7 @@ function createCongaOpenNoise(state, target, startTime, duration) {
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(350, startTime);
-    const gain = state.audioCtx.createGain();
+    const gain = acquireGain(state);
     gain.gain.setValueAtTime(0.2, startTime);
     gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
     noise.connect(filter);
@@ -799,8 +800,8 @@ function createCongaOpenNoise(state, target, startTime, duration) {
 
 /** Bongo low: short sine sweep, frequency varies by channel. */
 function playBongoLow(state, now, vol, channelName) {
-    const osc = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const gain = acquireGain(state);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(channelName.startsWith('A') ? 440 : 400, now);
     osc.frequency.exponentialRampToValueAtTime(200, now + 0.08);
@@ -812,8 +813,8 @@ function playBongoLow(state, now, vol, channelName) {
 
 /** Bongo high: higher-pitched short sine sweep, frequency varies by channel. */
 function playBongoHigh(state, now, vol, channelName) {
-    const osc = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const gain = acquireGain(state);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(channelName.startsWith('A') ? 550 : 500, now);
     osc.frequency.exponentialRampToValueAtTime(250, now + 0.07);
@@ -831,7 +832,7 @@ function playMaraca(state, now, vol) {
     filter.type = 'bandpass';
     filter.frequency.setValueAtTime(7000, now);
     filter.Q.setValueAtTime(2, now);
-    const gain = state.audioCtx.createGain();
+    const gain = acquireGain(state);
     gain.gain.setValueAtTime(0.001, now);
     for (let i = 0; i < 12; i++) {
         const t = now + i * 0.012;
@@ -849,14 +850,14 @@ function playCrash(state, now, vol) {
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'highpass';
     filter.frequency.setValueAtTime(3000, now);
-    const noiseGain = state.audioCtx.createGain();
+    const noiseGain = acquireGain(state);
     noiseGain.gain.setValueAtTime(vol * 0.6, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
     noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
     noise.start(now);
 
-    const osc = state.audioCtx.createOscillator();
-    const oscGain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const oscGain = acquireGain(state);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(5200, now);
     oscGain.gain.setValueAtTime(vol * 0.08, now);
@@ -873,14 +874,14 @@ function playRide(state, now, vol) {
     filter.type = 'bandpass';
     filter.frequency.setValueAtTime(6000, now);
     filter.Q.setValueAtTime(1.5, now);
-    const noiseGain = state.audioCtx.createGain();
+    const noiseGain = acquireGain(state);
     noiseGain.gain.setValueAtTime(vol * 0.35, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
     noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
     noise.start(now);
 
-    const osc = state.audioCtx.createOscillator();
-    const oscGain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const oscGain = acquireGain(state);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(6200, now);
     oscGain.gain.setValueAtTime(vol * 0.15, now);
@@ -891,9 +892,9 @@ function playRide(state, now, vol) {
 
 /** Claves: two slightly detuned sines creating a 5 Hz beat frequency for wooden click. */
 function playClaves(state, now, vol) {
-    const osc1 = state.audioCtx.createOscillator();
-    const osc2 = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
+    const osc1 = acquireOsc(state);
+    const osc2 = acquireOsc(state);
+    const gain = acquireGain(state);
     osc1.type = 'sine';
     osc2.type = 'sine';
     osc1.frequency.setValueAtTime(2000, now);
@@ -906,9 +907,9 @@ function playClaves(state, now, vol) {
 
 /** Djembe: sine + triangle mix with deep downward pitch sweep, frequency varies by channel. */
 function playDjembe(state, now, vol, channelName) {
-    const osc1 = state.audioCtx.createOscillator();
-    const osc2 = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
+    const osc1 = acquireOsc(state);
+    const osc2 = acquireOsc(state);
+    const gain = acquireGain(state);
     osc1.type = 'sine';
     osc2.type = 'triangle';
     osc1.frequency.setValueAtTime(channelName.startsWith('A') ? 180 : 150, now);
@@ -923,8 +924,8 @@ function playDjembe(state, now, vol, channelName) {
 
 /** Timbale: sine with fast pitch envelope + noise transient attack, frequency varies by channel. */
 function playTimbale(state, now, vol, channelName) {
-    const osc = state.audioCtx.createOscillator();
-    const oscGain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const oscGain = acquireGain(state);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(channelName.startsWith('A') ? 560 : 500, now);
     osc.frequency.exponentialRampToValueAtTime(350, now + 0.06);
@@ -939,7 +940,7 @@ function playTimbale(state, now, vol, channelName) {
     const noiseFilter = state.audioCtx.createBiquadFilter();
     noiseFilter.type = 'bandpass';
     noiseFilter.frequency.setValueAtTime(4000, now);
-    const noiseGain = state.audioCtx.createGain();
+    const noiseGain = acquireGain(state);
     noiseGain.gain.setValueAtTime(vol * 0.3, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
     noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
@@ -954,14 +955,14 @@ function playCastanets(state, now, vol) {
     filter.type = 'bandpass';
     filter.frequency.setValueAtTime(3500, now);
     filter.Q.setValueAtTime(5, now);
-    const noiseGain = state.audioCtx.createGain();
+    const noiseGain = acquireGain(state);
     noiseGain.gain.setValueAtTime(vol * 0.7, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
     noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
     noise.start(now);
 
-    const osc = state.audioCtx.createOscillator();
-    const oscGain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const oscGain = acquireGain(state);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(3500, now);
     oscGain.gain.setValueAtTime(vol * 0.2, now);
@@ -972,8 +973,8 @@ function playCastanets(state, now, vol) {
 
 /** EDM synth kick: sub-bass sine + noise transient + mid-range click. */
 function playSynthKick(state, now, vol) {
-    const subOsc = state.audioCtx.createOscillator();
-    const subGain = state.audioCtx.createGain();
+    const subOsc = acquireOsc(state);
+    const subGain = acquireGain(state);
     subOsc.type = 'sine';
     subOsc.frequency.setValueAtTime(60, now);
     subOsc.frequency.exponentialRampToValueAtTime(30, now + 0.2);
@@ -987,14 +988,14 @@ function playSynthKick(state, now, vol) {
     const noiseFilter = state.audioCtx.createBiquadFilter();
     noiseFilter.type = 'bandpass';
     noiseFilter.frequency.setValueAtTime(2000, now);
-    const noiseGain = state.audioCtx.createGain();
+    const noiseGain = acquireGain(state);
     noiseGain.gain.setValueAtTime(vol * 0.7, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
     noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
     noise.start(now);
 
-    const midOsc = state.audioCtx.createOscillator();
-    const midGain = state.audioCtx.createGain();
+    const midOsc = acquireOsc(state);
+    const midGain = acquireGain(state);
     midOsc.type = 'sine';
     midOsc.frequency.setValueAtTime(150, now);
     midOsc.frequency.exponentialRampToValueAtTime(50, now + 0.05);
@@ -1006,8 +1007,8 @@ function playSynthKick(state, now, vol) {
 
 /** Electronic snare: sine body + noise through formant bandpass filter. */
 function playElectronicSnare(state, now, vol) {
-    const osc = state.audioCtx.createOscillator();
-    const oscGain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const oscGain = acquireGain(state);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(200, now);
     osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
@@ -1022,7 +1023,7 @@ function playElectronicSnare(state, now, vol) {
     filter.type = 'bandpass';
     filter.frequency.setValueAtTime(2500, now);
     filter.Q.setValueAtTime(3, now);
-    const noiseGain = state.audioCtx.createGain();
+    const noiseGain = acquireGain(state);
     noiseGain.gain.setValueAtTime(vol * 0.6, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
     noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
@@ -1037,7 +1038,7 @@ function playFootTap(state, now, vol) {
     filter.type = 'bandpass';
     filter.frequency.setValueAtTime(180, now);
     filter.Q.setValueAtTime(1, now);
-    const gain = state.audioCtx.createGain();
+    const gain = acquireGain(state);
     gain.gain.setValueAtTime(vol * 0.8, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.025);
     noise.connect(filter); filter.connect(gain); gain.connect(state.audioCtx.destination);
@@ -1051,14 +1052,14 @@ function playSlap(state, now, vol) {
     const noiseFilter = state.audioCtx.createBiquadFilter();
     noiseFilter.type = 'bandpass';
     noiseFilter.frequency.setValueAtTime(2000, now);
-    const noiseGain = state.audioCtx.createGain();
+    const noiseGain = acquireGain(state);
     noiseGain.gain.setValueAtTime(vol * 0.55, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
     noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
     noise.start(now);
 
-    const osc = state.audioCtx.createOscillator();
-    const oscGain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const oscGain = acquireGain(state);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(800, now);
     osc.frequency.exponentialRampToValueAtTime(400, now + 0.04);
@@ -1069,7 +1070,7 @@ function playSlap(state, now, vol) {
 }
 
 function playBataTonalDrum(state, now, vol, { fundamental, overtones, decay, slapMix }) {
-    const masterGain = state.audioCtx.createGain();
+    const masterGain = acquireGain(state);
     masterGain.gain.setValueAtTime(vol, now);
     masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
     masterGain.connect(state.audioCtx.destination);
@@ -1118,7 +1119,7 @@ function playBataHigh(state, now, vol) {
 
 /** Batá slap: sharp small-head slap with little sustained tone. */
 function playBataSlap(state, now, vol) {
-    const masterGain = state.audioCtx.createGain();
+    const masterGain = acquireGain(state);
     const decay = 0.11;
     masterGain.gain.setValueAtTime(vol, now);
     masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
@@ -1131,8 +1132,8 @@ function playBataSlap(state, now, vol) {
 
 /** Helper: creates an individual frequency component for Batá drums. */
 function createBataTone(state, freq, volume, targetNode, startTime, duration) {
-    const osc = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const gain = acquireGain(state);
     osc.type = freq < 100 ? 'sine' : 'triangle';
     osc.frequency.setValueAtTime(freq * 1.15, startTime);
     osc.frequency.exponentialRampToValueAtTime(freq, startTime + 0.04);
@@ -1151,7 +1152,7 @@ function createBataSlap(state, volume, targetNode, startTime, duration) {
     const noiseFilter = state.audioCtx.createBiquadFilter();
     noiseFilter.type = 'highpass';
     noiseFilter.frequency.setValueAtTime(1200, startTime);
-    const noiseGain = state.audioCtx.createGain();
+    const noiseGain = acquireGain(state);
     noiseGain.gain.setValueAtTime(volume, startTime);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
     noise.connect(noiseFilter);
@@ -1162,8 +1163,8 @@ function createBataSlap(state, volume, targetNode, startTime, duration) {
 
 /** Cajón bass: low-frequency thump from center slap, short decay. */
 function playCajonBass(state, now, vol) {
-    const osc = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const gain = acquireGain(state);
     osc.type = 'sine';
     osc.frequency.setValueAtTime(90, now);
     osc.frequency.exponentialRampToValueAtTime(45, now + 0.1);
@@ -1173,8 +1174,8 @@ function playCajonBass(state, now, vol) {
     osc.start(now); osc.stop(now + 0.15);
 
     // Box body resonance
-    const osc2 = state.audioCtx.createOscillator();
-    const osc2Gain = state.audioCtx.createGain();
+    const osc2 = acquireOsc(state);
+    const osc2Gain = acquireGain(state);
     osc2.type = 'triangle';
     osc2.frequency.setValueAtTime(150, now);
     osc2.frequency.exponentialRampToValueAtTime(80, now + 0.06);
@@ -1192,15 +1193,15 @@ function playCajonSlap(state, now, vol) {
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'highpass';
     filter.frequency.setValueAtTime(3000, now);
-    const noiseGain = state.audioCtx.createGain();
+    const noiseGain = acquireGain(state);
     noiseGain.gain.setValueAtTime(vol * 0.5, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
     noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
     noise.start(now);
 
     // Mid-frequency slap tone
-    const osc = state.audioCtx.createOscillator();
-    const oscGain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const oscGain = acquireGain(state);
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(500, now);
     osc.frequency.exponentialRampToValueAtTime(250, now + 0.03);
@@ -1223,7 +1224,7 @@ function playCabasaShekere(state, now, vol) {
         const grainStart = now + grainIndex * 0.012;
         const noise = getNoiseSource(state);
         if (!noise) return;
-        const grainGain = state.audioCtx.createGain();
+        const grainGain = acquireGain(state);
         const accent = grainIndex % 3 === 0 ? 0.38 : 0.22;
         grainGain.gain.setValueAtTime(vol * accent, grainStart);
         grainGain.gain.exponentialRampToValueAtTime(0.001, grainStart + 0.026);
@@ -1255,7 +1256,7 @@ function playGuiro(state, now, vol) {
         const ridgeStart = now + ridgeIndex * 0.018;
         const noise = getNoiseSource(state);
         if (!noise) return;
-        const ridgeGain = state.audioCtx.createGain();
+        const ridgeGain = acquireGain(state);
         const accent = ridgeIndex === 0 || ridgeIndex === ridgeCount - 1 ? 0.45 : 0.3;
         ridgeGain.gain.setValueAtTime(vol * accent, ridgeStart);
         ridgeGain.gain.exponentialRampToValueAtTime(0.001, ridgeStart + 0.018);
@@ -1270,8 +1271,8 @@ function playTalkingDrum(state, now, vol, channelName) {
     const startFreq = channelName.startsWith('A') ? 145 : 115;
     const peakFreq = channelName.startsWith('A') ? 310 : 245;
     const endFreq = channelName.startsWith('A') ? 220 : 175;
-    const osc = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const gain = acquireGain(state);
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(startFreq, now);
     osc.frequency.exponentialRampToValueAtTime(peakFreq, now + 0.075);
@@ -1286,7 +1287,7 @@ function playTalkingDrum(state, now, vol, channelName) {
     const filter = state.audioCtx.createBiquadFilter();
     filter.type = 'bandpass';
     filter.frequency.setValueAtTime(1100, now);
-    const noiseGain = state.audioCtx.createGain();
+    const noiseGain = acquireGain(state);
     noiseGain.gain.setValueAtTime(vol * 0.28, now);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
     noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
@@ -1296,8 +1297,8 @@ function playTalkingDrum(state, now, vol, channelName) {
 /** Temple block: tuned woody strike with a short downward pitch bend. */
 function playTempleBlock(state, now, vol, channelName) {
     const baseFreq = channelName.startsWith('A') ? 1120 : 780;
-    const osc = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const gain = acquireGain(state);
     const filter = state.audioCtx.createBiquadFilter();
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(baseFreq * 1.22, now);
@@ -1320,8 +1321,8 @@ function playTriangle(state, now, vol) {
 /** Udu: hollow clay-pot bass with a soft air transient. */
 function playUdu(state, now, vol, channelName) {
     const baseFreq = channelName.startsWith('A') ? 155 : 125;
-    const osc = state.audioCtx.createOscillator();
-    const gain = state.audioCtx.createGain();
+    const osc = acquireOsc(state);
+    const gain = acquireGain(state);
     const filter = state.audioCtx.createBiquadFilter();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(baseFreq * 1.35, now);
@@ -1339,7 +1340,7 @@ function playUdu(state, now, vol, channelName) {
     airFilter.type = 'bandpass';
     airFilter.frequency.setValueAtTime(260, now);
     airFilter.Q.setValueAtTime(1.8, now);
-    const airGain = state.audioCtx.createGain();
+    const airGain = acquireGain(state);
     airGain.gain.setValueAtTime(vol * 0.25, now);
     airGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
     air.connect(airFilter); airFilter.connect(airGain); airGain.connect(state.audioCtx.destination);
@@ -1349,8 +1350,8 @@ function playUdu(state, now, vol, channelName) {
 /** Helper: creates an inharmonic metallic strike with a few bright partials. */
 function createMetalBellStrike(state, frequency, startTime, volume, duration) {
     [1, 1.48, 2.17].forEach((ratio, partialIndex) => {
-        const osc = state.audioCtx.createOscillator();
-        const gain = state.audioCtx.createGain();
+        const osc = acquireOsc(state);
+        const gain = acquireGain(state);
         osc.type = partialIndex === 0 ? 'triangle' : 'sine';
         osc.frequency.setValueAtTime(frequency * ratio, startTime);
         gain.gain.setValueAtTime(volume / (partialIndex + 1), startTime);
@@ -1358,6 +1359,70 @@ function createMetalBellStrike(state, frequency, startTime, volume, duration) {
         osc.connect(gain); gain.connect(state.audioCtx.destination);
         osc.start(startTime); osc.stop(startTime + duration);
     });
+}
+
+/** Pre-allocated pools of Web Audio nodes to avoid per-hit allocation. */
+const NODE_POOL_SIZE = 48;
+let _oscPool = [];
+let _gainPool = [];
+const _oscGains = new WeakMap();
+
+function _fillPools(audioCtx) {
+    while (_oscPool.length < NODE_POOL_SIZE) {
+        _oscPool.push(audioCtx.createOscillator());
+    }
+    while (_gainPool.length < NODE_POOL_SIZE) {
+        _gainPool.push(audioCtx.createGain());
+    }
+}
+
+function acquireOsc(state) {
+    const osc = _oscPool.pop() || state.audioCtx.createOscillator();
+    const _connect = osc.connect.bind(osc);
+    osc.connect = function (dest) {
+        if (dest instanceof GainNode && !_oscGains.has(osc)) {
+            const ended = () => {
+                const gains = _oscGains.get(osc);
+                if (gains) {
+                    gains.forEach(g => releaseGain(g));
+                    _oscGains.delete(osc);
+                }
+                osc.removeEventListener('ended', ended);
+            };
+            osc.addEventListener('ended', ended);
+        }
+        if (dest instanceof GainNode) {
+            const gains = _oscGains.get(osc) || [];
+            gains.push(dest);
+            _oscGains.set(osc, gains);
+        }
+        return _connect(dest);
+    };
+    _fillPools(state.audioCtx);
+    return osc;
+}
+
+function acquireGain(state) {
+    const gain = _gainPool.pop();
+    if (gain) {
+        gain.gain.cancelScheduledValues(0);
+        _fillPools(state.audioCtx);
+        return gain;
+    }
+    _fillPools(state.audioCtx);
+    return state.audioCtx.createGain();
+}
+
+function releaseGain(gain) {
+    gain.disconnect();
+    if (_gainPool.length < NODE_POOL_SIZE * 2) {
+        _gainPool.push(gain);
+    }
+}
+
+/** Pre-fills node pools. Called on AudioContext creation. */
+export function primeNodePools(audioCtx) {
+    _fillPools(audioCtx);
 }
 
 /** Dispatch table mapping instrument value keys to their synthesis functions. */
