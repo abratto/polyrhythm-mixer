@@ -16,7 +16,7 @@
 import { getDomRefs } from './dom.js';
 import { createState, resetFlashState, updateDerivedState, updatePhaseUI } from './state.js';
 import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons, addVoice, updateVoiceInstrumentLabels } from './lanes.js';
-import { createChannels, populateMenus, wireChannels, toggleAudio, playChannelSound, addVoiceChannel, syncAudioStartTime } from './audio.js';
+import { createChannels, populateMenus, wireChannels, toggleAudio, playChannelSound, addVoiceChannel, syncAudioStartTime, startAudioScheduler, stopAudioScheduler, resetAudioScheduler } from './audio.js';
 import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } from './controls.js';
 import { copyShareLink, loadStateFromUrl } from './share.js';
 import { closeSaveRhythmModal, closeSavedRhythmsModal, openSaveRhythmModal, openSavedRhythmsModal, saveCurrentRhythm } from './saved-rhythms.js';
@@ -192,6 +192,7 @@ function rebuildSystem() {
     buildAllLanes(lanes);
     state.mainAngle = 0;
     syncAudioStartTime(state);
+    resetAudioScheduler(state);
 }
 
 /**
@@ -201,6 +202,7 @@ function rebuildSystem() {
 function resetAndRebuild() {
     state.mainAngle = 0;
     syncAudioStartTime(state);
+    resetAudioScheduler(state);
     resetFlashState(state);
     resetPatterns(state, lanes);
     buildAllLanes(lanes);
@@ -261,6 +263,7 @@ function resetMixerToStartingState() {
     buildAllLanes(lanes);
     state.mainAngle = 0;
     syncAudioStartTime(state);
+    resetAudioScheduler(state);
 }
 
 function rebuildAllVoiceMixerStrips() {
@@ -328,7 +331,8 @@ const shareDeps = {
     buildAllLanes,
     resetFlashState,
     applyVoiceChannelState,
-    syncAudioStartTime
+    syncAudioStartTime,
+    resetAudioScheduler
 };
 
 // Phase 3: Initialize derived state and populate UI
@@ -377,7 +381,14 @@ wireControls({
     state,
     rebuildSystem,
     resetMixerToStartingState,
-    toggleAudio: () => toggleAudio(state, ui),
+    toggleAudio: async () => {
+        await toggleAudio(state, ui);
+        if (state.audioEnabled) {
+            startAudioScheduler(state, lanes, channels, cachedGlobalVolume);
+        } else {
+            stopAudioScheduler();
+        }
+    },
     onShare: () => copyShareLink(shareDeps),
     onOpenSaveRhythm: () => openSaveRhythmModal(ui, shareDeps),
     onConfirmSaveRhythm: () => saveCurrentRhythm(shareDeps),
@@ -414,9 +425,6 @@ buildAllLanes(lanes);
         ui,
         state,
         lanes,
-        playChannelSound: (channelName, voiceIndex, hitTime) => {
-            return playChannelSound(state, channels, channelName, cachedGlobalVolume, voiceIndex, hitTime);
-         },
         markCurrentButtons: (active, previousActive) => markCurrentButtons(state, lanes, active, previousActive)
     });
 })();

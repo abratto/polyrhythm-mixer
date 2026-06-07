@@ -9,6 +9,8 @@
  * selection, volume fader, and mute toggle.
  */
 
+import { getActivePhraseStep, getActiveWheelStep } from './math.js';
+
 /**
  * Available percussion instruments, sorted alphabetically by display label.
  * Each entry maps a short value key (used in serialization) to a human-readable label.
@@ -252,6 +254,146 @@ export function syncAudioStartTime(state) {
     if (state.audioClockActive && state.audioCtx) {
         const rps = state.tempo * Math.PI / 120;
         state.audioStartTime = state.audioCtx.currentTime - state.mainAngle / rps;
+    }
+}
+
+/**
+ * Schedules audio for all voices across all lanes at a given master step.
+ * Uses state.lastScheduledActive for dedup so consecutive master steps that
+ * map to the same phrase/wheel step only fire once.
+ */
+function scheduleStepAudio(state, lanes, channels, stepIndex, hitTime, globalVolume) {
+    const lsa = state.lastScheduledActive;
+    const stepWithinCycle = ((stepIndex % state.mainTeeth) + state.mainTeeth) % state.mainTeeth;
+
+    if (stepWithinCycle !== lsa.master) {
+        lanes.master.voices.forEach((voice, vi) => {
+            if (voice.selected[stepWithinCycle]) {
+                const ch = channels.masterVoices[vi];
+                if (ch) playSingleChannel(state, ch, globalVolume, hitTime);
+            }
+        });
+        lsa.master = stepWithinCycle;
+    }
+
+    const aps = getActivePhraseStep(stepIndex, state.phaseA, state.teethA, state.phraseStepsA);
+    if (aps !== lsa.Aphrase) {
+        lanes.Aphrase.voices.forEach((voice, vi) => {
+            if (voice.selected[aps]) {
+                const ch = channels.Avoices[vi];
+                if (ch) playSingleChannel(state, ch, globalVolume, hitTime);
+            }
+        });
+        lsa.Aphrase = aps;
+    }
+
+    const aws = getActiveWheelStep(stepIndex, state.phaseA, state.teethA, state.A);
+    if (aws !== lsa.Awheel) {
+        if (lanes.Awheel.selected[aws]) {
+            if (channels.Awheel) playSingleChannel(state, channels.Awheel, globalVolume, hitTime);
+        }
+        lsa.Awheel = aws;
+    }
+
+    const bps = getActivePhraseStep(stepIndex, state.phaseB, state.teethB, state.phraseStepsB);
+    if (bps !== lsa.Bphrase) {
+        lanes.Bphrase.voices.forEach((voice, vi) => {
+            if (voice.selected[bps]) {
+                const ch = channels.Bvoices[vi];
+                if (ch) playSingleChannel(state, ch, globalVolume, hitTime);
+            }
+        });
+        lsa.Bphrase = bps;
+    }
+
+    const bws = getActiveWheelStep(stepIndex, state.phaseB, state.teethB, state.B);
+    if (bws !== lsa.Bwheel) {
+        if (lanes.Bwheel.selected[bws]) {
+            if (channels.Bwheel) playSingleChannel(state, channels.Bwheel, globalVolume, hitTime);
+        }
+        lsa.Bwheel = bws;
+    }
+}
+
+let _schedulerTimer = null;
+
+/**
+ * Self-adjusting audio scheduling loop. Runs independently of rAF,
+ * pre-scheduling sounds at precise hitTimes from the audio clock.
+ * Wakes up 3ms before the next step or quarter boundary.
+ */
+export function startAudioScheduler(state, lanes, channels, globalVolume) {
+    if (_schedulerTimer) return;
+
+    // Seed tracking to current position so only future steps fire
+    const rps = state.tempo * Math.PI / 120;
+    const stepSize = 2 * Math.PI / state.mainTeeth;
+    const stepDuration = stepSize / rps;
+    const quarterDuration = 60 / state.tempo;
+    const elapsed = state.audioCtx.currentTime - state.audioStartTime;
+    state.lastScheduledStep = Math.floor(elapsed / stepDuration);
+    state.lastScheduledQuarter = Math.floor(elapsed / quarterDuration);
+    state.lastScheduledActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };
+
+    function tick() {
+        if (!state.audioClockActive || !state.audioCtx || !state.audioEnabled) {
+            _schedulerTimer = null;
+            return;
+        }
+
+        const rps = state.tempo * Math.PI / 120;
+        const stepSize = 2 * Math.PI / state.mainTeeth;
+        const stepDuration = stepSize / rps;
+        const quarterDuration = 60 / state.tempo;
+
+        const now = state.audioCtx.currentTime;
+        const elapsed = now - state.audioStartTime;
+        const currentStep = Math.floor(elapsed / stepDuration);
+        const currentQuarter = Math.floor(elapsed / quarterDuration);
+
+        for (let s = state.lastScheduledStep + 1; s <= currentStep; s++) {
+            const hitTime = state.audioStartTime + s * stepDuration;
+            scheduleStepAudio(state, lanes, channels, s, hitTime, globalVolume);
+        }
+        state.lastScheduledStep = Math.max(state.lastScheduledStep, currentStep);
+
+        for (let q = state.lastScheduledQuarter + 1; q <= currentQuarter; q++) {
+            const hitTime = state.audioStartTime + q * quarterDuration;
+            if (channels.driver) playSingleChannel(state, channels.driver, globalVolume, hitTime);
+        }
+        state.lastScheduledQuarter = Math.max(state.lastScheduledQuarter, currentQuarter);
+
+        const nextStep = state.audioStartTime + (state.lastScheduledStep + 1) * stepDuration;
+        const nextQuarter = state.audioStartTime + (state.lastScheduledQuarter + 1) * quarterDuration;
+        const nextBoundary = Math.min(nextStep, nextQuarter);
+        const delay = (nextBoundary - now) * 1000 - 3;
+        const boundedDelay = Math.max(5, Math.min(delay, 20));
+
+        _schedulerTimer = setTimeout(tick, boundedDelay);
+    }
+
+    tick();
+}
+
+/** Stops the audio scheduler and clears its timer. */
+export function stopAudioScheduler() {
+    if (_schedulerTimer) {
+        clearTimeout(_schedulerTimer);
+        _schedulerTimer = null;
+    }
+}
+
+/** Resets scheduler tracking to the current position so only future steps fire. */
+export function resetAudioScheduler(state) {
+    if (state.audioClockActive && state.audioCtx) {
+        const rps = state.tempo * Math.PI / 120;
+        const stepSize = 2 * Math.PI / state.mainTeeth;
+        const stepDuration = stepSize / rps;
+        const quarterDuration = 60 / state.tempo;
+        const elapsed = state.audioCtx.currentTime - state.audioStartTime;
+        state.lastScheduledStep = Math.floor(elapsed / stepDuration);
+        state.lastScheduledQuarter = Math.floor(elapsed / quarterDuration);
+        state.lastScheduledActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };
     }
 }
 
@@ -1312,7 +1454,7 @@ export function playChannelSound(state, channels, channelName, globalVolume = 1,
 }
 
 /** Plays a sound for a single channel if not muted. Uses a 5ms lookahead floor for audio thread prep. */
-function playSingleChannel(state, channel, globalVolume, hitTime) {
+export function playSingleChannel(state, channel, globalVolume, hitTime) {
     if (!channel || channel.muted) return;
     if (!channel.sound) return;
 

@@ -11,60 +11,38 @@
 import { getActivePhraseStep, getActiveWheelStep } from './math.js';
 
 /**
- * Checks which lane steps have become active since the last frame and
- * triggers sound + flash effects for any newly activated steps.
- * Uses lastActive tracking to fire each trigger only once per step transition.
- * For multi-voice lanes, checks each voice independently.
+ * Updates flash counters and lastActive tracking for visual step highlighting.
+ * Audio triggers are handled independently by the audio scheduler loop.
  */
-function processTriggers(state, lanes, playChannelSound, active, hitTime) {
-    // Master lane: multi-voice — play each voice independently
+function processTriggers(state, lanes, active) {
     if (active.master !== state.lastActive.master) {
-        lanes.master.voices.forEach((voice, vi) => {
-            if (voice.selected[active.master]) {
-                state.flash.custom = 12;
-                playChannelSound('master', vi, hitTime);
-            }
+        lanes.master.voices.forEach((voice) => {
+            if (voice.selected[active.master]) state.flash.custom = 12;
         });
         state.lastActive.master = active.master;
     }
 
-    // A phrase: multi-voice — play each voice independently
     if (active.Aphrase !== state.lastActive.Aphrase) {
-        lanes.Aphrase.voices.forEach((voice, vi) => {
-            if (voice.selected[active.Aphrase]) {
-                state.flash.A = 12;
-                playChannelSound('A', vi, hitTime);
-            }
+        lanes.Aphrase.voices.forEach((voice) => {
+            if (voice.selected[active.Aphrase]) state.flash.A = 12;
         });
         state.lastActive.Aphrase = active.Aphrase;
     }
 
-    // A wheel: single voice
     if (active.Awheel !== state.lastActive.Awheel) {
-        if (lanes.Awheel.selected[active.Awheel]) {
-            state.flash.A = 12;
-            playChannelSound('Awheel', null, hitTime);
-        }
+        if (lanes.Awheel.selected[active.Awheel]) state.flash.A = 12;
         state.lastActive.Awheel = active.Awheel;
     }
 
-    // B phrase: multi-voice — play each voice independently
     if (active.Bphrase !== state.lastActive.Bphrase) {
-        lanes.Bphrase.voices.forEach((voice, vi) => {
-            if (voice.selected[active.Bphrase]) {
-                state.flash.B = 12;
-                playChannelSound('B', vi, hitTime);
-            }
+        lanes.Bphrase.voices.forEach((voice) => {
+            if (voice.selected[active.Bphrase]) state.flash.B = 12;
         });
         state.lastActive.Bphrase = active.Bphrase;
     }
 
-    // B wheel: single voice
     if (active.Bwheel !== state.lastActive.Bwheel) {
-        if (lanes.Bwheel.selected[active.Bwheel]) {
-            state.flash.B = 12;
-            playChannelSound('Bwheel', null, hitTime);
-        }
+        if (lanes.Bwheel.selected[active.Bwheel]) state.flash.B = 12;
         state.lastActive.Bwheel = active.Bwheel;
     }
 }
@@ -425,7 +403,7 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width) {
  *   3. Detects step transitions and triggers audio/flash effects
  *   4. Draws all three gears and both timelines
  */
-export function startAnimation({ canvas, ctx, ui, state, lanes, playChannelSound, markCurrentButtons }) {
+export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButtons }) {
     let lastTime = null;
 
     // Pre-allocated reusable buffer for merging master voice selections
@@ -490,8 +468,6 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, playChannelSound
         const currentStep = Math.floor(state.mainAngle / stepSize);
         const prevStep = Math.floor(prevMainAngle / stepSize);
 
-        const stepDuration = 240 / (state.mainTeeth * state.tempo);
-
         // Quarter-note click (every π/2 radians = every beat)
         const quarterSize = Math.PI / 2;
         const currentQuarter = Math.floor(state.mainAngle / quarterSize);
@@ -499,13 +475,9 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, playChannelSound
 
         if (currentQuarter !== prevQuarter) {
             state.flash.driver = 12;
-            for (let q = prevQuarter + 1; q <= currentQuarter; q++) {
-                const hitTime = state.audioStartTime + q * (60 / state.tempo);
-                playChannelSound('driver', null, hitTime);
-            }
         }
 
-        // Step-level triggers for lane sounds — iterate all intermediate steps
+        // Step-level visual tracking — audio handled by scheduler
         if (currentStep !== prevStep) {
             const previousActive = { ...state.lastActive };
             let lastActive = null;
@@ -518,8 +490,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, playChannelSound
                     Bwheel: getActiveWheelStep(s, state.phaseB, state.teethB, state.B)
                 };
                 lastActive = active;
-                const hitTime = state.audioStartTime + s * stepDuration;
-                processTriggers(state, lanes, playChannelSound, active, hitTime);
+                processTriggers(state, lanes, active);
             }
             if (lastActive) markCurrentButtons(lastActive, previousActive);
         }

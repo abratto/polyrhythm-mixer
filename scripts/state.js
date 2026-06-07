@@ -42,6 +42,12 @@ export function createState(ui) {
         audioStartTime: 0,
         audioClockActive: false,
 
+        // Scheduler tracking — last step/quarter the audio scheduler has processed
+        lastScheduledStep: 0,
+        lastScheduledQuarter: 0,
+        // Dedup state for the audio scheduler (separate from lastActive used by rAF)
+        lastScheduledActive: { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 },
+
         // Flash counters for visual/audio triggers (count down each frame)
         flash: { driver: 0, custom: 0, A: 0, B: 0 },
         // Tracks the previously active step index per lane to detect transitions
