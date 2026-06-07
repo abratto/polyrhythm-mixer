@@ -369,11 +369,12 @@ export function startWorkerScheduler(state, lanes, channels, globalVolume) {
     }
 
     _workerInstance.onmessage = (e) => {
-        // Worker pre-computes triggers; main scheduler handles audio.
-        // Enable the line below once shared dedup state is implemented.
-        // if (e.data.type === 'triggers' && e.data.triggers) {
-        //     _handleWorkerTriggers(e.data.triggers, state, channels, globalVolume);
-        // }
+        if (e.data.type === 'triggers' && e.data.triggers) {
+            _handleWorkerTriggers(e.data.triggers, state, channels, globalVolume);
+            // Keep main-thread tracking in sync so fallback can take over on worker failure
+            if (e.data.lastScheduledStep !== undefined) state.lastScheduledStep = e.data.lastScheduledStep;
+            if (e.data.lastScheduledQuarter !== undefined) state.lastScheduledQuarter = e.data.lastScheduledQuarter;
+        }
     };
 
     _workerInstance.onerror = () => {
@@ -447,7 +448,7 @@ export function updateWorkerScheduler(state, lanes, channels, globalVolume) {
  * Tries Web Worker first; falls back to main-thread setTimeout.
  */
 export function startAudioScheduler(state, lanes, channels, globalVolume) {
-    if (_schedulerTimer) return;
+    if (_schedulerTimer || _workerInstance) return;
 
     // Seed tracking to current position so only future steps fire
     const rps = state.tempo * Math.PI / 120;
@@ -460,9 +461,10 @@ export function startAudioScheduler(state, lanes, channels, globalVolume) {
     state.lastScheduledQuarter = Math.floor((elapsed + lookahead) / quarterDuration);
     state.lastScheduledActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };
 
-    // Start worker as parallel enhancement — it pre-computes hitTimes to reduce
-    // main-thread scheduling latency on subsequent ticks
-    startWorkerScheduler(state, lanes, channels, globalVolume);
+    // Try worker-based scheduler first — runs on separate thread, immune to main-thread stalls
+    if (startWorkerScheduler(state, lanes, channels, globalVolume)) return;
+
+    // Fallback: main-thread setTimeout scheduler
 
     function tick() {
         if (!state.audioClockActive || !state.audioCtx || !state.audioEnabled) {

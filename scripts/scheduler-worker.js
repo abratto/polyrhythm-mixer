@@ -33,13 +33,13 @@ function _tick() {
     const triggers = [];
 
     for (let s = _lastScheduledStep + 1; s <= targetStep; s++) {
-        const hitTime = _config.audioCtxAtOrigin + (s * stepDuration + now - _config.clockOrigin);
+        const hitTime = _config.audioStartTime + s * stepDuration;
         _collectStepTriggers(s, hitTime, triggers);
     }
     _lastScheduledStep = Math.max(_lastScheduledStep, targetStep);
 
     for (let q = _lastScheduledQuarter + 1; q <= targetQuarter; q++) {
-        const hitTime = _config.audioCtxAtOrigin + (q * quarterDuration + now - _config.clockOrigin);
+        const hitTime = _config.audioStartTime + q * quarterDuration;
         if (_channels && _channels.driver && !_channels.driver.muted) {
             triggers.push({ channelKey: 'driver', voiceIndex: null, hitTime, sound: _channels.driver.sound, volume: _channels.driver.volume * _channels.driver.gainScale * _globalVolume });
         }
@@ -50,10 +50,11 @@ function _tick() {
         self.postMessage({ type: 'triggers', triggers, lastScheduledStep: _lastScheduledStep, lastScheduledQuarter: _lastScheduledQuarter });
     }
 
-    const nextStep = _config.audioCtxAtOrigin + ((_lastScheduledStep + 1) * stepDuration + now - _config.clockOrigin);
-    const nextQuarter = _config.audioCtxAtOrigin + ((_lastScheduledQuarter + 1) * quarterDuration + now - _config.clockOrigin);
+    const audioNow = _config.audioCtxAtOrigin + (now - _config.clockOrigin);
+    const nextStep = _config.audioStartTime + (_lastScheduledStep + 1) * stepDuration;
+    const nextQuarter = _config.audioStartTime + (_lastScheduledQuarter + 1) * quarterDuration;
     const nextBoundary = Math.min(nextStep, nextQuarter);
-    const delay = (nextBoundary - now) * 1000 - 3;
+    const delay = (nextBoundary - audioNow) * 1000 - 3;
     const boundedDelay = Math.max(5, Math.min(delay, 20));
 
     _timer = setTimeout(_tick, boundedDelay);
