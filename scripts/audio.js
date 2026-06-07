@@ -369,9 +369,9 @@ export function startWorkerScheduler(state, lanes, channels, globalVolume) {
     }
 
     _workerInstance.onmessage = (e) => {
-        // Worker pre-computes timing data on a separate thread.
+        // Worker runs as infrastructure-only — timing loop on a separate thread.
         // Audio creation is handled by the main-thread scheduler.
-        // State sync is disabled until worker gets reset on state changes.
+        // To activate: uncomment _handleWorkerTriggers + add shared dedup state.
     };
 
     _workerInstance.onerror = () => {

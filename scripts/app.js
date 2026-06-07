@@ -16,7 +16,7 @@
 import { getDomRefs } from './dom.js';
 import { createState, resetFlashState, updateDerivedState, updatePhaseUI } from './state.js';
 import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons, addVoice, updateVoiceInstrumentLabels } from './lanes.js';
-import { createChannels, populateMenus, wireChannels, toggleAudio, playChannelSound, addVoiceChannel, syncAudioStartTime, startAudioScheduler, stopAudioScheduler, resetAudioScheduler, updateWorkerScheduler } from './audio.js';
+import { createChannels, populateMenus, wireChannels, toggleAudio, addVoiceChannel, syncAudioStartTime, startAudioScheduler, stopAudioScheduler, resetAudioScheduler, updateWorkerScheduler } from './audio.js';
 import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } from './controls.js';
 import { copyShareLink, loadStateFromUrl } from './share.js';
 import { closeSaveRhythmModal, closeSavedRhythmsModal, openSaveRhythmModal, openSavedRhythmsModal, saveCurrentRhythm } from './saved-rhythms.js';
@@ -345,10 +345,10 @@ wireChannels(channels);
 wireLaneClearButtons(lanes);
 wireLaneInfoButtons(lanes);
 
-// Cache global volume to avoid parseInt per trigger
-let cachedGlobalVolume = parseInt(ui.masterVolumeSlider.value, 10) / 100;
+// Cache global volume to avoid Number.parseInt per trigger
+let cachedGlobalVolume = Number.parseInt(ui.masterVolumeSlider.value, 10) / 100;
 ui.masterVolumeSlider.addEventListener('input', () => {
-    cachedGlobalVolume = parseInt(ui.masterVolumeSlider.value, 10) / 100;
+    cachedGlobalVolume = Number.parseInt(ui.masterVolumeSlider.value, 10) / 100;
 });
 
 // Phase 4: Initialize voice channels
