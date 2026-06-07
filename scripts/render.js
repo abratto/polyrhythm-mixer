@@ -52,13 +52,13 @@ function processTriggers(state, lanes, active) {
  * The gear is drawn as a polygon with alternating inner/outer radii to create teeth.
  * Includes a center hole, spoke lines, selected-step markers, and a top indicator dot.
  */
-function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop = false, flashIntensity = 0, selectedSteps = null) {
+function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop = false, flashIntensity = 0, selectedSteps = null, isMobile = false) {
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(angle);
     ctx.fillStyle = color;
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = isMobile ? 1.5 : 2.5;
 
     // Draw gear body as alternating inner/outer polygon
     ctx.beginPath();
@@ -82,14 +82,16 @@ function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop
     ctx.fill();
     ctx.stroke();
 
-    // Spoke lines (every quarter of the gear)
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-    for (let i = 0; i < teeth; i += Math.max(1, Math.floor(teeth / 4))) {
-        const theta = (i * 2 * Math.PI) / teeth - Math.PI / 2;
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(rInner * Math.cos(theta), rInner * Math.sin(theta));
-        ctx.stroke();
+    // Spoke lines — skipped on mobile to save fillrate
+    if (!isMobile) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        for (let i = 0; i < teeth; i += Math.max(1, Math.floor(teeth / 4))) {
+            const theta = (i * 2 * Math.PI) / teeth - Math.PI / 2;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(rInner * Math.cos(theta), rInner * Math.sin(theta));
+            ctx.stroke();
+        }
     }
 
     // Orange markers for selected steps on the master wheel
@@ -98,8 +100,8 @@ function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop
         ctx.save();
         ctx.fillStyle = '#ff9100';
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.shadowBlur = 10;
+        ctx.lineWidth = isMobile ? 1 : 2;
+        ctx.shadowBlur = isMobile ? 0 : 10;
         ctx.shadowColor = '#ff9100';
         for (let i = 0; i < selectedSteps.length; i++) {
             if (!selectedSteps[i]) continue;
@@ -116,7 +118,7 @@ function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop
 
     // Top position indicator dot — marks the reference tooth (start of rotation)
     ctx.fillStyle = '#ffffff';
-    ctx.shadowBlur = 6;
+    ctx.shadowBlur = isMobile ? 0 : 6;
     ctx.shadowColor = color;
     ctx.beginPath();
     ctx.arc(0, -rOuter + (rOuter * 0.12), Math.max(3, rOuter * 0.08), 0, 2 * Math.PI);
@@ -405,6 +407,9 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width) {
  */
 export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButtons }) {
     let lastTime = null;
+    const isMobile = window.matchMedia('(pointer: coarse)').matches;
+    const MIN_FRAME_MS = isMobile ? 33 : 0;
+    let lastDrawTime = 0;
 
     // Pre-allocated reusable buffer for merging master voice selections
     const MAX_TEETH = 240; // LCM(16, 15) = 240, max possible
@@ -421,6 +426,13 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
         // Delta time in seconds, clamped to avoid jumps after tab switch
         const deltaTime = Math.min((timestamp - lastTime) / 1000, 0.1);
         lastTime = timestamp;
+
+        // On mobile, throttle rendering to ~30fps; audio is handled by scheduler
+        if (isMobile && timestamp - lastDrawTime < MIN_FRAME_MS) {
+            requestAnimationFrame(animate);
+            return;
+        }
+        lastDrawTime = timestamp;
 
         // 1 beat = 1/4 master cycle (quarter note = BPM)
         // radians per second = BPM × (π/2) / 60
@@ -514,9 +526,9 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
         const masterSelected = _masterSelected.subarray(0, state.mainTeeth);
 
         // Draw gears
-        drawGear(ctx, cx, cy, rMainInner, rMainOuter, state.mainTeeth, angles.main, '#7a8a9e', true, Math.max(state.flash.driver, state.flash.custom), masterSelected);
-        drawGear(ctx, cxA, cy, rAInner, rAOuter, state.teethA, angles.A, '#ff3366', true, state.flash.A);
-        drawGear(ctx, cxB, cy, rBInner, rBOuter, state.teethB, angles.B, '#00e5ff', true, state.flash.B);
+        drawGear(ctx, cx, cy, rMainInner, rMainOuter, state.mainTeeth, angles.main, '#7a8a9e', true, Math.max(state.flash.driver, state.flash.custom), masterSelected, isMobile);
+        drawGear(ctx, cxA, cy, rAInner, rAOuter, state.teethA, angles.A, '#ff3366', true, state.flash.A, null, isMobile);
+        drawGear(ctx, cxB, cy, rBInner, rBOuter, state.teethB, angles.B, '#00e5ff', true, state.flash.B, null, isMobile);
 
         // Labels
         ctx.fillStyle = '#ffffff';
