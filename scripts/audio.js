@@ -331,8 +331,9 @@ export function startAudioScheduler(state, lanes, channels, globalVolume) {
     const stepDuration = stepSize / rps;
     const quarterDuration = 60 / state.tempo;
     const elapsed = state.audioCtx.currentTime - state.audioStartTime;
-    state.lastScheduledStep = Math.floor(elapsed / stepDuration);
-    state.lastScheduledQuarter = Math.floor(elapsed / quarterDuration);
+    const lookahead = 0.05;
+    state.lastScheduledStep = Math.floor((elapsed + lookahead) / stepDuration);
+    state.lastScheduledQuarter = Math.floor((elapsed + lookahead) / quarterDuration);
     state.lastScheduledActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };
 
     function tick() {
@@ -348,20 +349,21 @@ export function startAudioScheduler(state, lanes, channels, globalVolume) {
 
         const now = state.audioCtx.currentTime;
         const elapsed = now - state.audioStartTime;
-        const currentStep = Math.floor(elapsed / stepDuration);
-        const currentQuarter = Math.floor(elapsed / quarterDuration);
+        const lookahead = 0.05;
+        const targetStep = Math.floor((elapsed + lookahead) / stepDuration);
+        const targetQuarter = Math.floor((elapsed + lookahead) / quarterDuration);
 
-        for (let s = state.lastScheduledStep + 1; s <= currentStep; s++) {
+        for (let s = state.lastScheduledStep + 1; s <= targetStep; s++) {
             const hitTime = state.audioStartTime + s * stepDuration;
             scheduleStepAudio(state, lanes, channels, s, hitTime, globalVolume);
         }
-        state.lastScheduledStep = Math.max(state.lastScheduledStep, currentStep);
+        state.lastScheduledStep = Math.max(state.lastScheduledStep, targetStep);
 
-        for (let q = state.lastScheduledQuarter + 1; q <= currentQuarter; q++) {
+        for (let q = state.lastScheduledQuarter + 1; q <= targetQuarter; q++) {
             const hitTime = state.audioStartTime + q * quarterDuration;
             if (channels.driver) playSingleChannel(state, channels.driver, globalVolume, hitTime);
         }
-        state.lastScheduledQuarter = Math.max(state.lastScheduledQuarter, currentQuarter);
+        state.lastScheduledQuarter = Math.max(state.lastScheduledQuarter, targetQuarter);
 
         const nextStep = state.audioStartTime + (state.lastScheduledStep + 1) * stepDuration;
         const nextQuarter = state.audioStartTime + (state.lastScheduledQuarter + 1) * quarterDuration;
