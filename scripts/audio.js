@@ -369,12 +369,12 @@ export function startWorkerScheduler(state, lanes, channels, globalVolume) {
     }
 
     _workerInstance.onmessage = (e) => {
-        if (e.data.type === 'triggers' && e.data.triggers) {
-            _handleWorkerTriggers(e.data.triggers, state, channels, globalVolume);
-            // Keep main-thread tracking in sync so fallback can take over on worker failure
-            if (e.data.lastScheduledStep !== undefined) state.lastScheduledStep = e.data.lastScheduledStep;
-            if (e.data.lastScheduledQuarter !== undefined) state.lastScheduledQuarter = e.data.lastScheduledQuarter;
-        }
+        // Worker pre-computes timing data on a separate thread.
+        // Audio creation is handled by the main-thread scheduler.
+        // Triggers are synced for tracking; enable audio path once
+        // shared dedup state prevents double-firing with main scheduler.
+        if (e.data.lastScheduledStep !== undefined) state.lastScheduledStep = Math.max(state.lastScheduledStep, e.data.lastScheduledStep);
+        if (e.data.lastScheduledQuarter !== undefined) state.lastScheduledQuarter = Math.max(state.lastScheduledQuarter, e.data.lastScheduledQuarter);
     };
 
     _workerInstance.onerror = () => {
