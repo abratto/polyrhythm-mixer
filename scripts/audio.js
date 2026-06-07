@@ -371,10 +371,7 @@ export function startWorkerScheduler(state, lanes, channels, globalVolume) {
     _workerInstance.onmessage = (e) => {
         // Worker pre-computes timing data on a separate thread.
         // Audio creation is handled by the main-thread scheduler.
-        // Triggers are synced for tracking; enable audio path once
-        // shared dedup state prevents double-firing with main scheduler.
-        if (e.data.lastScheduledStep !== undefined) state.lastScheduledStep = Math.max(state.lastScheduledStep, e.data.lastScheduledStep);
-        if (e.data.lastScheduledQuarter !== undefined) state.lastScheduledQuarter = Math.max(state.lastScheduledQuarter, e.data.lastScheduledQuarter);
+        // State sync is disabled until worker gets reset on state changes.
     };
 
     _workerInstance.onerror = () => {
@@ -516,6 +513,7 @@ export function stopAudioScheduler() {
 
 /** Resets scheduler tracking to the current position so only future steps fire. */
 export function resetAudioScheduler(state) {
+    stopWorkerScheduler();
     if (state.audioClockActive && state.audioCtx) {
         const rps = state.tempo * Math.PI / 120;
         const stepSize = 2 * Math.PI / state.mainTeeth;
