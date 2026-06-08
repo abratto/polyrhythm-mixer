@@ -264,16 +264,16 @@ export function syncAudioStartTime(state) {
  */
 function scheduleStepAudio(state, lanes, channels, stepIndex, hitTime, globalVolume) {
     const lsa = state.lastScheduledActive;
-    const stepWithinCycle = ((stepIndex % state.mainTeeth) + state.mainTeeth) % state.mainTeeth;
+    const stepWithinPhrase = ((stepIndex % state.masterPhraseSteps) + state.masterPhraseSteps) % state.masterPhraseSteps;
 
-    if (stepWithinCycle !== lsa.master) {
+    if (stepWithinPhrase !== lsa.master) {
         lanes.master.voices.forEach((voice, vi) => {
-            if (voice.selected[stepWithinCycle]) {
+            if (voice.selected[stepWithinPhrase]) {
                 const ch = channels.masterVoices[vi];
                 if (ch) playSingleChannel(state, ch, globalVolume, hitTime);
             }
         });
-        lsa.master = stepWithinCycle;
+        lsa.master = stepWithinPhrase;
     }
 
     const aps = getActivePhraseStep(stepIndex, state.phaseA, state.teethA, state.phraseStepsA);

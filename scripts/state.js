@@ -20,6 +20,8 @@ export function createState(ui) {
         // Number of master cycles each phrase spans
         phraseCyclesA: parseInt(ui.phraseCyclesA.value, 10),
         phraseCyclesB: parseInt(ui.phraseCyclesB.value, 10),
+        // Number of master cycles the master lane pattern spans
+        masterPhraseCycles: parseInt(ui.masterPhraseCycles.value, 10),
         // Legacy timeline phase values are fixed at zero; visible nudging edits rows directly.
         phaseA: 0,
         phaseB: 0,
@@ -30,7 +32,8 @@ export function createState(ui) {
         teethB: 0,          // mainTeeth / B — teeth on wheel B
         phraseStepsA: 0,    // total steps in phrase A
         phraseStepsB: 0,    // total steps in phrase B
-        fullPatternCycles: 0, // LCM(phraseCyclesA, phraseCyclesB)
+        masterPhraseSteps: 0, // total steps in master phrase (mainTeeth × masterPhraseCycles)
+        fullPatternCycles: 0, // LCM(masterPhraseCycles, phraseCyclesA, phraseCyclesB)
 
         // Animation state
         mainAngle: 0,       // current rotation angle of the master wheel (radians)
@@ -66,8 +69,9 @@ export function updateDerivedState(state) {
 
     state.phraseStepsA = phraseStepsFor(state.A, state.phraseCyclesA);
     state.phraseStepsB = phraseStepsFor(state.B, state.phraseCyclesB);
+    state.masterPhraseSteps = state.mainTeeth * state.masterPhraseCycles;
 
-    state.fullPatternCycles = lcm(state.phraseCyclesA, state.phraseCyclesB);
+    state.fullPatternCycles = lcm(state.masterPhraseCycles, lcm(state.phraseCyclesA, state.phraseCyclesB));
 }
 
 /**

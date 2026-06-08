@@ -16,6 +16,8 @@ export function getDomRefs() {
         // Phrase length selectors (number of master cycles per phrase)
         phraseCyclesA: document.getElementById('phraseCyclesA'),
         phraseCyclesB: document.getElementById('phraseCyclesB'),
+        // Master phrase length (cycles the master lane pattern spans)
+        masterPhraseCycles: document.getElementById('masterPhraseCycles'),
         // Global tempo slider (BPM) and its display label
         tempoSlider: document.getElementById('tempoSlider'),
         tempoLabel: document.getElementById('tempoLabel'),

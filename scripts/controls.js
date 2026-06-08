@@ -76,6 +76,12 @@ export function wireControls({ ui, state, rebuildSystem, resetMixerToStartingSta
         rebuildSystem();
     });
 
+    // Master phrase cycle selector — extends the master lane pattern
+    ui.masterPhraseCycles.addEventListener('change', () => {
+        state.masterPhraseCycles = parseInt(ui.masterPhraseCycles.value, 10);
+        rebuildSystem();
+    });
+
     // Tempo slider — linear BPM range (30–180), slider value equals BPM directly
     ui.tempoSlider.addEventListener('input', () => {
         state.tempo = parseInt(ui.tempoSlider.value, 10);

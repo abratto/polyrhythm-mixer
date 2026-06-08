@@ -495,7 +495,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
             let lastActive = null;
             for (let s = prevStep + 1; s <= currentStep; s++) {
                 const active = {
-                    master: ((s % state.mainTeeth) + state.mainTeeth) % state.mainTeeth,
+                    master: ((s % state.masterPhraseSteps) + state.masterPhraseSteps) % state.masterPhraseSteps,
                     Aphrase: getActivePhraseStep(s, state.phaseA, state.teethA, state.phraseStepsA),
                     Bphrase: getActivePhraseStep(s, state.phaseB, state.teethB, state.phraseStepsB),
                     Awheel: getActiveWheelStep(s, state.phaseA, state.teethA, state.A),
@@ -514,13 +514,18 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
         if (f.A > 0) f.A--;
         if (f.B > 0) f.B--;
 
-        // Merge all master voice selections for gear display (reuse pre-allocated buffer)
+        // Merge master voice selections for gear display — only the current cycle
         _masterSelected.fill(0);
+        const currentCycle = state.masterPhraseCycles > 1
+            ? Math.floor(currentStep / state.mainTeeth) % state.masterPhraseCycles
+            : 0;
+        const cycleStart = currentCycle * state.mainTeeth;
+        const cycleEnd = cycleStart + state.mainTeeth;
         const voices = lanes.master.voices;
         for (let v = 0; v < voices.length; v++) {
             const sel = voices[v].selected;
-            for (let i = 0; i < sel.length; i++) {
-                if (sel[i]) _masterSelected[i] = 1;
+            for (let i = cycleStart; i < cycleEnd && i < sel.length; i++) {
+                if (sel[i]) _masterSelected[i - cycleStart] = 1;
             }
         }
         const masterSelected = _masterSelected.subarray(0, state.mainTeeth);
@@ -535,6 +540,11 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
         ctx.font = 'bold 13px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(`MASTER WHEEL (${state.mainTeeth} TEETH / LCM)`, cx, cy - rMainOuter - 32);
+        if (state.masterPhraseCycles > 1) {
+            ctx.font = '11px sans-serif';
+            ctx.fillStyle = '#ff9100';
+            ctx.fillText(`C${currentCycle + 1} of ${state.masterPhraseCycles}`, cx, cy - rMainOuter - 50);
+        }
         ctx.fillText(`A: ${state.A} (${state.teethA}:${state.mainTeeth})`, cxA, cy + rAOuter + 50);
         ctx.fillText(`B: ${state.B} (${state.teethB}:${state.mainTeeth})`, cxB, cy + rBOuter + 50);
 

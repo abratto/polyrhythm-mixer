@@ -167,6 +167,7 @@ function serializeState({ state, ui, lanes, channels }) {
             B: state.B,
             phraseA: state.phraseCyclesA,
             phraseB: state.phraseCyclesB,
+            masterPhrase: state.masterPhraseCycles,
             phaseA: 0,
             phaseB: 0,
             tempo: state.tempo,
@@ -366,16 +367,19 @@ function restoreFromPayload(payload, deps) {
     const b = clampInteger(meters.B, 2, 16);
     const phraseA = clampInteger(meters.phraseA, 1, 4);
     const phraseB = clampInteger(meters.phraseB, 1, 4);
+    const masterPhrase = clampInteger(meters.masterPhrase, 1, 4);
 
     if (a !== null) state.A = a;
     if (b !== null) state.B = b;
     if (phraseA !== null) state.phraseCyclesA = phraseA;
     if (phraseB !== null) state.phraseCyclesB = phraseB;
+    if (masterPhrase !== null) state.masterPhraseCycles = masterPhrase;
 
     ui.selectA.value = String(state.A);
     ui.selectB.value = String(state.B);
     ui.phraseCyclesA.value = String(state.phraseCyclesA);
     ui.phraseCyclesB.value = String(state.phraseCyclesB);
+    ui.masterPhraseCycles.value = String(state.masterPhraseCycles);
 
     updateDerivedState(state);
 

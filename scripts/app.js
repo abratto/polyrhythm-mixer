@@ -27,6 +27,7 @@ const STARTING_MIXER_STATE = {
     B: 4,
     phraseCyclesA: 2,
     phraseCyclesB: 2,
+    masterPhraseCycles: 1,
     tempo: 90,
     masterVolume: 80,
     fixedChannels: {
@@ -235,6 +236,7 @@ function resetMixerToStartingState() {
     ui.selectB.value = String(STARTING_MIXER_STATE.B);
     ui.phraseCyclesA.value = String(STARTING_MIXER_STATE.phraseCyclesA);
     ui.phraseCyclesB.value = String(STARTING_MIXER_STATE.phraseCyclesB);
+    ui.masterPhraseCycles.value = String(STARTING_MIXER_STATE.masterPhraseCycles);
     ui.tempoSlider.value = String(STARTING_MIXER_STATE.tempo);
     ui.tempoLabel.textContent = String(STARTING_MIXER_STATE.tempo);
     ui.masterVolumeSlider.value = String(STARTING_MIXER_STATE.masterVolume);
@@ -245,6 +247,7 @@ function resetMixerToStartingState() {
     state.B = STARTING_MIXER_STATE.B;
     state.phraseCyclesA = STARTING_MIXER_STATE.phraseCyclesA;
     state.phraseCyclesB = STARTING_MIXER_STATE.phraseCyclesB;
+    state.masterPhraseCycles = STARTING_MIXER_STATE.masterPhraseCycles;
     state.phaseA = 0;
     state.phaseB = 0;
     state.tempo = STARTING_MIXER_STATE.tempo;
