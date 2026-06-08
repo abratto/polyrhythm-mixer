@@ -1236,20 +1236,20 @@ function playBataLow(state, now, vol) {
 /** Batá middle (Itótele): middle-sized drum voice with a tighter tone. */
 function playBataMiddle(state, now, vol) {
     playBataTonalDrum(state, now, vol, {
-        fundamental: 95,
-        overtones: [1.45, 2.08, 2.75],
-        decay: 0.31,
-        slapMix: 0.2
+        fundamental: 155,
+        overtones: [1.58, 2.35, 3.15],
+        decay: 0.24,
+        slapMix: 0.28
     });
 }
 
 /** Batá high (Okónkolo): smallest drum voice with the highest tonal head. */
 function playBataHigh(state, now, vol) {
     playBataTonalDrum(state, now, vol, {
-        fundamental: 155,
-        overtones: [1.58, 2.35, 3.15],
-        decay: 0.24,
-        slapMix: 0.28
+        fundamental: 240,
+        overtones: [1.62, 2.50, 3.40],
+        decay: 0.20,
+        slapMix: 0.32
     });
 }
 
