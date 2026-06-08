@@ -1238,7 +1238,7 @@ function playBataMiddle(state, now, vol) {
     playBataTonalDrum(state, now, vol, {
         fundamental: 155,
         overtones: [1.58, 2.35, 3.15],
-        decay: 0.24,
+        decay: 0.28,
         slapMix: 0.28
     });
 }
@@ -1248,7 +1248,7 @@ function playBataHigh(state, now, vol) {
     playBataTonalDrum(state, now, vol, {
         fundamental: 240,
         overtones: [1.62, 2.50, 3.40],
-        decay: 0.20,
+        decay: 0.24,
         slapMix: 0.32
     });
 }
