@@ -22,6 +22,9 @@ export const instrumentCatalog = [
     { value: 'bata_middle', label: 'Batá Drum (Middle)' },
     { value: 'bata_high', label: 'Batá Drum (High)' },
     { value: 'bata_slap', label: 'Batá Slap' },
+    { value: 'bata_high_slap', label: 'Batá Slap (High)' },
+    { value: 'bata_low_slap', label: 'Batá Slap (Low)' },
+    { value: 'bata_middle_slap', label: 'Batá Slap (Middle)' },
     { value: 'kick', label: 'Bass Drum (Kick)' },
     { value: 'bongo_high', label: 'Bongo (High)' },
     { value: 'bongo_low', label: 'Bongo (Low)' },
@@ -1252,15 +1255,42 @@ function playBataHigh(state, now, vol) {
 
 /** Batá slap: sharp small-head slap with little sustained tone. */
 function playBataSlap(state, now, vol) {
+    playBataSlapVariant(state, now, vol, {
+        fundamental1: 260, fundamental2: 420, noiseFilterFreq: 1200, decay: 0.11, slapDuration: 0.045
+    });
+}
+
+/** Batá slap — general variant helper parameterized by drum size. */
+function playBataSlapVariant(state, now, vol, { fundamental1, fundamental2, noiseFilterFreq, decay, slapDuration }) {
     const masterGain = acquireGain(state);
-    const decay = 0.11;
     masterGain.gain.setValueAtTime(vol, now);
     masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
     masterGain.connect(state.audioCtx.destination);
 
-    createBataSlap(state, 0.9, masterGain, now, 0.045);
-    createBataTone(state, 260, 0.22, masterGain, now, 0.08);
-    createBataTone(state, 420, 0.12, masterGain, now, 0.045);
+    createBataSlap(state, 0.9, masterGain, now, slapDuration, noiseFilterFreq);
+    createBataTone(state, fundamental1, 0.22, masterGain, now, decay * 0.7);
+    createBataTone(state, fundamental2, 0.12, masterGain, now, decay * 0.4);
+}
+
+/** Batá low slap — largest drum, deepest slap tone. */
+function playBataLowSlap(state, now, vol) {
+    playBataSlapVariant(state, now, vol, {
+        fundamental1: 160, fundamental2: 280, noiseFilterFreq: 700, decay: 0.14, slapDuration: 0.055
+    });
+}
+
+/** Batá middle slap — mid-sized drum, centered slap tone. */
+function playBataMiddleSlap(state, now, vol) {
+    playBataSlapVariant(state, now, vol, {
+        fundamental1: 210, fundamental2: 350, noiseFilterFreq: 950, decay: 0.12, slapDuration: 0.05
+    });
+}
+
+/** Batá high slap — smallest drum, sharpest slap tone. */
+function playBataHighSlap(state, now, vol) {
+    playBataSlapVariant(state, now, vol, {
+        fundamental1: 380, fundamental2: 600, noiseFilterFreq: 1800, decay: 0.09, slapDuration: 0.035
+    });
 }
 
 /** Helper: creates an individual frequency component for Batá drums. */
@@ -1279,12 +1309,12 @@ function createBataTone(state, freq, volume, targetNode, startTime, duration) {
 }
 
 /** Helper: generates a hand-impact slap transient using white noise through a high-pass filter. */
-function createBataSlap(state, volume, targetNode, startTime, duration) {
+function createBataSlap(state, volume, targetNode, startTime, duration, filterFreq = 1200) {
     const noise = acquireNoiseSource(state);
     if (!noise) return;
     const noiseFilter = state.audioCtx.createBiquadFilter();
     noiseFilter.type = 'highpass';
-    noiseFilter.frequency.setValueAtTime(1200, startTime);
+    noiseFilter.frequency.setValueAtTime(filterFreq, startTime);
     const noiseGain = acquireGain(state);
     noiseGain.gain.setValueAtTime(volume, startTime);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
@@ -1545,6 +1575,9 @@ const instruments = {
     bata_middle: playBataMiddle,
     bata_high: playBataHigh,
     bata_slap: playBataSlap,
+    bata_high_slap: playBataHighSlap,
+    bata_low_slap: playBataLowSlap,
+    bata_middle_slap: playBataMiddleSlap,
     cajon_bass: playCajonBass,
     cajon_slap: playCajonSlap
 };
