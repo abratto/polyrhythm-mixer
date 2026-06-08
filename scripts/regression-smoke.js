@@ -137,6 +137,29 @@ async function run() {
                 }
             }
         });
+        globalThis.__audioParamValues = [];
+        const recordAudioParamValue = (value) => {
+            if (typeof value === 'number' && value > 0 && value <= 1) {
+                globalThis.__audioParamValues.push(value);
+            }
+        };
+        if (globalThis.AudioParam) {
+            const originalSetValueAtTime = globalThis.AudioParam.prototype.setValueAtTime;
+            const originalLinearRampToValueAtTime = globalThis.AudioParam.prototype.linearRampToValueAtTime;
+            const originalExponentialRampToValueAtTime = globalThis.AudioParam.prototype.exponentialRampToValueAtTime;
+            globalThis.AudioParam.prototype.setValueAtTime = function (value, startTime) {
+                recordAudioParamValue(value);
+                return originalSetValueAtTime.call(this, value, startTime);
+            };
+            globalThis.AudioParam.prototype.linearRampToValueAtTime = function (value, endTime) {
+                recordAudioParamValue(value);
+                return originalLinearRampToValueAtTime.call(this, value, endTime);
+            };
+            globalThis.AudioParam.prototype.exponentialRampToValueAtTime = function (value, endTime) {
+                recordAudioParamValue(value);
+                return originalExponentialRampToValueAtTime.call(this, value, endTime);
+            };
+        }
     }, { helpKey: HELP_STORAGE_KEY });
 
     const waitForApp = async () => {
@@ -320,6 +343,24 @@ async function run() {
         assert(hl2.masterIdx !== hl1.masterIdx,
             'Master step highlight should advance over time',
             { before: hl1, after: hl2 });
+
+        const maxRecordedGain = async () => page.evaluate(() => Math.max(...globalThis.__audioParamValues, 0));
+        const clearRecordedGains = async () => page.evaluate(() => { globalThis.__audioParamValues = []; });
+
+        await setRange('#masterVolumeSlider', 100);
+        await page.waitForTimeout(200);
+        await clearRecordedGains();
+        await page.waitForTimeout(1500);
+        const highMasterVolumeGain = await maxRecordedGain();
+
+        await setRange('#masterVolumeSlider', 5);
+        await page.waitForTimeout(200);
+        await clearRecordedGains();
+        await page.waitForTimeout(1500);
+        const lowMasterVolumeGain = await maxRecordedGain();
+
+        assert(highMasterVolumeGain > 0.05, 'High Master Volume should produce audible gain automation.', { highMasterVolumeGain, lowMasterVolumeGain });
+        assert(lowMasterVolumeGain < highMasterVolumeGain * 0.25, 'Master Volume changes while audio is running should affect newly scheduled hits.', { highMasterVolumeGain, lowMasterVolumeGain });
 
         // --- Reset restores a single voice per lane ---
         await setSelect('#rhythmA', 5);

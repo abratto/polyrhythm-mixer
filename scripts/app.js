@@ -349,6 +349,7 @@ wireLaneInfoButtons(lanes);
 let cachedGlobalVolume = Number.parseInt(ui.masterVolumeSlider.value, 10) / 100;
 ui.masterVolumeSlider.addEventListener('input', () => {
     cachedGlobalVolume = Number.parseInt(ui.masterVolumeSlider.value, 10) / 100;
+    updateWorkerScheduler(state, lanes, channels, cachedGlobalVolume);
 });
 
 // Phase 4: Initialize voice channels
@@ -387,7 +388,7 @@ wireControls({
     toggleAudio: async () => {
         await toggleAudio(state, ui);
         if (state.audioEnabled) {
-            startAudioScheduler(state, lanes, channels, cachedGlobalVolume);
+            startAudioScheduler(state, lanes, channels, () => cachedGlobalVolume);
         } else {
             stopAudioScheduler();
         }

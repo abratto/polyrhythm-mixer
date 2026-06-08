@@ -83,7 +83,7 @@ export function wireControls({ ui, state, rebuildSystem, resetMixerToStartingSta
         syncAudioStartTime(state);
     });
 
-    // Master volume slider — updates display label only (read in render loop)
+    // Master volume slider — app.js also updates the scheduler's cached gain multiplier
     ui.masterVolumeSlider.addEventListener('input', () => {
         ui.masterVolumeLabel.textContent = String(ui.masterVolumeSlider.value);
     });

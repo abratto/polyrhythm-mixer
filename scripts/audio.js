@@ -444,8 +444,12 @@ export function updateWorkerScheduler(state, lanes, channels, globalVolume) {
  * Wakes up 3ms before the next step or quarter boundary.
  * Tries Web Worker first; falls back to main-thread setTimeout.
  */
-export function startAudioScheduler(state, lanes, channels, globalVolume) {
+export function startAudioScheduler(state, lanes, channels, globalVolumeSource) {
     if (_schedulerTimer) return;
+
+    const currentGlobalVolume = () => typeof globalVolumeSource === 'function'
+        ? globalVolumeSource()
+        : globalVolumeSource;
 
     // Seed tracking to current position so only future steps fire
     const rps = state.tempo * Math.PI / 120;
@@ -459,7 +463,7 @@ export function startAudioScheduler(state, lanes, channels, globalVolume) {
     state.lastScheduledActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };
 
     // Start worker as parallel enhancement (non-blocking — main scheduler handles audio)
-    startWorkerScheduler(state, lanes, channels, globalVolume);
+    startWorkerScheduler(state, lanes, channels, currentGlobalVolume());
 
     function tick() {
         if (!state.audioClockActive || !state.audioCtx || !state.audioEnabled) {
@@ -477,6 +481,7 @@ export function startAudioScheduler(state, lanes, channels, globalVolume) {
         const lookahead = 0.05;
         const targetStep = Math.floor((elapsed + lookahead) / stepDuration);
         const targetQuarter = Math.floor((elapsed + lookahead) / quarterDuration);
+        const globalVolume = currentGlobalVolume();
 
         for (let s = state.lastScheduledStep + 1; s <= targetStep; s++) {
             const hitTime = state.audioStartTime + s * stepDuration;
