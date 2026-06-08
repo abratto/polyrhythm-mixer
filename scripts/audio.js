@@ -535,7 +535,6 @@ export async function toggleAudio(state, ui) {
         if (!state.audioCtx) {
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
             state.audioCtx = new AudioContextClass();
-            primeNodePools(state.audioCtx);
         }
         if (state.audioCtx.state === 'suspended') {
             await state.audioCtx.resume();
@@ -562,7 +561,6 @@ export async function toggleAudio(state, ui) {
  * one buffer and create new BufferSource nodes from it.
  */
 let _noiseBuffer = null;
-let _noisePool = [];
 
 function acquireNoiseSource(state) {
     if (!state.audioCtx) return null;
@@ -573,12 +571,6 @@ function acquireNoiseSource(state) {
         const data = _noiseBuffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
     }
-    const source = _noisePool.pop();
-    if (source) {
-        _fillPools(state.audioCtx);
-        return source;
-    }
-    _fillPools(state.audioCtx);
     const newSource = state.audioCtx.createBufferSource();
     newSource.buffer = _noiseBuffer;
     return newSource;
@@ -1497,73 +1489,12 @@ function createMetalBellStrike(state, frequency, startTime, volume, duration) {
     });
 }
 
-/** Pre-allocated pools of Web Audio nodes to avoid per-hit allocation. */
-const NODE_POOL_SIZE = 48;
-let _oscPool = [];
-let _gainPool = [];
-const _oscGains = new WeakMap();
-
-function _fillPools(audioCtx) {
-    while (_oscPool.length < NODE_POOL_SIZE) {
-        _oscPool.push(audioCtx.createOscillator());
-    }
-    while (_gainPool.length < NODE_POOL_SIZE) {
-        _gainPool.push(audioCtx.createGain());
-    }
-    while (_noisePool.length < NODE_POOL_SIZE / 2) {
-        const src = audioCtx.createBufferSource();
-        if (_noiseBuffer) src.buffer = _noiseBuffer;
-        _noisePool.push(src);
-    }
-}
-
 function acquireOsc(state) {
-    const osc = _oscPool.pop() || state.audioCtx.createOscillator();
-    const _connect = osc.connect.bind(osc);
-    osc.connect = function (dest) {
-        if (dest instanceof GainNode && !_oscGains.has(osc)) {
-            const ended = () => {
-                const gains = _oscGains.get(osc);
-                if (gains) {
-                    gains.forEach(g => releaseGain(g));
-                    _oscGains.delete(osc);
-                }
-                osc.removeEventListener('ended', ended);
-            };
-            osc.addEventListener('ended', ended);
-        }
-        if (dest instanceof GainNode) {
-            const gains = _oscGains.get(osc) || [];
-            gains.push(dest);
-            _oscGains.set(osc, gains);
-        }
-        return _connect(dest);
-    };
-    _fillPools(state.audioCtx);
-    return osc;
+    return state.audioCtx.createOscillator();
 }
 
 function acquireGain(state) {
-    const gain = _gainPool.pop();
-    if (gain) {
-        gain.gain.cancelScheduledValues(0);
-        _fillPools(state.audioCtx);
-        return gain;
-    }
-    _fillPools(state.audioCtx);
     return state.audioCtx.createGain();
-}
-
-function releaseGain(gain) {
-    gain.disconnect();
-    if (_gainPool.length < NODE_POOL_SIZE * 2) {
-        _gainPool.push(gain);
-    }
-}
-
-/** Pre-fills node pools. Called on AudioContext creation. */
-export function primeNodePools(audioCtx) {
-    _fillPools(audioCtx);
 }
 
 /** Dispatch table mapping instrument value keys to their synthesis functions. */

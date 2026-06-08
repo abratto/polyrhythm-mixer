@@ -416,8 +416,12 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
     const _masterSelected = new Uint8Array(MAX_TEETH);
 
     function animate(timestamp) {
-        ctx.fillStyle = '#08080c';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // On mobile, throttle rendering to ~30fps; audio is handled by scheduler
+        if (isMobile && timestamp - lastDrawTime < MIN_FRAME_MS) {
+            requestAnimationFrame(animate);
+            return;
+        }
+        lastDrawTime = timestamp;
 
         if (lastTime === null) {
             lastTime = timestamp;
@@ -427,12 +431,8 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
         const deltaTime = Math.min((timestamp - lastTime) / 1000, 0.1);
         lastTime = timestamp;
 
-        // On mobile, throttle rendering to ~30fps; audio is handled by scheduler
-        if (isMobile && timestamp - lastDrawTime < MIN_FRAME_MS) {
-            requestAnimationFrame(animate);
-            return;
-        }
-        lastDrawTime = timestamp;
+        ctx.fillStyle = '#08080c';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         // 1 beat = 1/4 master cycle (quarter note = BPM)
         // radians per second = BPM × (π/2) / 60

@@ -97,11 +97,10 @@ All sounds are synthesized in real-time using Web Audio oscillators, noise buffe
 - **Local persistence** — Saved rhythms use the same versioned payload format and are stored in `localStorage`
 - **Performance** —
   - 25ms lookahead buffer gives the audio rendering thread margin on busy devices
-  - Pre-allocated oscillator, gain, and noise source node pools (48 each) avoid per-hit allocation
+  - Web Audio sources are created per hit so one-shot oscillator and buffer-source nodes never share stale playback state
   - 50ms batch scheduling keeps the audio thread fed ahead of time
   - Mobile detection throttles canvas rendering to 30fps and simplifies gear drawing
   - Web Worker scheduler infrastructure runs timing logic on a separate thread
-  - WeakMap-based gain node auto-release for watertight memory management
 
 ## Regression Smoke Test
 
