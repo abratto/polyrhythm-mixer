@@ -218,13 +218,21 @@ function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width) {
     const playheadX = startX + cycleProgress * width;
 
     // Master wheel selected steps (orange dots, one row per voice)
+    // When masterPhraseCycles > 1, only show the current cycle's selections
+    const masterStepSize = 2 * Math.PI / state.mainTeeth;
+    const masterCurrentStep = Math.floor(state.mainAngle / masterStepSize);
+    const masterCurrentCycle = state.masterPhraseCycles > 1
+        ? Math.floor(masterCurrentStep / state.mainTeeth) % state.masterPhraseCycles
+        : 0;
+    const cycleSlotStart = masterCurrentCycle * state.mainTeeth;
+    const cycleSlotEnd = cycleSlotStart + state.mainTeeth;
     lanes.master.voices.forEach((voice, vi) => {
         const yOffset = vi * 10;
-        voice.selected.forEach((on, i) => {
-            if (!on) return;
-            const x = startX + (i / state.mainTeeth) * width;
+        for (let i = cycleSlotStart; i < cycleSlotEnd && i < voice.selected.length; i++) {
+            if (!voice.selected[i]) continue;
+            const x = startX + ((i - cycleSlotStart) / state.mainTeeth) * width;
             drawTimelineMarker(ctx, x, y - yOffset, '#ff9100', 'dot', 4);
-        });
+        }
     });
 
     // Wheel lane steps (diamonds, offset above/below axis)
@@ -286,13 +294,22 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width) {
     ctx.textAlign = 'left';
     ctx.fillText(`FULL PATTERN TIMELINE (${totalCycles} master cycles)`, startX, yTop - 8);
 
-    // Calculate row positions based on number of voices
+    // Calculate row positions — master voices above A/B phrase rows
+    const masterVoiceCount = lanes.master.voices.length;
     const aVoiceCount = lanes.Aphrase.voices.length;
     const bVoiceCount = lanes.Bphrase.voices.length;
     const rowHeight = 18;
-    const aStartY = yTop + 18;
+    const masterStartY = yTop + 18;
+    const aStartY = masterStartY + (masterVoiceCount * rowHeight) + 10;
     const bStartY = aStartY + (aVoiceCount * rowHeight) + 10;
     const bottomY = bStartY + (bVoiceCount * rowHeight) + 10;
+
+    // Master voice labels
+    lanes.master.voices.forEach((_, vi) => {
+        const rowY = masterStartY + vi * rowHeight;
+        ctx.fillStyle = '#ff9100';
+        ctx.fillText(`Master${masterVoiceCount > 1 ? ` v${vi + 1}` : ''}`, startX, rowY - 4);
+    });
 
     // A phrase labels
     lanes.Aphrase.voices.forEach((_, vi) => {
@@ -306,6 +323,17 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width) {
         const rowY = bStartY + vi * rowHeight;
         ctx.fillStyle = '#00e5ff';
         ctx.fillText(`B phrase${bVoiceCount > 1 ? ` v${vi + 1}` : ''}`, startX, rowY - 4);
+    });
+
+    // Timeline axes for master voices
+    lanes.master.voices.forEach((_, vi) => {
+        const rowY = masterStartY + vi * rowHeight;
+        ctx.strokeStyle = '#2d2d3d';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(startX, rowY);
+        ctx.lineTo(startX + width, rowY);
+        ctx.stroke();
     });
 
     // Timeline axes for A voices
@@ -355,6 +383,19 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width) {
             ctx.fillText(`C${c + 1}`, x + segmentWidth / 2, bottomY + 14);
         }
     }
+
+    // Master voice markers (repeating across the full pattern, one row per voice)
+    const masterRepeatSteps = state.masterPhraseSteps;
+    lanes.master.voices.forEach((voice, vi) => {
+        const rowY = masterStartY + vi * rowHeight;
+        voice.selected.forEach((on, i) => {
+            if (!on) return;
+            for (let pos = i; pos < totalSteps; pos += masterRepeatSteps) {
+                const x = startX + (pos / totalSteps) * width;
+                drawTimelineMarker(ctx, x, rowY, '#ff9100', 'dot', 4);
+            }
+        });
+    });
 
     // A phrase markers (repeating across the full pattern, one row per voice)
     const aRepeatSteps = state.phraseStepsA * state.teethA;
