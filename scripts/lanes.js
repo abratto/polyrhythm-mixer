@@ -259,7 +259,7 @@ function ensureGroupNudgeControl(lane) {
  */
 export function resetPatterns(state, lanes) {
     lanes.master.voices.forEach(v => {
-        v.selected = new Array(state.mainTeeth).fill(false);
+        v.selected = new Array(state.masterPhraseSteps).fill(false);
         v.nudgeOffset = 0;
     });
     lanes.Aphrase.voices.forEach(v => {
@@ -297,9 +297,13 @@ function resizeVoice(voice, newLength) {
 
 /**
  * Resizes all lanes to match current derived state while preserving patterns.
+ * For master voices, copies the first cycle's pattern into each new cycle.
  */
 export function resizeAllLanes(state, lanes) {
-    lanes.master.voices.forEach(v => resizeVoice(v, state.mainTeeth));
+    lanes.master.voices.forEach(v => {
+        resizeVoice(v, state.masterPhraseSteps);
+        copyCyclePattern(v, state.mainTeeth);
+    });
     lanes.Aphrase.voices.forEach(v => resizeVoice(v, state.phraseStepsA));
     lanes.Bphrase.voices.forEach(v => resizeVoice(v, state.phraseStepsB));
     resizeSingleLane(lanes.Awheel, state.A, true);
@@ -308,6 +312,17 @@ export function resizeAllLanes(state, lanes) {
     if (lanes.master.voices[0]?.selected.length > 0) lanes.master.voices[0].selected[0] = true;
     if (lanes.Aphrase.voices[0]?.selected.length > 0) lanes.Aphrase.voices[0].selected[0] = true;
     if (lanes.Bphrase.voices[0]?.selected.length > 0) lanes.Bphrase.voices[0].selected[0] = true;
+}
+
+/** Copies the first cycle's pattern slice into each subsequent cycle. */
+function copyCyclePattern(voice, cycleLength) {
+    const total = voice.selected.length;
+    if (cycleLength <= 0 || total <= cycleLength) return;
+    for (let src = 0; src < cycleLength; src++) {
+        for (let dest = src + cycleLength; dest < total; dest += cycleLength) {
+            voice.selected[dest] = voice.selected[src];
+        }
+    }
 }
 
 /** Resizes a single-voice lane (wheel lanes). */
