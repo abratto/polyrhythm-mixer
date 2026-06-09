@@ -56,7 +56,7 @@ The phase sliders shift a meter wheel's starting position relative to the master
 - **Multi-voice layering** — Add independent voices to the master sequence, A phrase, and B phrase lanes. Each voice has its own pattern, instrument, volume, and mute control
 - **Phrase sequencers** — Build patterns that span multiple master cycles
 - **Wheel lanes** — Select which evenly-spaced placements within a cycle trigger sound
-- **43 synthesized percussion instruments** — All generated in real-time via Web Audio API (no samples), including Batá drums (low/middle/high/slap), Conga drums (low/middle/high/slap), Cajón (bass/slap), Cabasa/Shekere, Guiro, and 33 others
+- **46 synthesized percussion instruments** — All generated in real-time via Web Audio API (no samples), including Batá drums (low/middle/high/slap with sized slap variants), Conga drums (low/middle/high/slap), Cajón (bass/slap), Cabasa/Shekere, Guiro, and 33 others
 - **Pattern preservation** — Changing phrase lengths or meters preserves existing patterns; new steps are appended, excess is truncated
 - **Per-channel controls** — Sound selection, volume fader, and mute for each lane and voice
 - **Master volume** — Global gain control
@@ -83,7 +83,7 @@ The phase sliders shift a meter wheel's starting position relative to the master
 All sounds are synthesized in real-time using Web Audio oscillators, noise buffers, and filters:
 
 - **Drums**: Kick, Snare, Tom, Rimshot, Handclap, Foot Tap, Electronic Snare, EDM Synth Kick
-- **Hand Drums**: Conga (low/middle/high/slap), Bongo (low/high), Batá (low/middle/high/slap), Cajón (bass/slap), Djembe, Timbale, Talking Drum, Udu
+- **Hand Drums**: Conga (low/middle/high/slap), Bongo (low/high), Batá (low/middle/high/slap, low/middle/high slap), Cajón (bass/slap), Djembe, Timbale, Talking Drum, Udu
 - **Cymbals & Hats**: Closed Hi-Hat, Open Hi-Hat, Crash, Ride
 - **Percussion**: Shaker, Maraca, Tambourine, Cabasa/Shekere, Guiro, Castanets, Claves, Woodblock, Temple Block, Cowbell, Agogo Bell, Gankogui Double Bell, Triangle, Crystal Ping, Hand Slap
 
@@ -92,6 +92,10 @@ All sounds are synthesized in real-time using Web Audio oscillators, noise buffe
 - **No build step** — Runs as plain ES modules in the browser
 - **Static site** — Hosted on GitHub Pages
 - **Web Audio API** — All instruments are synthesized in real-time using oscillators, noise buffers, and filters
+- **Batá drum synthesis** — Uses two distinct additive synthesis models based on drum acoustics:
+  - **Enú (large head)**: 4-layer model — root with pitch bend + shell overtone at inharmonic Bessel ratio (~1.54×) + chachá sympathetic resonance with delayed swell + hand-impact slap transient
+  - **Chachá (small head)**: 3-layer model — filtered noise transient with per-hit jitter + body overtones with muted fundamental + micro-delayed enú coupling pulse through the hourglass air column
+  - Frequencies tuned to 150/220/300 Hz for low/middle/high with size-appropriate overtone ratios and decay times
 - **Audio-clock master architecture** — The Web Audio API's hardware clock is the source of truth for all rhythmic timing. A self-adjusting scheduling loop pre-schedules synthesized sounds at computed step boundaries, while `requestAnimationFrame` drives only visual rendering (gear animation, step highlighting, flash effects)
 - **Versioned sharing** — Share payloads include a version number with automatic migration from older formats (v0, v1 → v2)
 - **Local persistence** — Saved rhythms use the same versioned payload format and are stored in `localStorage`
