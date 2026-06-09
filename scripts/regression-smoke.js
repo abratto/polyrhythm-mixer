@@ -280,11 +280,13 @@ async function run() {
             { value: 'bata_low', label: 'Batá Drum (Low)' },
             { value: 'bata_middle', label: 'Batá Drum (Middle)' },
             { value: 'bata_high', label: 'Batá Drum (High)' },
+            { value: 'bata_low_press', label: 'Batá Press (Low)' },
+            { value: 'bata_middle_press', label: 'Batá Press (Middle)' },
             { value: 'bata_slap', label: 'Batá Slap' },
             { value: 'bata_high_slap', label: 'Batá Slap (High)' },
             { value: 'bata_low_slap', label: 'Batá Slap (Low)' },
             { value: 'bata_middle_slap', label: 'Batá Slap (Middle)' }
-        ]), 'Mixer menus should expose low, middle, high, and slap Batá sounds.', bataOptions);
+        ]), 'Mixer menus should expose all Batá sounds.', bataOptions);
         const congaOptions = await page.locator('#soundDriver option').evaluateAll(options => options
             .map(option => ({ value: option.value, label: option.textContent.trim() }))
             .filter(option => option.value.startsWith('conga_')));

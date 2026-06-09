@@ -21,6 +21,8 @@ export const instrumentCatalog = [
     { value: 'bata_low', label: 'Batá Drum (Low)' },
     { value: 'bata_middle', label: 'Batá Drum (Middle)' },
     { value: 'bata_high', label: 'Batá Drum (High)' },
+    { value: 'bata_low_press', label: 'Batá Press (Low)' },
+    { value: 'bata_middle_press', label: 'Batá Press (Middle)' },
     { value: 'bata_slap', label: 'Batá Slap' },
     { value: 'bata_high_slap', label: 'Batá Slap (High)' },
     { value: 'bata_low_slap', label: 'Batá Slap (Low)' },
@@ -1396,6 +1398,68 @@ function playChachaSlap(state, now, vol, { chachaFundamental, bodyOvertones, enu
     couplingOsc.start(couplingDelay); couplingOsc.stop(couplingDelay + couplingDecay + 0.05);
 }
 
+/** Batá low press (Iyá): heavy muted thud, semitone pitch bend, slower sweep. */
+function playBataLowPress(state, now, vol) {
+    playBataPress(state, now, vol, {
+        fundamental: 150,
+        overtoneFreq: 225,
+        pitchBendRatio: 1.059,
+        pitchBendDuration: 0.025,
+        ampDecay: 0.085,
+        filterStartFreq: 600,
+        filterEndFreq: 150,
+        filterSweepDuration: 0.040
+    });
+}
+
+/** Batá middle press (Itótele): sharp muted bop, whole-step pitch bend, fast sweep. */
+function playBataMiddlePress(state, now, vol) {
+    playBataPress(state, now, vol, {
+        fundamental: 220,
+        overtoneFreq: 330,
+        pitchBendRatio: 1.122,
+        pitchBendDuration: 0.015,
+        ampDecay: 0.050,
+        filterStartFreq: 900,
+        filterEndFreq: 220,
+        filterSweepDuration: 0.030
+    });
+}
+
+/** Batá press (muff) — amplitude thud + pitch doink + filter muffle. */
+function playBataPress(state, now, vol, { fundamental, overtoneFreq, pitchBendRatio, pitchBendDuration, ampDecay, filterStartFreq, filterEndFreq, filterSweepDuration }) {
+    const filter = state.audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.Q.value = 1.5;
+    filter.frequency.setValueAtTime(filterStartFreq * vol, now);
+    filter.frequency.exponentialRampToValueAtTime(filterEndFreq, now + filterSweepDuration);
+
+    const masterGain = acquireGain(state);
+    const maxGain = vol * vol * 1.3;
+    masterGain.gain.setValueAtTime(0, now);
+    masterGain.gain.linearRampToValueAtTime(maxGain, now + 0.005);
+    masterGain.gain.exponentialRampToValueAtTime(0.001, now + ampDecay);
+    masterGain.connect(state.audioCtx.destination);
+
+    const rootOsc = acquireOsc(state);
+    rootOsc.type = 'sine';
+    const rootImpactFreq = fundamental * pitchBendRatio;
+    rootOsc.frequency.setValueAtTime(rootImpactFreq, now);
+    rootOsc.frequency.exponentialRampToValueAtTime(fundamental, now + pitchBendDuration);
+    rootOsc.connect(filter);
+    rootOsc.start(now); rootOsc.stop(now + ampDecay + 0.02);
+
+    const overtoneOsc = acquireOsc(state);
+    overtoneOsc.type = 'sine';
+    const overtoneImpactFreq = overtoneFreq * pitchBendRatio;
+    overtoneOsc.frequency.setValueAtTime(overtoneImpactFreq, now);
+    overtoneOsc.frequency.exponentialRampToValueAtTime(overtoneFreq, now + pitchBendDuration);
+    overtoneOsc.connect(filter);
+
+    filter.connect(masterGain);
+    overtoneOsc.start(now); overtoneOsc.stop(now + ampDecay + 0.02);
+}
+
 /** Helper: creates an individual frequency component for Batá drums. */
 function createBataTone(state, freq, volume, targetNode, startTime, duration) {
     const osc = acquireOsc(state);
@@ -1678,6 +1742,8 @@ const instruments = {
     bata_middle: playBataMiddle,
     bata_high: playBataHigh,
     bata_slap: playBataSlap,
+    bata_low_press: playBataLowPress,
+    bata_middle_press: playBataMiddlePress,
     bata_high_slap: playBataHighSlap,
     bata_low_slap: playBataLowSlap,
     bata_middle_slap: playBataMiddleSlap,
