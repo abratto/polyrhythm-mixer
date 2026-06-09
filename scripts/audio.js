@@ -1205,51 +1205,85 @@ function playSlap(state, now, vol) {
     osc.start(now); osc.stop(now + 0.05);
 }
 
-function playBataTonalDrum(state, now, vol, { fundamental, overtones, decay, slapMix }) {
+function playBataTonalDrum(state, now, vol, { fundamental, overtoneRatio, chachaRatio, slapFilterFreq, rootDecay, overtoneDecay, chachaDecay, slapDecay }) {
     const masterGain = acquireGain(state);
-    masterGain.gain.setValueAtTime(vol, now);
-    masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay);
     masterGain.connect(state.audioCtx.destination);
 
-    createBataTone(state, fundamental, 0.6, masterGain, now, decay);
+    // 1. Root — pitch bend simulates skin stretch, long sustain
+    const rootOsc = acquireOsc(state);
+    const rootGain = acquireGain(state);
+    rootOsc.type = 'sine';
+    rootOsc.frequency.setValueAtTime(fundamental + 30, now);
+    rootOsc.frequency.exponentialRampToValueAtTime(fundamental, now + 0.04);
+    rootGain.gain.setValueAtTime(vol * 0.95, now);
+    rootGain.gain.exponentialRampToValueAtTime(0.001, now + rootDecay);
+    rootOsc.connect(rootGain); rootGain.connect(masterGain);
+    rootOsc.start(now); rootOsc.stop(now + rootDecay + 0.05);
 
-    overtones.forEach((ratio, index) => {
-        const partialDecay = decay * (1 - (index * 0.08));
-        createBataTone(state, fundamental * ratio, 0.35 / (index + 1), masterGain, now, partialDecay);
-    });
+    // 2. Shell overtone — inharmonic Bessel ratio, fast decay
+    const overtoneOsc = acquireOsc(state);
+    const overtoneGain = acquireGain(state);
+    overtoneOsc.type = 'sine';
+    overtoneOsc.frequency.setValueAtTime(fundamental * overtoneRatio, now);
+    overtoneGain.gain.setValueAtTime(vol * 0.4, now);
+    overtoneGain.gain.exponentialRampToValueAtTime(0.001, now + overtoneDecay);
+    overtoneOsc.connect(overtoneGain); overtoneGain.connect(masterGain);
+    overtoneOsc.start(now); overtoneOsc.stop(now + overtoneDecay + 0.05);
 
-    if (slapMix > 0) {
-        createBataSlap(state, slapMix, masterGain, now, decay * 0.3);
-    }
+    // 3. Chachá sympathetic — delayed swell from coupled head
+    const chachaOsc = acquireOsc(state);
+    const chachaGain = acquireGain(state);
+    chachaOsc.type = 'sine';
+    chachaOsc.frequency.setValueAtTime(fundamental * chachaRatio, now);
+    chachaGain.gain.setValueAtTime(0, now);
+    chachaGain.gain.linearRampToValueAtTime(vol * 0.15, now + 0.02);
+    chachaGain.gain.exponentialRampToValueAtTime(0.001, now + chachaDecay);
+    chachaOsc.connect(chachaGain); chachaGain.connect(masterGain);
+    chachaOsc.start(now); chachaOsc.stop(now + chachaDecay + 0.05);
+
+    // 4. Slap — hand impact transient
+    createBataSlap(state, vol * 0.6, masterGain, now, slapDecay, slapFilterFreq);
 }
 
-/** Batá low (Iyá): largest drum voice with the deepest tonal head. */
+/** Batá low (Iyá): largest drum — deep fundamental, octave chachá. */
 function playBataLow(state, now, vol) {
     playBataTonalDrum(state, now, vol, {
-        fundamental: 58,
-        overtones: [1.38, 1.95, 2.55],
-        decay: 0.38,
-        slapMix: 0.14
+        fundamental: 150,
+        overtoneRatio: 1.54,
+        chachaRatio: 2.0,
+        slapFilterFreq: 500,
+        rootDecay: 0.45,
+        overtoneDecay: 0.18,
+        chachaDecay: 0.30,
+        slapDecay: 0.06
     });
 }
 
-/** Batá middle (Itótele): middle-sized drum voice with a tighter tone. */
+/** Batá middle (Itótele): mid-sized drum — warm tone, octave chachá. */
 function playBataMiddle(state, now, vol) {
     playBataTonalDrum(state, now, vol, {
-        fundamental: 155,
-        overtones: [1.58, 2.35, 3.15],
-        decay: 0.28,
-        slapMix: 0.28
+        fundamental: 220,
+        overtoneRatio: 1.54,
+        chachaRatio: 2.0,
+        slapFilterFreq: 800,
+        rootDecay: 0.35,
+        overtoneDecay: 0.15,
+        chachaDecay: 0.25,
+        slapDecay: 0.05
     });
 }
 
-/** Batá high (Okónkolo): smallest drum voice with the highest tonal head. */
+/** Batá high (Okónkolo): smallest drum — bright tone, fifth chachá. */
 function playBataHigh(state, now, vol) {
     playBataTonalDrum(state, now, vol, {
-        fundamental: 240,
-        overtones: [1.62, 2.50, 3.40],
-        decay: 0.24,
-        slapMix: 0.32
+        fundamental: 300,
+        overtoneRatio: 1.54,
+        chachaRatio: 1.5,
+        slapFilterFreq: 1200,
+        rootDecay: 0.28,
+        overtoneDecay: 0.12,
+        chachaDecay: 0.20,
+        slapDecay: 0.04
     });
 }
 
