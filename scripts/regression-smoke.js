@@ -349,6 +349,37 @@ async function run() {
             'Master step highlight should advance over time',
             { before: hl1, after: hl2 });
 
+        // --- Voice removal and re-add preserves mixer dropdown population ---
+        // Add voices, remove middle one, re-add — all dropdowns must have options
+        await page.locator('#addMasterVoiceBtn').click();
+        await page.locator('#addMasterVoiceBtn').click();
+        await page.waitForTimeout(300);
+        // Remove the middle voice (index 1 of 3) via its sequencer row remove button
+        await page.locator('#masterGrid .voice-row:nth-child(2) .remove-voice-btn').click();
+        await page.waitForTimeout(300);
+        // Re-add a voice
+        await page.locator('#addMasterVoiceBtn').click();
+        await page.waitForTimeout(300);
+
+        const masterVoiceSelects = await page.locator('#masterVoiceContainer select').evaluateAll(selects =>
+            selects.map(s => ({ id: s.id, options: s.options.length }))
+        );
+        assert(masterVoiceSelects.every(s => s.options > 0),
+            'All master voice mixer selects should have options after remove/re-add',
+            masterVoiceSelects);
+        // No duplicate IDs in master voice strips
+        const stripIds = await page.locator('#masterVoiceContainer [id]').evaluateAll(els =>
+            els.map(e => e.id).filter(id => id.startsWith('strip_'))
+        );
+        const uniqueStrips = new Set(stripIds);
+        assert(stripIds.length === uniqueStrips.size,
+            'Master voice strip IDs must be unique after remove/re-add',
+            { ids: stripIds, duplicates: stripIds.filter((id, i) => stripIds.indexOf(id) !== i) });
+
+        // Reset voices back to 1 by reloading — removes clutter for subsequent tests
+        await page.locator('#resetBtn').click();
+        await page.waitForTimeout(300);
+
         const maxRecordedGain = async () => page.evaluate(() => Math.max(...globalThis.__audioParamValues, 0));
         const clearRecordedGains = async () => page.evaluate(() => { globalThis.__audioParamValues = []; });
 

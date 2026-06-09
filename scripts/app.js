@@ -308,16 +308,24 @@ function handleRemoveVoiceChannel(prefix, voiceIndex) {
     // Re-index remaining strips' labels
     const lane = laneForPrefix(prefix);
 
-    // Update channel references and strip IDs
+    // Update channel references and strip IDs, including child elements
     voiceArray.forEach((ch, idx) => {
-        const oldId = `strip_${prefix}_${idx}`;
-        const newId = `strip_${prefix}_${idx}`;
+        const oldSuffix = `${prefix}_${ch.voiceIndex}`;
+        const newSuffix = `${prefix}_${idx}`;
         // Update channel voiceIndex
         ch.voiceIndex = idx;
         ch.onInstrumentChange = () => updateVoiceInstrumentLabels(lane);
-        // Update strip ID if it exists
-        const strip = document.getElementById(oldId);
-        if (strip) strip.id = newId;
+        // Update strip div and all child element IDs
+        const strip = document.getElementById(`strip_${oldSuffix}`);
+        if (strip) {
+            strip.id = `strip_${newSuffix}`;
+            const soundEl = document.getElementById(`sound_${oldSuffix}`);
+            if (soundEl) soundEl.id = `sound_${newSuffix}`;
+            const muteEl = document.getElementById(`mute_${oldSuffix}`);
+            if (muteEl) muteEl.id = `mute_${newSuffix}`;
+            const volEl = document.getElementById(`vol_${oldSuffix}`);
+            if (volEl) volEl.id = `vol_${newSuffix}`;
+        }
         // Update voice reference
         lane.voices[idx].channel = ch;
     });
