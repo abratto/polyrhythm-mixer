@@ -1306,25 +1306,94 @@ function playBataSlapVariant(state, now, vol, { fundamental1, fundamental2, nois
     createBataTone(state, fundamental2, 0.12, masterGain, now, decay * 0.4);
 }
 
-/** Batá low slap — largest drum, deepest slap tone. */
+/** Batá low slap — largest drum, deep chachá with octave enú coupling. */
 function playBataLowSlap(state, now, vol) {
-    playBataSlapVariant(state, now, vol, {
-        fundamental1: 160, fundamental2: 280, noiseFilterFreq: 700, decay: 0.14, slapDuration: 0.055
+    playChachaSlap(state, now, vol, {
+        chachaFundamental: 225,
+        bodyOvertones: [1.6, 2.3, 3.1],
+        enuCouplingFreq: 150,
+        enuCouplingDelay: 0.002,
+        enuCouplingAttack: 0.008,
+        noiseFilterFreq: 1800,
+        noiseDecay: 0.05,
+        bodyDecay: 0.13,
+        couplingDecay: 0.06
     });
 }
 
-/** Batá middle slap — mid-sized drum, centered slap tone. */
+/** Batá middle slap — mid-sized drum, aggressive crack with enú coupling. */
 function playBataMiddleSlap(state, now, vol) {
-    playBataSlapVariant(state, now, vol, {
-        fundamental1: 210, fundamental2: 350, noiseFilterFreq: 950, decay: 0.12, slapDuration: 0.05
+    playChachaSlap(state, now, vol, {
+        chachaFundamental: 350,
+        bodyOvertones: [1.6, 2.4, 3.2],
+        enuCouplingFreq: 220,
+        enuCouplingDelay: 0.002,
+        enuCouplingAttack: 0.007,
+        noiseFilterFreq: 2500,
+        noiseDecay: 0.04,
+        bodyDecay: 0.11,
+        couplingDecay: 0.05
     });
 }
 
-/** Batá high slap — smallest drum, sharpest slap tone. */
+/** Batá high slap — smallest drum, octave chachá, tight enú coupling. */
 function playBataHighSlap(state, now, vol) {
-    playBataSlapVariant(state, now, vol, {
-        fundamental1: 380, fundamental2: 600, noiseFilterFreq: 1800, decay: 0.09, slapDuration: 0.035
+    playChachaSlap(state, now, vol, {
+        chachaFundamental: 600,
+        bodyOvertones: [1.7, 2.5, 3.4],
+        enuCouplingFreq: 300,
+        enuCouplingDelay: 0.0015,
+        enuCouplingAttack: 0.005,
+        noiseFilterFreq: 3200,
+        noiseDecay: 0.03,
+        bodyDecay: 0.09,
+        couplingDecay: 0.04
     });
+}
+
+/** Chachá slap — 3-layer physical model: transient, body, coupling. */
+function playChachaSlap(state, now, vol, { chachaFundamental, bodyOvertones, enuCouplingFreq, enuCouplingDelay, enuCouplingAttack, noiseFilterFreq, noiseDecay, bodyDecay, couplingDecay }) {
+    const masterGain = acquireGain(state);
+    masterGain.connect(state.audioCtx.destination);
+
+    // 1. Transient — filtered noise burst with ±10% volume jitter
+    const transientJitter = 0.9 + Math.random() * 0.2;
+    createBataSlap(state, vol * 0.55 * transientJitter, masterGain, now, noiseDecay, noiseFilterFreq);
+
+    // 2. Body — inharmonic overtones with muted fundamental, ±15% volume jitter
+    const bodyJitter = 0.85 + Math.random() * 0.3;
+    const bodyOsc = acquireOsc(state);
+    const bodyGain = acquireGain(state);
+    bodyOsc.type = 'sine';
+    bodyOsc.frequency.setValueAtTime(chachaFundamental, now);
+    bodyGain.gain.setValueAtTime(vol * 0.08 * bodyJitter, now);
+    bodyGain.gain.exponentialRampToValueAtTime(0.001, now + bodyDecay);
+    bodyOsc.connect(bodyGain); bodyGain.connect(masterGain);
+    bodyOsc.start(now); bodyOsc.stop(now + bodyDecay + 0.05);
+
+    bodyOvertones.forEach(ratio => {
+        const overtoneJitter = 0.85 + Math.random() * 0.3;
+        const osc = acquireOsc(state);
+        const gain = acquireGain(state);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(chachaFundamental * ratio, now);
+        gain.gain.setValueAtTime(vol * 0.18 * overtoneJitter / ratio, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + bodyDecay * 0.7);
+        osc.connect(gain); gain.connect(masterGain);
+        osc.start(now); osc.stop(now + bodyDecay * 0.7 + 0.05);
+    });
+
+    // 3. Enú coupling — low-pass sine at enú fundamental, micro-delayed, smoothed attack
+    const couplingDelay = now + enuCouplingDelay;
+    const couplingOsc = acquireOsc(state);
+    const couplingGain = acquireGain(state);
+    couplingOsc.type = 'sine';
+    couplingOsc.frequency.setValueAtTime(enuCouplingFreq, couplingDelay);
+    couplingGain.gain.setValueAtTime(0, couplingDelay);
+    couplingGain.gain.linearRampToValueAtTime(vol * 0.06, couplingDelay + enuCouplingAttack);
+    couplingGain.gain.exponentialRampToValueAtTime(0.001, couplingDelay + couplingDecay);
+    couplingOsc.connect(couplingGain); couplingGain.connect(masterGain);
+    couplingOsc.start(couplingDelay); couplingOsc.stop(couplingDelay + couplingDecay + 0.05);
 }
 
 /** Helper: creates an individual frequency component for Batá drums. */
