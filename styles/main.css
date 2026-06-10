@@ -619,6 +619,24 @@
             border-color: #ff5252;
             box-shadow: 0 0 6px rgba(255,23,68,0.4);
         }
+        .solo-btn {
+            background-color: #272735;
+            border: none;
+            font-weight: 700;
+            font-size: 10px;
+            padding: 6px 8px;
+            text-transform: uppercase;
+            width: 52px;
+            border: 1px solid #333344;
+            flex-shrink: 0;
+            margin-right: 4px;
+        }
+        .solo-btn.soloed {
+            background-color: #ffb300;
+            color: #000;
+            border-color: #ffd54f;
+            box-shadow: 0 0 8px rgba(255,179,0,0.5);
+        }
         .v-divider {
             width: 1px;
             height: 40px;

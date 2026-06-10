@@ -77,27 +77,33 @@ export function createChannels() {
             soundEl: document.getElementById('soundDriver'),
             volEl: document.getElementById('volDriver'),
             muteEl: document.getElementById('muteDriver'),
-            sound: 'shaker',
+            soloEl: document.getElementById('soloDriver'),
+            sound: 'kick',
             volume: 0.6,
             muted: false,
+            soloed: false,
             gainScale: 0.6
         },
         Awheel: {
             soundEl: document.getElementById('soundAWheel'),
             volEl: document.getElementById('volAWheel'),
             muteEl: document.getElementById('muteAWheel'),
+            soloEl: document.getElementById('soloAWheel'),
             sound: 'shaker',
             volume: 0.45,
             muted: false,
+            soloed: false,
             gainScale: 0.5
         },
         Bwheel: {
             soundEl: document.getElementById('soundBWheel'),
             volEl: document.getElementById('volBWheel'),
             muteEl: document.getElementById('muteBWheel'),
+            soloEl: document.getElementById('soloBWheel'),
             sound: 'shaker',
             volume: 0.35,
             muted: false,
+            soloed: false,
             gainScale: 0.4
         },
         // Multi-voice channels — populated dynamically
@@ -113,14 +119,17 @@ export function createVoiceChannel(container, voiceIndex, prefix, defaults, gain
     const soundEl = document.getElementById(`sound_${id}`);
     const volEl = document.getElementById(`vol_${id}`);
     const muteEl = document.getElementById(`mute_${id}`);
+    const soloEl = document.getElementById(`solo_${id}`);
 
     const channel = {
         soundEl,
         volEl,
         muteEl,
+        soloEl,
         sound: defaults[prefix] || 'kick', // cached instrument value
         volume: 0.5,
         muted: false,
+        soloed: false,
         gainScale,
         voiceIndex,
         prefix,
@@ -174,6 +183,15 @@ export function addVoiceChannel(channels, prefix, container, voiceIndex) {
                 channel.muted = !channel.muted;
                 channel.muteEl.classList.toggle('muted', channel.muted);
                 channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
+            });
+        }
+
+        // Wire solo handler
+        if (channel.soloEl) {
+            channel.soloEl.addEventListener('click', () => {
+                channel.soloed = !channel.soloed;
+                channel.soloEl.classList.toggle('soloed', channel.soloed);
+                channel.soloEl.textContent = channel.soloed ? 'Soloed' : 'Solo';
             });
         }
 
@@ -243,6 +261,15 @@ export function wireChannels(channels) {
             channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
         });
 
+        // Solo button handler
+        if (channel.soloEl) {
+            channel.soloEl.addEventListener('click', () => {
+                channel.soloed = !channel.soloed;
+                channel.soloEl.classList.toggle('soloed', channel.soloed);
+                channel.soloEl.textContent = channel.soloed ? 'Soloed' : 'Solo';
+            });
+        }
+
         // Cache instrument changes
         channel.soundEl.addEventListener('change', () => {
             channel.sound = channel.soundEl.value;
@@ -268,6 +295,7 @@ export function syncAudioStartTime(state) {
  * map to the same phrase/wheel step only fire once.
  */
 function scheduleStepAudio(state, lanes, channels, stepIndex, hitTime, globalVolume) {
+    _updateSoloFlag(channels);
     const lsa = state.lastScheduledActive;
     const stepWithinPhrase = ((stepIndex % state.masterPhraseSteps) + state.masterPhraseSteps) % state.masterPhraseSteps;
 
@@ -345,6 +373,7 @@ function _serializeForWorker(state, lanes, channels) {
 
 /** Handles trigger batches from the worker — creates audio nodes on the main thread. */
 function _handleWorkerTriggers(triggers, state, channels, globalVolume) {
+    _updateSoloFlag(channels);
     for (const t of triggers) {
         let channel = null;
         switch (t.channelKey) {
@@ -475,6 +504,7 @@ export function startAudioScheduler(state, lanes, channels, globalVolumeSource) 
             _schedulerTimer = null;
             return;
         }
+        _updateSoloFlag(channels);
 
         const rps = state.tempo * Math.PI / 120;
         const stepSize = 2 * Math.PI / state.mainTeeth;
@@ -1751,44 +1781,55 @@ const instruments = {
     cajon_slap: playCajonSlap
 };
 
+/** Returns true if any channel in the mixer has solo enabled. */
+function isAnyChannelSoloed(channels) {
+    for (const key of ['driver', 'Awheel', 'Bwheel']) {
+        if (channels[key]?.soloed) return true;
+    }
+    for (const key of ['masterVoices', 'Avoices', 'Bvoices']) {
+        if ((channels[key] || []).some(ch => ch?.soloed)) return true;
+    }
+    return false;
+}
+
+/** Cached solo flag — set before each batch of sound scheduling, read by playSingleChannel. */
+let _soloActive = false;
+function _updateSoloFlag(channels) {
+    _soloActive = isAnyChannelSoloed(channels);
+}
+
 /**
  * Plays the sound for a given channel. Applies the channel's volume,
  * mute state, gain scale, and the global volume multiplier.
- * For multi-voice channels (master, A, B), plays all active voices.
+ * Respects solo: if any channel is soloed, only soloed channels play.
  */
 export function playChannelSound(state, channels, channelName, globalVolume = 1, voiceIndex = null, hitTime = null) {
     if (!state.audioEnabled || !state.audioCtx) return;
 
     const scheduleTime = hitTime ?? state.audioCtx.currentTime;
+    _updateSoloFlag(channels);
 
     // Multi-voice channels: play specific voice or all voices
     if (channelName === 'master') {
         const voices = channels.masterVoices || [];
         if (voiceIndex !== null) {
-            // Play only the specified voice
             if (voices[voiceIndex]) playSingleChannel(state, voices[voiceIndex], globalVolume, scheduleTime);
         } else {
-            voices.forEach(channel => {
-                playSingleChannel(state, channel, globalVolume, scheduleTime);
-            });
+            voices.forEach(ch => { if (ch) playSingleChannel(state, ch, globalVolume, scheduleTime); });
         }
     } else if (channelName === 'A') {
         const voices = channels.Avoices || [];
         if (voiceIndex !== null) {
             if (voices[voiceIndex]) playSingleChannel(state, voices[voiceIndex], globalVolume, scheduleTime);
         } else {
-            voices.forEach(channel => {
-                playSingleChannel(state, channel, globalVolume, scheduleTime);
-            });
+            voices.forEach(ch => { if (ch) playSingleChannel(state, ch, globalVolume, scheduleTime); });
         }
     } else if (channelName === 'B') {
         const voices = channels.Bvoices || [];
         if (voiceIndex !== null) {
             if (voices[voiceIndex]) playSingleChannel(state, voices[voiceIndex], globalVolume, scheduleTime);
         } else {
-            voices.forEach(channel => {
-                playSingleChannel(state, channel, globalVolume, scheduleTime);
-            });
+            voices.forEach(ch => { if (ch) playSingleChannel(state, ch, globalVolume, scheduleTime); });
         }
     } else {
         // Fixed single-voice channels
@@ -1801,6 +1842,7 @@ export function playChannelSound(state, channels, channelName, globalVolume = 1,
 export function playSingleChannel(state, channel, globalVolume, hitTime) {
     if (!channel || channel.muted) return;
     if (!channel.sound) return;
+    if (_soloActive && !channel.soloed) return;
 
     const vol = channel.volume * channel.gainScale * globalVolume;
     if (vol <= 0) return;

@@ -64,6 +64,7 @@ function createVoiceStripDOM(container, prefix, voiceIndex, color, label) {
         <div class="strip-header" style="color: ${color};">${label} Voice ${voiceIndex + 1}</div>
         <select id="sound_${id}" style="padding: 4px; width: 100%; font-size:12px;"></select>
         <div class="fader-area">
+            <button id="solo_${id}" class="solo-btn">Solo</button>
             <button id="mute_${id}" class="mute-btn">Mute</button>
         </div>
         <div class="fader-area volume-only-area">
@@ -147,6 +148,15 @@ function applyVoiceChannelState(channel, voiceState) {
             channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
         }
     }
+
+    const soloed = voiceState.o ?? voiceState.soloed;
+    if (soloed !== undefined) {
+        channel.soloed = !!soloed;
+        if (channel.soloEl) {
+            channel.soloEl.classList.toggle('soloed', channel.soloed);
+            channel.soloEl.textContent = channel.soloed ? 'Soloed' : 'Solo';
+        }
+    }
 }
 
 /**
@@ -217,12 +227,17 @@ function resetFixedChannel(channel, defaults) {
     channel.sound = defaults.sound;
     channel.volume = defaults.volume;
     channel.muted = defaults.muted;
+    channel.soloed = false;
 
     if (channel.soundEl) channel.soundEl.value = defaults.sound;
     if (channel.volEl) channel.volEl.value = String(defaults.volume);
     if (channel.muteEl) {
         channel.muteEl.classList.toggle('muted', defaults.muted);
         channel.muteEl.textContent = defaults.muted ? 'Muted' : 'Mute';
+    }
+    if (channel.soloEl) {
+        channel.soloEl.classList.remove('soloed');
+        channel.soloEl.textContent = 'Solo';
     }
 }
 

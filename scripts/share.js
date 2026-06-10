@@ -147,7 +147,8 @@ function serializeVoice(voice, channel) {
         s: selectedIndexes(voice.selected),
         i: channel?.sound || null,
         v: channel?.volume ?? 0.5,
-        u: channel?.muted ? 1 : 0
+        u: channel?.muted ? 1 : 0,
+        o: channel?.soloed ? 1 : 0
     };
 
     if (voice.nudgeOffset) serialized.n = voice.nudgeOffset;
@@ -184,12 +185,14 @@ function serializeState({ state, ui, lanes, channels }) {
             driver: {
                 s: channels.driver.sound,
                 v: channels.driver.volume,
-                u: channels.driver.muted ? 1 : 0
+                u: channels.driver.muted ? 1 : 0,
+                o: channels.driver.soloed ? 1 : 0
             },
             awheel: {
                 s: channels.Awheel.sound,
                 v: channels.Awheel.volume,
-                u: channels.Awheel.muted ? 1 : 0
+                u: channels.Awheel.muted ? 1 : 0,
+                o: channels.Awheel.soloed ? 1 : 0
             },
             bwheel: {
                 s: channels.Bwheel.sound,
@@ -321,6 +324,15 @@ function applyVoiceChannelState(channel, voiceState) {
             channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
          }
        }
+
+    const soloed = voiceState.o ?? voiceState.soloed;
+    if (soloed !== undefined) {
+        channel.soloed = !!soloed;
+        if (channel.soloEl) {
+            channel.soloEl.classList.toggle('soloed', channel.soloed);
+            channel.soloEl.textContent = channel.soloed ? 'Soloed' : 'Solo';
+        }
+    }
 }
 
 /** Applies a fixed channel's state (driver, Awheel, Bwheel) using compact s/v/u format. */
@@ -349,6 +361,15 @@ function applyFixedChannelState(channel, channelState) {
         if (channel.muteEl) {
             channel.muteEl.classList.toggle('muted', channel.muted);
             channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
+        }
+      }
+
+    const soloed = channelState.o ?? channelState.soloed;
+    if (soloed !== undefined) {
+        channel.soloed = !!soloed;
+        if (channel.soloEl) {
+            channel.soloEl.classList.toggle('soloed', channel.soloed);
+            channel.soloEl.textContent = channel.soloed ? 'Soloed' : 'Solo';
         }
       }
 }

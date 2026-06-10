@@ -380,6 +380,33 @@ async function run() {
         await page.locator('#resetBtn').click();
         await page.waitForTimeout(300);
 
+        // --- Solo button toggling on fixed and voice channels ---
+        async function testSolo(id) {
+            const btn = page.locator(`#${id}`);
+            const textBefore = await btn.textContent();
+            assert(textBefore === 'Solo', `Solo button ${id} should start as 'Solo'`, textBefore);
+            await btn.click();
+            await page.waitForTimeout(100);
+            const textAfter = await btn.textContent();
+            assert(textAfter === 'Soloed', `Solo button ${id} should toggle to 'Soloed'`, textAfter);
+            const hasClass = await btn.evaluate(el => el.classList.contains('soloed'));
+            assert(hasClass, `${id} should have 'soloed' class when active`);
+            await btn.click();
+            await page.waitForTimeout(100);
+            const textFinal = await btn.textContent();
+            assert(textFinal === 'Solo', `Solo button ${id} should toggle back to 'Solo'`, textFinal);
+        }
+
+        await testSolo('soloDriver');
+        await testSolo('soloAWheel');
+        await testSolo('soloBWheel');
+        // Voice channels: add one, test solo, remove
+        await page.locator('#addMasterVoiceBtn').click();
+        await page.waitForTimeout(300);
+        await testSolo('solo_master_1');
+        await page.locator('#resetBtn').click();
+        await page.waitForTimeout(300);
+
         const maxRecordedGain = async () => page.evaluate(() => Math.max(...globalThis.__audioParamValues, 0));
         const clearRecordedGains = async () => page.evaluate(() => { globalThis.__audioParamValues = []; });
 
