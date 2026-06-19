@@ -309,6 +309,44 @@ async function run() {
             { value: 'udu', label: 'Udu Clay Pot' }
         ]), 'Mixer menus should expose the expanded percussion palette.', expandedPercussionOptions);
 
+        // --- Higher meter values rebuild correctly ---
+        await setSelect('#rhythmA', 12);
+        await setSelect('#rhythmB', 18);
+        const twelveAgainstEighteen = await page.evaluate(() => ({
+            meterA: document.querySelector('#rhythmA')?.value ?? null,
+            meterB: document.querySelector('#rhythmB')?.value ?? null,
+            masterSteps: document.querySelectorAll('#masterGrid .voice-row:nth-child(1) .step-btn').length,
+            aWheelSteps: document.querySelectorAll('#meterAWheelGrid .step-btn').length,
+            bWheelSteps: document.querySelectorAll('#meterBWheelGrid .step-btn').length,
+            aPhraseSteps: document.querySelectorAll('#meterAPhraseGrid .voice-row:nth-child(1) .step-btn').length,
+            bPhraseSteps: document.querySelectorAll('#meterBPhraseGrid .voice-row:nth-child(1) .step-btn').length
+        }));
+        assert(same(twelveAgainstEighteen, {
+            meterA: '12',
+            meterB: '18',
+            masterSteps: 36,
+            aWheelSteps: 12,
+            bWheelSteps: 18,
+            aPhraseSteps: 24,
+            bPhraseSteps: 36
+        }), '12 against 18 should be accepted and rebuild all sequencers with the expected lengths.', twelveAgainstEighteen);
+
+        await setSelect('#rhythmA', 17);
+        await setSelect('#rhythmB', 18);
+        const seventeenAgainstEighteen = await page.evaluate(() => ({
+            masterSteps: document.querySelectorAll('#masterGrid .voice-row:nth-child(1) .step-btn').length,
+            wheelA: document.querySelectorAll('#meterAWheelGrid .step-btn').length,
+            wheelB: document.querySelectorAll('#meterBWheelGrid .step-btn').length
+        }));
+        assert(same(seventeenAgainstEighteen, {
+            masterSteps: 306,
+            wheelA: 17,
+            wheelB: 18
+        }), 'Higher 18-based meter pairs should also rebuild beyond the old 240-step limit.', seventeenAgainstEighteen);
+
+        await page.locator('#resetBtn').click();
+        await page.waitForFunction(() => document.querySelector('#rhythmA')?.value === '6' && document.querySelector('#rhythmB')?.value === '4');
+
         // --- Button highlight advancement ---
         // Enable audio so the animation and scheduler both run, then verify
         // step highlighting advances over time.

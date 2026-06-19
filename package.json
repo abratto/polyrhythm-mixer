@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "test:wheel-ratios": "node scripts/test-wheel-ratios.js",
     "test:smoke": "node scripts/regression-smoke.js",
     "test:smoke:headed": "HEADFUL=1 node scripts/regression-smoke.js"
   },

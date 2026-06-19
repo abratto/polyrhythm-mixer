@@ -51,3 +51,16 @@ export function getActivePhraseStep(masterStep, phaseShift, teethPerPulse, phras
 export function getActiveWheelStep(masterStep, phaseShift, teethPerPulse, wheelLength) {
     return ((Math.floor((masterStep - phaseShift) / teethPerPulse) % wheelLength) + wheelLength) % wheelLength;
 }
+
+/**
+ * Converts the master wheel angle into the drawn angle for a meshed meter wheel.
+ *
+ * `teethPerPulse` is the number of master teeth per meter pulse, so the secondary
+ * wheel must rotate `mainTeeth / teethPerPulse` times faster than the master wheel
+ * and in the opposite direction. Phase shift is stored in master-wheel teeth and is
+ * translated into an angular offset before scaling.
+ */
+export function getMeshedWheelAngle(mainAngle, phaseShift, mainTeeth, teethPerPulse) {
+    const stepSize = (2 * Math.PI) / mainTeeth;
+    return (mainAngle - phaseShift * stepSize) * (mainTeeth / teethPerPulse);
+}

@@ -14,7 +14,7 @@ import { lcm, phraseStepsFor } from './math.js';
  */
 export function createState(ui) {
     return {
-        // User-facing meter values (2–16)
+        // User-facing meter values (2–18)
         A: parseInt(ui.selectA.value, 10),
         B: parseInt(ui.selectB.value, 10),
         // Number of master cycles each phrase spans

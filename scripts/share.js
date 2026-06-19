@@ -384,8 +384,8 @@ function restoreFromPayload(payload, deps) {
     const meters = payload.m;
     if (!meters || typeof meters !== 'object') return;
 
-    const a = clampInteger(meters.A, 2, 16);
-    const b = clampInteger(meters.B, 2, 16);
+    const a = clampInteger(meters.A, 2, 18);
+    const b = clampInteger(meters.B, 2, 18);
     const phraseA = clampInteger(meters.phraseA, 1, 4);
     const phraseB = clampInteger(meters.phraseB, 1, 4);
     const masterPhrase = clampInteger(meters.masterPhrase, 1, 4);

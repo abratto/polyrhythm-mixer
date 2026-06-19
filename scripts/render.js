@@ -8,7 +8,7 @@
  * The master wheel completes one full rotation every 4 beats (one "measure"),
  * so the visual speed is: radiansPerSecond = BPM × π/2 / 60.
  */
-import { getActivePhraseStep, getActiveWheelStep } from './math.js';
+import { getActivePhraseStep, getActiveWheelStep, getMeshedWheelAngle } from './math.js';
 
 /**
  * Updates flash counters and lastActive tracking for visual step highlighting.
@@ -452,9 +452,9 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
     const MIN_FRAME_MS = isMobile ? 33 : 0;
     let lastDrawTime = 0;
 
-    // Pre-allocated reusable buffer for merging master voice selections
-    const MAX_TEETH = 240; // LCM(16, 15) = 240, max possible
-    const _masterSelected = new Uint8Array(MAX_TEETH);
+    // Reused buffer for merging master voice selections.
+    // Grow it on demand so higher meter pairs such as 17 against 18 still render correctly.
+    let masterSelectedBuffer = new Uint8Array(0);
 
     function animate(timestamp) {
         // On mobile, throttle rendering to ~30fps; audio is handled by scheduler
@@ -514,8 +514,8 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
         const stepSize = 2 * Math.PI / state.mainTeeth;
         const angles = {
             main: -state.mainAngle,
-            A: (state.mainAngle - state.phaseA * stepSize) * (state.mainTeeth / state.teethA),
-            B: (state.mainAngle - state.phaseB * stepSize) * (state.mainTeeth / state.teethB)
+            A: getMeshedWheelAngle(state.mainAngle, state.phaseA, state.mainTeeth, state.teethA),
+            B: getMeshedWheelAngle(state.mainAngle, state.phaseB, state.mainTeeth, state.teethB)
         };
 
         const currentStep = Math.floor(state.mainAngle / stepSize);
@@ -556,7 +556,10 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
         if (f.B > 0) f.B--;
 
         // Merge master voice selections for gear display — only the current cycle
-        _masterSelected.fill(0);
+        if (masterSelectedBuffer.length < state.mainTeeth) {
+            masterSelectedBuffer = new Uint8Array(state.mainTeeth);
+        }
+        masterSelectedBuffer.fill(0, 0, state.mainTeeth);
         const currentCycle = state.masterPhraseCycles > 1
             ? Math.floor(currentStep / state.mainTeeth) % state.masterPhraseCycles
             : 0;
@@ -566,10 +569,10 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
         for (let v = 0; v < voices.length; v++) {
             const sel = voices[v].selected;
             for (let i = cycleStart; i < cycleEnd && i < sel.length; i++) {
-                if (sel[i]) _masterSelected[i - cycleStart] = 1;
+                if (sel[i]) masterSelectedBuffer[i - cycleStart] = 1;
             }
         }
-        const masterSelected = _masterSelected.subarray(0, state.mainTeeth);
+        const masterSelected = masterSelectedBuffer.subarray(0, state.mainTeeth);
 
         // Draw gears
         drawGear(ctx, cx, cy, rMainInner, rMainOuter, state.mainTeeth, angles.main, '#7a8a9e', true, Math.max(state.flash.driver, state.flash.custom), masterSelected, isMobile);
