@@ -54,7 +54,11 @@ export function createState(ui) {
         // Flash counters for visual/audio triggers (count down each frame)
         flash: { driver: 0, custom: 0, A: 0, B: 0 },
         // Tracks the previously active step index per lane to detect transitions
-        lastActive: { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 }
+        lastActive: { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 },
+        // Which cycle is currently displayed in each multi-cycle lane
+        visibleCycle: { master: 0, Aphrase: 0, Bphrase: 0 },
+        // Whether each multi-cycle lane auto-follows the playhead (false = pinned/manual)
+        followPlayhead: { master: true, Aphrase: true, Bphrase: true }
     };
 }
 

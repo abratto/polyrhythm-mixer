@@ -197,10 +197,12 @@ function initVoiceChannels() {
  * rebuilds lane buttons, and resets the animation angle to zero.
  */
 function rebuildSystem() {
+    state.followPlayhead = { master: true, Aphrase: true, Bphrase: true };
+    state.visibleCycle = { master: 0, Aphrase: 0, Bphrase: 0 };
     updateDerivedState(state);
     updatePhaseUI(state, ui);
     resizeAllLanes(state, lanes);
-    buildAllLanes(lanes);
+    buildAllLanes(lanes, state);
     state.mainAngle = 0;
     syncAudioStartTime(state);
     resetAudioScheduler(state);
@@ -213,12 +215,14 @@ function rebuildSystem() {
  */
 function resetAndRebuild() {
     state.mainAngle = 0;
+    state.followPlayhead = { master: true, Aphrase: true, Bphrase: true };
+    state.visibleCycle = { master: 0, Aphrase: 0, Bphrase: 0 };
     syncAudioStartTime(state);
     resetAudioScheduler(state);
     updateWorkerScheduler(state, lanes, channels, cachedGlobalVolume);
     resetFlashState(state);
     resetPatterns(state, lanes);
-    buildAllLanes(lanes);
+    buildAllLanes(lanes, state);
 }
 
 function resetFixedChannel(channel, defaults) {
@@ -266,6 +270,8 @@ function resetMixerToStartingState() {
     state.phaseA = 0;
     state.phaseB = 0;
     state.tempo = STARTING_MIXER_STATE.tempo;
+    state.followPlayhead = { master: true, Aphrase: true, Bphrase: true };
+    state.visibleCycle = { master: 0, Aphrase: 0, Bphrase: 0 };
 
     resetFixedChannel(channels.driver, STARTING_MIXER_STATE.fixedChannels.driver);
     resetFixedChannel(channels.Awheel, STARTING_MIXER_STATE.fixedChannels.Awheel);
@@ -280,7 +286,7 @@ function resetMixerToStartingState() {
     resetFlashState(state);
     resetPatterns(state, lanes);
     rebuildAllVoiceMixerStrips();
-    buildAllLanes(lanes);
+    buildAllLanes(lanes, state);
     state.mainAngle = 0;
     syncAudioStartTime(state);
     resetAudioScheduler(state);
@@ -301,7 +307,7 @@ function handleAddVoice(lane, prefix, container, color, label) {
     const voiceIndex = lane.voices.length - 1;
     createVoiceStripDOM(container, prefix, voiceIndex, color, label);
     bindChannelToVoice(prefix, voiceIndex, addVoiceChannel(channels, prefix, container, voiceIndex));
-    buildLane(lane); // Only rebuild the affected lane, not all lanes
+    buildLane(lane, state); // Only rebuild the affected lane, not all lanes
 }
 
 /**
@@ -345,7 +351,7 @@ function handleRemoveVoiceChannel(prefix, voiceIndex) {
         lane.voices[idx].channel = ch;
     });
 
-    buildLane(lane); // Only rebuild the affected lane
+    buildLane(lane, state); // Only rebuild the affected lane
 }
 
 // Shared dependency bag passing to share and animation functions
@@ -430,7 +436,7 @@ wireControls({
 // Phase 7: Build initial lane patterns and attempt to load shared state
 resetPatterns(state, lanes);
 updatePhaseUI(state, ui);
-buildAllLanes(lanes);
+buildAllLanes(lanes, state);
 
 // Async initialization: load shared state from URL, then start animation
 (async () => {
@@ -455,7 +461,8 @@ buildAllLanes(lanes);
         ui,
         state,
         lanes,
-        markCurrentButtons: (active, previousActive) => markCurrentButtons(state, lanes, active, previousActive)
+        markCurrentButtons: (active, previousActive) => markCurrentButtons(state, lanes, active, previousActive),
+        buildLane: (lane) => buildLane(lane, state)
     });
 })();
 

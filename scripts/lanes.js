@@ -115,7 +115,9 @@ export function createLanes(ui, state) {
             allowGroupNudge: true,
             color: '#ff9100',
             channelPrefix: 'master',
-            onRemoveVoice: null
+            onRemoveVoice: null,
+            stepsPerCycle: () => state.mainTeeth,
+            totalCycles: () => state.masterPhraseCycles
         },
         Aphrase: {
             container: ui.meterAPhraseGrid,
@@ -138,7 +140,9 @@ export function createLanes(ui, state) {
             allowGroupNudge: true,
             color: '#ff3366',
             channelPrefix: 'A',
-            onRemoveVoice: null
+            onRemoveVoice: null,
+            stepsPerCycle: () => state.A,
+            totalCycles: () => state.phraseCyclesA
         },
         Awheel: {
             container: ui.meterAWheelGrid,
@@ -180,7 +184,9 @@ export function createLanes(ui, state) {
             allowGroupNudge: true,
             color: '#00e5ff',
             channelPrefix: 'B',
-            onRemoveVoice: null
+            onRemoveVoice: null,
+            stepsPerCycle: () => state.B,
+            totalCycles: () => state.phraseCyclesB
         },
         Bwheel: {
             container: ui.meterBWheelGrid,
@@ -351,25 +357,26 @@ export function removeVoice(lane, index) {
 }
 
 /** Creates a single step button for a voice with click-to-toggle behavior. */
-function createStepButton(lane, voice, i) {
+function createStepButton(lane, voice, i, actualIndex) {
+    actualIndex = actualIndex ?? i;
     const btn = document.createElement('button');
     btn.className = `step-btn ${lane.className}`;
     btn.id = `${lane.stepId}-${i}`;
     btn.textContent = lane.textForStep(i);
 
     if (lane.boundary(i)) btn.classList.add('bar-boundary');
-    if (voice.selected[i]) btn.classList.add('active');
+    if (voice.selected[actualIndex]) btn.classList.add('active');
 
     btn.addEventListener('click', () => {
-        voice.selected[i] = !voice.selected[i];
-        btn.classList.toggle('active', voice.selected[i]);
+        voice.selected[actualIndex] = !voice.selected[actualIndex];
+        btn.classList.toggle('active', voice.selected[actualIndex]);
     });
 
     return btn;
 }
 
 /** Builds all step buttons for a single voice, replacing any existing content. */
-function buildVoiceButtons(lane, voice, voiceIndex) {
+function buildVoiceButtons(lane, voice, voiceIndex, state) {
     const row = document.createElement('div');
     row.className = 'voice-row';
     row.dataset.voiceIndex = voiceIndex;
@@ -395,7 +402,7 @@ function buildVoiceButtons(lane, voice, voiceIndex) {
             if (lane.onRemoveVoice) {
                 lane.onRemoveVoice(voiceIndex);
             }
-            buildMultiVoiceLane(lane);
+            buildMultiVoiceLane(lane, state);
         });
         labelArea.appendChild(removeBtn);
     }
@@ -411,15 +418,15 @@ function buildVoiceButtons(lane, voice, voiceIndex) {
 
         const nudgeDown = createNudgeButton('←', `Shift Voice ${voiceIndex + 1} left`, () => {
             rotateVoicePattern(voice, -1);
-            buildMultiVoiceLane(lane);
+            buildMultiVoiceLane(lane, state);
         });
         const nudgeReset = createNudgeButton('1', `Reset Voice ${voiceIndex + 1} to start on 1`, () => {
             resetVoicePattern(voice);
-            buildMultiVoiceLane(lane);
+            buildMultiVoiceLane(lane, state);
         }, 'voice-nudge-reset-btn');
         const nudgeUp = createNudgeButton('→', `Shift Voice ${voiceIndex + 1} right`, () => {
             rotateVoicePattern(voice, 1);
-            buildMultiVoiceLane(lane);
+            buildMultiVoiceLane(lane, state);
         });
 
         nudgeControl.append(nudgeLabel, nudgeDown, nudgeReset, nudgeUp);
@@ -441,9 +448,16 @@ function buildVoiceButtons(lane, voice, voiceIndex) {
     // Step buttons container
     const stepsContainer = document.createElement('div');
     stepsContainer.className = 'voice-steps';
+
+    const totalCycles = lane.totalCycles?.() ?? 1;
+    const stepsPerCycle = lane.stepsPerCycle?.() ?? lane.count();
+    const visibleCycle = totalCycles > 1 ? (lane._visibleCycle ?? 0) : 0;
+    const cycleStart = visibleCycle * stepsPerCycle;
+
     voice.buttons = [];
-    for (let i = 0; i < lane.count(); i++) {
-        const btn = createStepButton(lane, voice, i);
+    for (let i = 0; i < stepsPerCycle; i++) {
+        const actualIndex = totalCycles > 1 ? cycleStart + i : i;
+        const btn = createStepButton(lane, voice, i, actualIndex);
         stepsContainer.appendChild(btn);
         voice.buttons.push(btn);
     }
@@ -468,12 +482,88 @@ export function updateVoiceInstrumentLabels(lane) {
     });
 }
 
+function cycleNavKey(lane) {
+    if (lane.stepId.includes('meterA')) return 'Aphrase';
+    if (lane.stepId.includes('meterB')) return 'Bphrase';
+    return 'master';
+}
+
+function addCycleNavigation(lane, state) {
+    const totalCycles = lane.totalCycles();
+    const key = cycleNavKey(lane);
+    const current = state.visibleCycle[key];
+    const following = state.followPlayhead[key] !== false;
+
+    const viewActions = lane.container?.closest('.matrix-row')?.querySelector('.lane-view-actions');
+    if (!viewActions) return;
+
+    const existing = viewActions.querySelector('.cycle-nav');
+    if (existing) existing.remove();
+
+    const nav = document.createElement('div');
+    nav.className = 'cycle-nav';
+
+    const title = document.createElement('span');
+    title.className = 'cycle-nav-title';
+    title.textContent = 'Cycle';
+
+    const prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.className = 'cycle-nav-btn';
+    prevBtn.textContent = '\u25c0';
+    prevBtn.title = 'Previous cycle';
+    prevBtn.addEventListener('click', () => {
+        state.followPlayhead[key] = false;
+        state.visibleCycle[key] = ((state.visibleCycle[key] || 0) - 1 + totalCycles) % totalCycles;
+        buildMultiVoiceLane(lane, state);
+    });
+
+    const label = document.createElement('button');
+    label.type = 'button';
+    label.className = 'cycle-nav-label';
+    if (!following) label.classList.add('pinned');
+    label.textContent = following
+        ? `AUTO ${current + 1}/${totalCycles}`
+        : `PIN ${current + 1}/${totalCycles}`;
+    label.title = following ? 'Following playhead — click to pin' : 'Pinned — click to follow playhead';
+    label.addEventListener('click', () => {
+        state.followPlayhead[key] = !state.followPlayhead[key];
+        buildMultiVoiceLane(lane, state);
+    });
+
+    const nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.className = 'cycle-nav-btn';
+    nextBtn.textContent = '\u25b6';
+    nextBtn.title = 'Next cycle';
+    nextBtn.addEventListener('click', () => {
+        state.followPlayhead[key] = false;
+        state.visibleCycle[key] = ((state.visibleCycle[key] || 0) + 1) % totalCycles;
+        buildMultiVoiceLane(lane, state);
+    });
+
+    nav.append(title, prevBtn, label, nextBtn);
+    viewActions.appendChild(nav);
+}
+
 /** Builds all voice rows for a multi-voice lane. */
-function buildMultiVoiceLane(lane) {
+function buildMultiVoiceLane(lane, state) {
     lane.container.innerHTML = '';
     updateLaneHeader(lane);
+
+    const totalCycles = lane.totalCycles?.() ?? 1;
+    if (totalCycles > 1 && state) {
+        addCycleNavigation(lane, state);
+    }
+
+    if (state) {
+        const laneKey = lane.stepId.includes('meterA') ? 'Aphrase'
+            : lane.stepId.includes('meterB') ? 'Bphrase' : 'master';
+        lane._visibleCycle = state?.visibleCycle?.[laneKey] ?? 0;
+    }
+
     lane.voices.forEach((voice, idx) => {
-        const row = buildVoiceButtons(lane, voice, idx);
+        const row = buildVoiceButtons(lane, voice, idx, state);
         lane.container.appendChild(row);
     });
 }
@@ -522,17 +612,17 @@ function createStepButtonForSingle(lane, i) {
 }
 
 /** Builds all step buttons for a lane, replacing any existing content. */
-export function buildLane(lane) {
+export function buildLane(lane, state) {
     if (lane.isMultiVoice) {
-        buildMultiVoiceLane(lane);
+        buildMultiVoiceLane(lane, state);
     } else {
         buildSingleLane(lane);
     }
 }
 
 /** Rebuilds every lane's DOM buttons. */
-export function buildAllLanes(lanes) {
-    Object.values(lanes).forEach(buildLane);
+export function buildAllLanes(lanes, state) {
+    Object.values(lanes).forEach(lane => buildLane(lane, state));
 }
 
 function removeCurrentClass(button) {
@@ -562,14 +652,37 @@ export function wireLaneClearButtons(lanes) {
     });
 }
 
-function markMultiVoiceCurrentButtons(lane, previous, next) {
+function markMultiVoiceCurrentButtons(lane, state, previous, next) {
     const currentIndexes = Array.isArray(next) ? next : lane.voices.map(() => next);
+    const totalCycles = lane.totalCycles?.() ?? 1;
+    const stepsPerCycle = lane.stepsPerCycle?.() ?? lane.count();
 
-    lane.voices.forEach((voice, voiceIndex) => {
-        const previousIndex = Array.isArray(previous) ? previous[voiceIndex] : previous;
-        removeCurrentClass(voice.buttons[previousIndex]);
-        addCurrentClass(voice.buttons[currentIndexes[voiceIndex]]);
-    });
+    if (totalCycles > 1) {
+        const laneKey = cycleNavKey(lane);
+        const following = state?.followPlayhead?.[laneKey] !== false;
+        const visibleCycle = state?.visibleCycle?.[laneKey] ?? 0;
+        const cycleStart = visibleCycle * stepsPerCycle;
+
+        lane.voices.forEach((voice) => {
+            voice.buttons.forEach(btn => btn?.classList.remove('current'));
+        });
+
+        if (following) {
+            lane.voices.forEach((voice, voiceIndex) => {
+                const displayedCurr = currentIndexes[voiceIndex] - cycleStart;
+                if (displayedCurr >= 0 && displayedCurr < stepsPerCycle) {
+                    addCurrentClass(voice.buttons[displayedCurr]);
+                }
+            });
+        }
+    } else {
+        const previousIndexes = Array.isArray(previous) ? previous : lane.voices.map(() => previous);
+
+        lane.voices.forEach((voice, voiceIndex) => {
+            removeCurrentClass(voice.buttons[previousIndexes[voiceIndex]]);
+            addCurrentClass(voice.buttons[currentIndexes[voiceIndex]]);
+        });
+    }
 }
 
 function markSingleVoiceCurrentButtons(lane, previous, next) {
@@ -595,7 +708,7 @@ export function markCurrentButtons(state, lanes, active, previousActive = null) 
 
     for (const [key, lane, index] of mappings) {
         if (lane.isMultiVoice) {
-            markMultiVoiceCurrentButtons(lane, prev[key], index);
+            markMultiVoiceCurrentButtons(lane, state, prev[key], index);
         } else {
             markSingleVoiceCurrentButtons(lane, prev[key], index);
         }

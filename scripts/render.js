@@ -446,7 +446,7 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width) {
  *   3. Detects step transitions and triggers audio/flash effects
  *   4. Draws all three gears and both timelines
  */
-export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButtons }) {
+export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButtons, buildLane }) {
     let lastTime = null;
     const isMobile = window.matchMedia('(pointer: coarse)').matches;
     const MIN_FRAME_MS = isMobile ? 33 : 0;
@@ -546,6 +546,33 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
                 processTriggers(state, lanes, active);
             }
             if (lastActive) markCurrentButtons(lastActive, previousActive);
+
+            // Auto-follow cycle window for multi-cycle lanes
+            if (state.masterPhraseCycles > 1 && state.followPlayhead.master) {
+                const masterCycle = Math.floor(currentStep / state.mainTeeth) % state.masterPhraseCycles;
+                if (masterCycle !== state.visibleCycle.master) {
+                    state.visibleCycle.master = masterCycle;
+                    buildLane(lanes.master, state);
+                }
+            }
+
+            if (state.phraseCyclesA > 1 && state.followPlayhead.Aphrase) {
+                const aStep = getActivePhraseStep(currentStep, state.phaseA, state.teethA, state.phraseStepsA);
+                const aCycle = Math.floor(aStep / state.A);
+                if (aCycle !== state.visibleCycle.Aphrase) {
+                    state.visibleCycle.Aphrase = aCycle;
+                    buildLane(lanes.Aphrase, state);
+                }
+            }
+
+            if (state.phraseCyclesB > 1 && state.followPlayhead.Bphrase) {
+                const bStep = getActivePhraseStep(currentStep, state.phaseB, state.teethB, state.phraseStepsB);
+                const bCycle = Math.floor(bStep / state.B);
+                if (bCycle !== state.visibleCycle.Bphrase) {
+                    state.visibleCycle.Bphrase = bCycle;
+                    buildLane(lanes.Bphrase, state);
+                }
+            }
         }
 
         // Decay flash counters
@@ -598,6 +625,13 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
 
         drawMasterCycleTimeline(ctx, state, lanes, timelineX, 395, timelineWidth);
         drawFullPatternTimeline(ctx, state, lanes, timelineX, 450, timelineWidth);
+
+        // Dynamically resize canvas height to fit all timeline rows
+        const totalVoices = lanes.master.voices.length + lanes.Aphrase.voices.length + lanes.Bphrase.voices.length;
+        const minCanvasHeight = 498 + totalVoices * 18 + 20;
+        if (canvas.height !== minCanvasHeight) {
+            canvas.height = minCanvasHeight;
+        }
 
         requestAnimationFrame(animate);
     }

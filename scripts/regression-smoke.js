@@ -327,8 +327,8 @@ async function run() {
             masterSteps: 36,
             aWheelSteps: 12,
             bWheelSteps: 18,
-            aPhraseSteps: 24,
-            bPhraseSteps: 36
+            aPhraseSteps: 12,
+            bPhraseSteps: 18
         }), '12 against 18 should be accepted and rebuild all sequencers with the expected lengths.', twelveAgainstEighteen);
 
         await setSelect('#rhythmA', 17);
@@ -487,13 +487,13 @@ async function run() {
         await clickStep('#masterGrid', 2, 2);
         await clickStep('#masterGrid', 2, 6);
         await clickStep('#meterAPhraseGrid', 1, 4);
-        await clickStep('#meterAPhraseGrid', 1, 8);
+        await clickStep('#meterAPhraseGrid', 1, 2);
         await clickStep('#meterAPhraseGrid', 2, 1);
-        await clickStep('#meterAPhraseGrid', 2, 6);
+        await clickStep('#meterAPhraseGrid', 2, 3);
         await clickStep('#meterBPhraseGrid', 1, 5);
-        await clickStep('#meterBPhraseGrid', 1, 10);
+        await clickStep('#meterBPhraseGrid', 1, 2);
         await clickStep('#meterBPhraseGrid', 2, 3);
-        await clickStep('#meterBPhraseGrid', 2, 9);
+        await clickStep('#meterBPhraseGrid', 2, 6);
 
         await page.locator('#masterGrid .voice-row:nth-child(2) .voice-nudge-btn[title="Shift Voice 2 right"]').click();
         await page.locator('#meterAPhraseGrid .voice-row:nth-child(1) .voice-nudge-btn[title="Shift Voice 1 right"]').click();
@@ -525,13 +525,13 @@ async function run() {
         await clickStep('#masterGrid', 2, 2);
         await clickStep('#masterGrid', 2, 6);
         await clickStep('#meterAPhraseGrid', 1, 4);
-        await clickStep('#meterAPhraseGrid', 1, 8);
+        await clickStep('#meterAPhraseGrid', 1, 2);
         await clickStep('#meterAPhraseGrid', 2, 1);
-        await clickStep('#meterAPhraseGrid', 2, 6);
+        await clickStep('#meterAPhraseGrid', 2, 3);
         await clickStep('#meterBPhraseGrid', 1, 5);
-        await clickStep('#meterBPhraseGrid', 1, 10);
+        await clickStep('#meterBPhraseGrid', 1, 2);
         await clickStep('#meterBPhraseGrid', 2, 3);
-        await clickStep('#meterBPhraseGrid', 2, 9);
+        await clickStep('#meterBPhraseGrid', 2, 6);
 
         await page.locator('#masterGrid .voice-row:nth-child(2) .voice-nudge-btn[title="Shift Voice 2 right"]').click();
         await page.locator('#meterAPhraseGrid .voice-row:nth-child(1) .voice-nudge-btn[title="Shift Voice 1 right"]').click();

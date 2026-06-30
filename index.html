@@ -11,13 +11,13 @@
         <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
             <div id="helpModalTitle" class="modal-title">Welcome to Alan's Polyrhythm Mixer</div>
             <div class="modal-subtitle">
-                Start with two repeating counts, tap in a simple pattern, then add extra voices to build a layered groove.
+                Layer two competing meters into a groove — tap in patterns, add voices, and shape the sound.
             </div>
             <div class="modal-help-grid">
-                <div class="modal-help-item"><strong>1. Choose the feel in Polyrhythm Controls.</strong> Pick <strong>Meter A</strong>, <strong>Meter B</strong>, and a tempo. Try 3 against 4 or 5 against 4 to hear the two counts weave together.</div>
-                <div class="modal-help-item"><strong>2. Tap boxes to make a rhythm.</strong> The first pulse starts selected for the <strong>Master Cycle</strong>, <strong>Meter A</strong>, and <strong>Meter B</strong> so you can hear the groove right away.</div>
-                <div class="modal-help-item"><strong>3. Add layers with + Voice.</strong> Use <strong>Nudge</strong> to slide one rhythm, or <strong>Nudge Group</strong> to move a whole pattern together; the <strong>1</strong> button brings it back to the start.</div>
-                <div class="modal-help-item"><strong>4. Shape the sound in the Sound Mixer.</strong> Change instruments, mute parts, adjust volume, use the <strong>Master Click</strong> as a guide, then <strong>Save</strong> or <strong>Share</strong>.</div>
+                <div class="modal-help-item"><strong>Pick a polyrhythm.</strong> Choose <strong>Meter A</strong> and <strong>Meter B</strong> (try 3 against 4), set a tempo, and press <strong>Enable Audio</strong>. A default pulse is pre-tapped so you hear the groove right away.</div>
+                <div class="modal-help-item"><strong>Tap steps and add voices.</strong> Click boxes in any lane to toggle hits. <strong>+ Voice</strong> layers extra rhythms in the Master, A Phrase, or B Phrase lanes. <strong>Nudge</strong> shifts one voice; <strong>Nudge Group</strong> shifts the whole lane.</div>
+                <div class="modal-help-item"><strong>Extend with phrase lengths.</strong> Set A, B, or Master <strong>Phrase Length</strong> to 2–8 cycles for longer repeating patterns. When a lane has multiple cycles, use <strong>Cycle ◀</strong> / <strong>▶</strong> to browse — the label shows <strong>AUTO</strong> (follows the playhead) or <strong>PIN</strong> (manual view).</div>
+                <div class="modal-help-item"><strong>Mix and share.</strong> In the <strong>Sound Mixer</strong>, swap instruments, solo, mute, and adjust volume per channel. <strong>Save</strong> stores rhythms locally; <strong>Share</strong> copies a link; <strong>Reset Mixer</strong> restores defaults.</div>
             </div>
             <div class="modal-actions">
                 <button id="closeHelpModalBtn" class="modal-close-btn">Got It</button>
@@ -139,7 +139,12 @@
                         <select id="masterPhraseCycles">
                             <option value="1" selected>1 cycle</option>
                             <option value="2">2 cycles</option>
+                            <option value="3">3 cycles</option>
                             <option value="4">4 cycles</option>
+                            <option value="5">5 cycles</option>
+                            <option value="6">6 cycles</option>
+                            <option value="7">7 cycles</option>
+                            <option value="8">8 cycles</option>
                         </select>
                     </div>
                 </div>
@@ -182,10 +187,13 @@
                     <label id="masterTitle" style="color: #ff9100;">Master Wheel Sequence</label>
                     <button id="masterInfoBtn" class="lane-info-btn" aria-label="Show master wheel explanation" aria-expanded="false" aria-controls="masterDescription">?</button>
                 </div>
+            </div>
+            <div class="lane-toolbar">
                 <div class="lane-actions">
                     <button id="clearMasterBtn" class="clear-btn">Clear</button>
                     <button id="addMasterVoiceBtn" class="add-voice-btn">+ Voice</button>
                 </div>
+                <div class="lane-view-actions"></div>
             </div>
             <div id="masterDescription" class="lane-description" hidden></div>
             <div id="masterGrid" class="sequencer-container"></div>
@@ -199,9 +207,12 @@
                         <label id="titleAWheel" style="color: #ff6b8f;">Meter A Wheel Lane</label>
                         <button id="aWheelInfoBtn" class="lane-info-btn" aria-label="Show Meter A wheel explanation" aria-expanded="false" aria-controls="aWheelDescription">?</button>
                     </div>
+                </div>
+                <div class="lane-toolbar">
                     <div class="lane-actions">
                         <button id="clearAWheelBtn" class="clear-btn">Clear</button>
                     </div>
+                    <div class="lane-view-actions"></div>
                 </div>
                 <div id="aWheelDescription" class="lane-description" hidden></div>
                 <div id="meterAWheelGrid" class="sequencer-container short-lane"></div>
@@ -213,10 +224,13 @@
                         <label id="titleAPhrase" style="color: #ff3366;">Meter A Phrase Sequencer</label>
                         <button id="aPhraseInfoBtn" class="lane-info-btn" aria-label="Show Meter A phrase explanation" aria-expanded="false" aria-controls="aPhraseDescription">?</button>
                     </div>
+                </div>
+                <div class="lane-toolbar">
                     <div class="lane-actions">
                         <button id="clearAPhraseBtn" class="clear-btn">Clear</button>
                         <button id="addAPhraseVoiceBtn" class="add-voice-btn">+ Voice</button>
                     </div>
+                    <div class="lane-view-actions"></div>
                 </div>
                 <div id="aPhraseDescription" class="lane-description" hidden></div>
                 <div id="meterAPhraseGrid" class="sequencer-container"></div>
@@ -231,9 +245,12 @@
                         <label id="titleBWheel" style="color: #6ef2ff;">Meter B Wheel Lane</label>
                         <button id="bWheelInfoBtn" class="lane-info-btn" aria-label="Show Meter B wheel explanation" aria-expanded="false" aria-controls="bWheelDescription">?</button>
                     </div>
+                </div>
+                <div class="lane-toolbar">
                     <div class="lane-actions">
                         <button id="clearBWheelBtn" class="clear-btn">Clear</button>
                     </div>
+                    <div class="lane-view-actions"></div>
                 </div>
                 <div id="bWheelDescription" class="lane-description" hidden></div>
                 <div id="meterBWheelGrid" class="sequencer-container short-lane"></div>
@@ -245,10 +262,13 @@
                         <label id="titleBPhrase" style="color: #00e5ff;">Meter B Phrase Sequencer</label>
                         <button id="bPhraseInfoBtn" class="lane-info-btn" aria-label="Show Meter B phrase explanation" aria-expanded="false" aria-controls="bPhraseDescription">?</button>
                     </div>
+                </div>
+                <div class="lane-toolbar">
                     <div class="lane-actions">
                         <button id="clearBPhraseBtn" class="clear-btn">Clear</button>
                         <button id="addBPhraseVoiceBtn" class="add-voice-btn">+ Voice</button>
                     </div>
+                    <div class="lane-view-actions"></div>
                 </div>
                 <div id="bPhraseDescription" class="lane-description" hidden></div>
                 <div id="meterBPhraseGrid" class="sequencer-container"></div>
