@@ -91,6 +91,10 @@ export function getDomRefs() {
         bPhraseDescription: document.getElementById('bPhraseDescription'),
         bWheelDescription: document.getElementById('bWheelDescription'),
 
+        // Visualization explanation toggle
+        vizInfoBtn: document.getElementById('vizInfoBtn'),
+        vizDescription: document.getElementById('vizDescription'),
+
         // Mixer console containers for dynamic voice strips
         masterVoiceContainer: document.getElementById('masterVoiceContainer'),
         AVoiceContainer: document.getElementById('AVoiceContainer'),

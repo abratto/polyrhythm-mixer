@@ -54,6 +54,15 @@ export function wireControls({ ui, state, rebuildSystem, resetMixerToStartingSta
     syncResponsiveDisclosureState();
     mobileLayout.addEventListener('change', syncResponsiveDisclosureState);
 
+    if (ui.vizInfoBtn && ui.vizDescription) {
+        ui.vizInfoBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const shouldShow = ui.vizDescription.hidden;
+            ui.vizDescription.hidden = !shouldShow;
+            ui.vizInfoBtn.setAttribute('aria-expanded', String(shouldShow));
+        });
+    }
+
     // Meter A/B selectors — changing either recalculates the entire polyrhythm
     ui.selectA.addEventListener('change', () => {
         state.A = parseInt(ui.selectA.value, 10);

@@ -174,7 +174,12 @@
     </div>
 
     <details id="polyrhythmView" class="visual-guide" open>
-        <summary>Polyrhythm Visualization</summary>
+        <summary>Polyrhythm Visualization <button id="vizInfoBtn" class="lane-info-btn" aria-label="Show visualization explanation" aria-expanded="false" aria-controls="vizDescription">?</button></summary>
+        <div id="vizDescription" class="lane-description" hidden>
+            <p><strong>Three Gears.</strong> Three meshing gears as a physical analogy: the center Master Wheel rotates once per measure; each side gear meshes and spins a whole-number ratio faster. In 3-against-4, the master has 12 teeth (LCM of 3 and 4) — one side gear spins 3&times; and the other 4&times; per master rotation, realigning at the top to complete the cycle. But while the smaller gears spin faster, each full rotation defines a pulse that is <em>slower</em> than the master's per-tooth pulse — one meter divides the measure into 3 equal pulses (4&times; slower), the other into 4 equal pulses (3&times; slower). Their rates sit in a 3:4 ratio — one is 3/4 the rate of the other. Playing both divisions of the same measure at those different rates is the polyrhythm. Orange dots show your tapped steps.</p>
+            <p><strong>Master Cycle Timeline.</strong> One master cycle, left to right. The white playhead sweeps as it plays. Markers per lane: orange dots (master), pink diamonds (A cycle), cyan diamonds (B cycle), red triangles (A phrase), cyan triangles (B phrase) — one row per voice.</p>
+            <p><strong>Full Pattern Timeline.</strong> The entire repeating pattern across all cycles with C1, C2 dividers — one labeled row per voice showing every trigger over the full loop.</p>
+        </div>
         <div id="canvasContainer">
             <canvas id="simCanvas" width="960" height="580"></canvas>
         </div>
