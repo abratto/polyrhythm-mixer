@@ -164,12 +164,13 @@ async function run() {
 
     const waitForApp = async () => {
         await page.waitForSelector('#masterGrid .voice-row:first-child .step-btn', { timeout: 10000 });
-        await page.waitForSelector('#masterVoiceContainer select', { timeout: 10000 });
+        await page.waitForSelector('#sound_master_0', { timeout: 10000 });
     };
 
     const snapshot = async () => page.evaluate(() => {
         const activeIndexesFor = (selector) => Array.from(document.querySelectorAll(selector)).map(button => Array.from(button.parentElement.children).indexOf(button));
         const selectValue = (selector) => document.querySelector(selector)?.value ?? null;
+        const selectText = (selector) => document.querySelector(selector)?.selectedOptions?.[0]?.textContent?.trim() ?? null;
         const muteText = (selector) => document.querySelector(selector)?.textContent?.trim() ?? null;
 
         return {
@@ -207,12 +208,12 @@ async function run() {
                 BVoice1Sound: selectValue('#sound_B_0')
             },
             voiceLabels: {
-                master1: document.querySelector('#masterGrid .voice-row:nth-child(1) .voice-instrument-label')?.textContent?.trim() ?? null,
-                master2: document.querySelector('#masterGrid .voice-row:nth-child(2) .voice-instrument-label')?.textContent?.trim() ?? null,
-                A1: document.querySelector('#meterAPhraseGrid .voice-row:nth-child(1) .voice-instrument-label')?.textContent?.trim() ?? null,
-                A2: document.querySelector('#meterAPhraseGrid .voice-row:nth-child(2) .voice-instrument-label')?.textContent?.trim() ?? null,
-                B1: document.querySelector('#meterBPhraseGrid .voice-row:nth-child(1) .voice-instrument-label')?.textContent?.trim() ?? null,
-                B2: document.querySelector('#meterBPhraseGrid .voice-row:nth-child(2) .voice-instrument-label')?.textContent?.trim() ?? null
+                master1: selectText('#masterGrid .voice-row:nth-child(1) .voice-instrument-select'),
+                master2: selectText('#masterGrid .voice-row:nth-child(2) .voice-instrument-select'),
+                A1: selectText('#meterAPhraseGrid .voice-row:nth-child(1) .voice-instrument-select'),
+                A2: selectText('#meterAPhraseGrid .voice-row:nth-child(2) .voice-instrument-select'),
+                B1: selectText('#meterBPhraseGrid .voice-row:nth-child(1) .voice-instrument-select'),
+                B2: selectText('#meterBPhraseGrid .voice-row:nth-child(2) .voice-instrument-select')
             },
             helpLeads: Array.from(document.querySelectorAll('#helpModal .modal-help-item > strong:first-child')).map(node => node.textContent.trim())
         };

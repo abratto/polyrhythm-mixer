@@ -1196,6 +1196,20 @@
             text-transform: uppercase;
             white-space: nowrap;
         }
+        .voice-instrument-select,
+        .lane-instrument-select {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 6px;
+            border-radius: 4px;
+            background: #171721;
+            color: #e5e5ea;
+            border: 1px solid #2d2d3d;
+            max-width: 180px;
+        }
+        .lane-instrument-select {
+            margin-left: auto;
+        }
         .voice-steps {
             display: flex;
             gap: 4px;

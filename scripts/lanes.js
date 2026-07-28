@@ -11,6 +11,7 @@
  * Awheel and Bwheel remain single-voice (no pattern to layer).
  */
 import { reduceFraction } from './math.js';
+import { populateInstrumentSelect } from './audio.js';
 
 /** Returns a human-readable ratio like "3/4" for the master-to-meter relationship. */
 function masterRateLabelForMeter(state, meterValue) {
@@ -422,6 +423,28 @@ function applyGroupClasses(btn, lane, i) {
     }
 }
 
+/**
+ * Builds an inline instrument <select> for a voice. The select carries the
+ * channel's sound id so the existing audio wiring (save/load, scheduling)
+ * keeps working, and is recreated on every lane rebuild so it never goes
+ * stale. `onChange` updates the bound channel's sound.
+ */
+function buildVoiceInstrumentSelect(lane, voice, voiceIndex) {
+    const id = `sound_${lane.channelPrefix}_${voiceIndex}`;
+    const select = document.createElement('select');
+    select.id = id;
+    select.className = 'voice-instrument-select';
+    select.style.color = lane.color;
+    populateInstrumentSelect(select, voice.channel?.sound);
+    select.addEventListener('change', () => {
+        if (!voice.channel) return;
+        voice.channel.sound = select.value;
+        voice.channel.onInstrumentChange?.();
+    });
+    if (voice.channel) voice.channel.soundEl = select;
+    return select;
+}
+
 /** Creates a single step button for a voice with click-to-toggle behavior. */
 function createStepButton(lane, voice, i, actualIndex) {
     actualIndex = actualIndex ?? i;
@@ -504,12 +527,9 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     const stepsColumn = document.createElement('div');
     stepsColumn.className = 'voice-steps-column';
 
-    const instrumentLabel = document.createElement('div');
-    instrumentLabel.className = 'voice-instrument-label';
-    instrumentLabel.textContent = voiceInstrumentLabel(voice);
-    instrumentLabel.title = `Voice ${voiceIndex + 1} instrument: ${instrumentLabel.textContent}`;
-    instrumentLabel.style.color = lane.color;
-    stepsColumn.appendChild(instrumentLabel);
+    const instrumentSelect = buildVoiceInstrumentSelect(lane, voice, voiceIndex);
+    instrumentSelect.title = `Voice ${voiceIndex + 1} instrument`;
+    stepsColumn.appendChild(instrumentSelect);
 
     // Step buttons container
     const stepsContainer = document.createElement('div');
@@ -533,18 +553,16 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     return row;
 }
 
-/** Refreshes displayed instrument labels without rebuilding step buttons. */
+/** Refreshes displayed instrument selections without rebuilding step buttons. */
 export function updateVoiceInstrumentLabels(lane) {
     if (!lane.isMultiVoice || !lane.container) return;
 
     lane.voices.forEach((voice, idx) => {
         const row = lane.container.querySelector(`.voice-row[data-voice-index="${idx}"]`);
-        const label = row?.querySelector('.voice-instrument-label');
-        if (!label) return;
+        const select = row?.querySelector('.voice-instrument-select');
+        if (!select) return;
 
-        const labelText = voiceInstrumentLabel(voice);
-        label.textContent = labelText;
-        label.title = `Voice ${idx + 1} instrument: ${labelText}`;
+        if (voice.channel?.sound) select.value = voice.channel.sound;
     });
 }
 

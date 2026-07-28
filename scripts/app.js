@@ -16,7 +16,7 @@
 import { getDomRefs } from './dom.js';
 import { createState, resetFlashState, updateDerivedState, updatePhaseUI } from './state.js';
 import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons, addVoice, updateVoiceInstrumentLabels } from './lanes.js';
-import { createChannels, populateMenus, wireChannels, toggleAudio, addVoiceChannel, syncAudioStartTime, startAudioScheduler, stopAudioScheduler, resetAudioScheduler, updateWorkerScheduler } from './audio.js';
+import { createChannels, populateMenus, wireChannels, toggleAudio, addVoiceChannel, syncAudioStartTime, startAudioScheduler, stopAudioScheduler, resetAudioScheduler, updateWorkerScheduler, populateInstrumentSelect } from './audio.js';
 import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } from './controls.js';
 import { copyShareLink, loadStateFromUrl } from './share.js';
 import { closeSaveRhythmModal, closeSavedRhythmsModal, openSaveRhythmModal, openSavedRhythmsModal, saveCurrentRhythm } from './saved-rhythms.js';
@@ -31,7 +31,7 @@ const STARTING_MIXER_STATE = {
     tempo: 90,
     masterVolume: 80,
     fixedChannels: {
-        driver: { sound: 'shaker', volume: 0.6, muted: false },
+        driver: { sound: 'kick', volume: 0.6, muted: false },
         Awheel: { sound: 'shaker', volume: 0.45, muted: false },
         Bwheel: { sound: 'shaker', volume: 0.35, muted: false }
     }
@@ -62,7 +62,6 @@ function createVoiceStripDOM(container, prefix, voiceIndex, color, label) {
 
     strip.innerHTML = `
         <div class="strip-header" style="color: ${color};">${label} Voice ${voiceIndex + 1}</div>
-        <select id="sound_${id}" style="padding: 4px; width: 100%; font-size:12px;"></select>
         <div class="fader-area">
             <button id="solo_${id}" class="solo-btn">Solo</button>
             <button id="mute_${id}" class="mute-btn">Mute</button>
@@ -189,6 +188,36 @@ function initVoiceChannels() {
             bindChannelToVoice('B', idx, addVoiceChannel(channels, 'B', bContainer, idx));
         });
     }
+}
+
+/**
+ * Creates the fixed (single-voice) instrument selectors inline in their lanes:
+ * the master wheel sound in the Master lane header, and the Meter A/B wheel
+ * sounds in each wheel lane's toolbar. Created once; they live outside the
+ * rebuilt grid so they persist across meter/phrase changes (unlike the
+ * per-voice selectors, which are rebuilt with each voice row).
+ */
+function createFixedLaneInstrumentSelects() {
+    const mountForGrid = (gridId) =>
+        document.getElementById(gridId)?.closest('.matrix-row')?.querySelector('.lane-actions') || null;
+
+    const defs = [
+        { id: 'soundDriver', channel: channels.driver, mount: ui.masterHeaderContainer, color: '#ff9100' },
+        { id: 'soundAWheel', channel: channels.Awheel, mount: mountForGrid('meterAWheelGrid'), color: '#ff6b8f' },
+        { id: 'soundBWheel', channel: channels.Bwheel, mount: mountForGrid('meterBWheelGrid'), color: '#6ef2ff' }
+    ];
+
+    defs.forEach(({ id, channel, mount, color }) => {
+        if (!mount || !channel) return;
+        const select = document.createElement('select');
+        select.id = id;
+        select.className = 'lane-instrument-select';
+        select.style.color = color;
+        populateInstrumentSelect(select, channel.sound);
+        select.addEventListener('change', () => { channel.sound = select.value; });
+        channel.soundEl = select;
+        mount.appendChild(select);
+    });
 }
 
 /**
@@ -437,6 +466,7 @@ wireControls({
 resetPatterns(state, lanes);
 updatePhaseUI(state, ui);
 buildAllLanes(lanes, state);
+createFixedLaneInstrumentSelects();
 
 // Async initialization: load shared state from URL, then start animation
 (async () => {

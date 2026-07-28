@@ -242,6 +242,19 @@ export function populateMenus(channels) {
     });
 }
 
+/** Fills a <select> with the instrument catalog, selecting `selectedValue`. */
+export function populateInstrumentSelect(el, selectedValue) {
+    if (!el) return;
+    el.innerHTML = '';
+    instrumentCatalog.forEach(inst => {
+        const opt = document.createElement('option');
+        opt.value = inst.value;
+        opt.textContent = inst.label;
+        if (inst.value === selectedValue) opt.selected = true;
+        el.appendChild(opt);
+    });
+}
+
 /** Attaches input/click handlers to each fixed channel's volume fader and mute button. */
 export function wireChannels(channels) {
     const fixedChannels = ['driver', 'Awheel', 'Bwheel'];
@@ -270,10 +283,13 @@ export function wireChannels(channels) {
             });
         }
 
-        // Cache instrument changes
-        channel.soundEl.addEventListener('change', () => {
-            channel.sound = channel.soundEl.value;
-        });
+        // Cache instrument changes (soundEl is created inline in the lane,
+        // so it may not exist yet when wireChannels runs at startup)
+        if (channel.soundEl) {
+            channel.soundEl.addEventListener('change', () => {
+                channel.sound = channel.soundEl.value;
+            });
+        }
     });
 }
 
