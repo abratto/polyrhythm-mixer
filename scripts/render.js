@@ -14,35 +14,35 @@ import { getActivePhraseStep, getActiveWheelStep, getMeshedWheelAngle } from './
  * Updates flash counters and lastActive tracking for visual step highlighting.
  * Audio triggers are handled independently by the audio scheduler loop.
  */
-function processTriggers(state, lanes, active) {
+function processTriggers(state, lanes, active, channels) {
     if (active.master !== state.lastActive.master) {
         lanes.master.voices.forEach((voice) => {
-            if (voice.selected[active.master]) state.flash.custom = 12;
+            if (voice.selected[active.master] && !voice.channel?.silenced) state.flash.custom = 12;
         });
         state.lastActive.master = active.master;
     }
 
     if (active.Aphrase !== state.lastActive.Aphrase) {
         lanes.Aphrase.voices.forEach((voice) => {
-            if (voice.selected[active.Aphrase]) state.flash.A = 12;
+            if (voice.selected[active.Aphrase] && !voice.channel?.silenced) state.flash.A = 12;
         });
         state.lastActive.Aphrase = active.Aphrase;
     }
 
     if (active.Awheel !== state.lastActive.Awheel) {
-        if (lanes.Awheel.selected[active.Awheel]) state.flash.A = 12;
+        if (lanes.Awheel.selected[active.Awheel] && !lanes.Awheel.channel?.silenced) state.flash.A = 12;
         state.lastActive.Awheel = active.Awheel;
     }
 
     if (active.Bphrase !== state.lastActive.Bphrase) {
         lanes.Bphrase.voices.forEach((voice) => {
-            if (voice.selected[active.Bphrase]) state.flash.B = 12;
+            if (voice.selected[active.Bphrase] && !voice.channel?.silenced) state.flash.B = 12;
         });
         state.lastActive.Bphrase = active.Bphrase;
     }
 
     if (active.Bwheel !== state.lastActive.Bwheel) {
-        if (lanes.Bwheel.selected[active.Bwheel]) state.flash.B = 12;
+        if (lanes.Bwheel.selected[active.Bwheel] && !lanes.Bwheel.channel?.silenced) state.flash.B = 12;
         state.lastActive.Bwheel = active.Bwheel;
     }
 }
@@ -446,7 +446,7 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width) {
  *   3. Detects step transitions and triggers audio/flash effects
  *   4. Draws all three gears and both timelines
  */
-export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButtons, buildLane }) {
+export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCurrentButtons, buildLane }) {
     let lastTime = null;
     const isMobile = window.matchMedia('(pointer: coarse)').matches;
     const MIN_FRAME_MS = isMobile ? 33 : 0;
@@ -505,6 +505,12 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
             }
         }
 
+        // Compact playhead in the sticky transport bar tracks master-cycle progress.
+        if (ui && ui.miniPlayhead) {
+            const cycleProgress = (state.mainAngle % (2 * Math.PI)) / (2 * Math.PI);
+            ui.miniPlayhead.style.left = `${cycleProgress * 100}%`;
+        }
+
           // Calculate gear geometry
           // All gears share the same module (tooth size) so teeth mesh properly.
           // The master gear has a fixed size, and smaller gears are scaled proportionally
@@ -542,7 +548,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
         const currentQuarter = Math.floor(state.mainAngle / quarterSize);
         const prevQuarter = Math.floor(prevMainAngle / quarterSize);
 
-        if (currentQuarter !== prevQuarter) {
+        if (currentQuarter !== prevQuarter && !(channels && channels.driver && channels.driver.silenced)) {
             state.flash.driver = 12;
         }
 
@@ -559,7 +565,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
                     Bwheel: getActiveWheelStep(s, state.phaseB, state.teethB, state.B)
                 };
                 lastActive = active;
-                processTriggers(state, lanes, active);
+                processTriggers(state, lanes, active, channels);
             }
             if (lastActive) markCurrentButtons(lastActive, previousActive);
 

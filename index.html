@@ -50,15 +50,21 @@
 
     <h1>Alan's Polyrhythm Mixer</h1>
 
+    <div id="stickyBar" class="sticky-bar">
+        <div class="transport-controls">
+            <button id="playBtn" class="transport-btn">Play</button>
+            <button id="stopBtn" class="transport-btn">Stop</button>
+            <span id="transportReadout" class="transport-readout">Stopped</span>
+        </div>
+        <div class="mini-playhead" aria-hidden="true">
+            <div id="miniPlayhead" class="mini-playhead-dot"></div>
+        </div>
+    </div>
+
     <div class="rack-unit config-panel">
         <div class="config-layout">
             <div class="action-row">
                 <button id="audioBtn">Enable Audio</button>
-                <div class="transport-controls">
-                    <button id="playBtn" class="transport-btn">Play</button>
-                    <button id="stopBtn" class="transport-btn">Stop</button>
-                    <span id="transportReadout" class="transport-readout">Stopped</span>
-                </div>
                 <div class="secondary-actions">
                     <button id="saveRhythmBtn">Save</button>
                     <button id="loadRhythmBtn">Load</button>
@@ -164,7 +170,7 @@
                         </div>
                     </div>
                     <div class="control-group master-volume-group">
-                        <label>Master Volume</label>
+                        <label>Master Output</label>
                         <div class="volume-display">
                             <input type="range" id="masterVolumeSlider" min="0" max="100" value="80" />
                             <span class="volume-value" id="masterVolumeLabel">80</span>
@@ -290,8 +296,8 @@
           <div class="section-label">Sound Mixer</div>
           <!-- Row 1: Fixed controls (horizontal) -->
           <div class="fixed-controls-row">
-              <div class="mixer-strip">
-                  <div class="strip-header" style="color: #7a8a9e;">Master</div>
+                   <div class="mixer-strip">
+                   <div class="strip-header" style="color: #7a8a9e;" title="Master wheel channel fader">Master Wheel</div>
                   <div class="fader-area">
                       <button id="soloDriver" class="solo-btn">Solo</button>
                       <button id="muteDriver" class="mute-btn">Mute</button>

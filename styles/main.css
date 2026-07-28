@@ -1364,3 +1364,160 @@
                 font-size: 12px;
             }
         }
+
+        /* ----- UX improvements: sticky transport, playhead column, mix dimming ----- */
+
+        /* Sticky transport bar keeps playback orientation while scrolling lanes. */
+        .sticky-bar {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            background: rgba(12, 12, 18, 0.92);
+            backdrop-filter: blur(6px);
+            border: 1px solid #232332;
+            border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Compact playhead track (one master cycle). */
+        .mini-playhead {
+            position: relative;
+            flex: 1;
+            height: 10px;
+            min-width: 80px;
+            background: #1c1c26;
+            border: 1px solid #2d2d3d;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .mini-playhead-dot {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 3px;
+            background: #ffea00;
+            box-shadow: 0 0 8px rgba(255, 234, 0, 0.8);
+            border-radius: 999px;
+        }
+
+        /* Moving playhead column overlay — replaces per-button outlines as the
+           primary play-position indicator. */
+        .lane-playhead {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 2;
+            background: linear-gradient(to bottom, rgba(255, 234, 0, 0.16), rgba(255, 234, 0, 0.05));
+            border-left: 1px solid rgba(255, 234, 0, 0.55);
+            border-right: 1px solid rgba(255, 234, 0, 0.55);
+            box-shadow: 0 0 10px rgba(255, 234, 0, 0.25);
+            transition: left 60ms linear, width 60ms linear, opacity 120ms ease;
+        }
+
+        /* Softened per-button current marker (the column carries the read now). */
+        .step-btn.current {
+            box-shadow: inset 0 0 0 2px rgba(255, 234, 0, 0.7);
+        }
+
+        .step-btn {
+            touch-action: none;
+        }
+
+        /* Dim/suppress a lane (or voice row) when its channel is muted or another
+           channel is soloed. */
+        .voice-row.lane-muted {
+            opacity: 0.38;
+            filter: saturate(0.35);
+        }
+        .voice-row.lane-muted .step-btn.active {
+            box-shadow: none;
+        }
+        .sequencer-container.lane-muted {
+            opacity: 0.4;
+            filter: saturate(0.35);
+        }
+
+        /* "Playhead is in another cycle" cue for PINned multi-cycle lanes. */
+        .lane-cycle-cue {
+            position: absolute;
+            top: 4px;
+            right: 6px;
+            z-index: 3;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: #fbbf24;
+            background: rgba(251, 191, 36, 0.12);
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            border-radius: 4px;
+            padding: 2px 6px;
+            pointer-events: none;
+        }
+
+        /* Always-visible Pulse (per cycle) / Phrase (across cycles) hint. */
+        .lane-kind-hint {
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            border: 1px solid currentColor;
+            border-radius: 999px;
+            padding: 1px 6px;
+            opacity: 0.85;
+            white-space: nowrap;
+        }
+
+        /* Per-lane editing controls. */
+        .lane-edit-controls {
+            display: inline-flex;
+            gap: 4px;
+            margin-left: 6px;
+        }
+        .edit-btn {
+            background-color: #272735;
+            border: 1px solid #3f3f4e;
+            border-radius: 4px;
+            color: #cfcfd8;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 700;
+            line-height: 1;
+            padding: 4px 8px;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .edit-btn:hover {
+            background-color: #3a3a4c;
+            color: #fff;
+        }
+        .voice-edit-controls {
+            display: inline-flex;
+            gap: 3px;
+            margin-left: 4px;
+        }
+        .edit-btn-sm {
+            padding: 2px 6px;
+            font-size: 9px;
+        }
+
+        @media (max-width: 720px) {
+            .sticky-bar {
+                flex-wrap: wrap;
+            }
+            /* Step buttons wrap on narrow screens, so the column overlay can't
+               align; fall back to the per-button current marker. */
+            .lane-playhead {
+                display: none;
+            }
+        }

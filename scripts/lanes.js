@@ -13,6 +13,67 @@
 import { reduceFraction } from './math.js';
 import { populateInstrumentSelect } from './audio.js';
 
+/**
+ * Tracks an in-progress click-drag paint across step buttons. Only one lane
+ * can paint at a time (a single global pointer is down). `lane._anchorIndex`
+ * remembers the last clicked step so shift-click can select a range.
+ */
+let _activeDrag = null;
+if (typeof window !== 'undefined') {
+    window.addEventListener('pointerup', () => { _activeDrag = null; });
+}
+
+function setStepValue(arr, i, val, btn) {
+    arr[i] = val;
+    if (btn) {
+        btn.classList.toggle('active', val);
+        btn.setAttribute('aria-pressed', String(val));
+    }
+}
+
+/**
+ * Wires click / drag / shift / right-click editing onto a single step button.
+ *   - plain click or click-drag: paints a run of steps to the new toggle value
+ *   - shift-click: toggles a contiguous range (from the last clicked step)
+ *   - right-click: clears that step
+ * `isSingle` distinguishes single-voice lanes (state on `lane.selected`) from
+ * multi-voice lanes (state on `voice.selected`).
+ */
+function attachStepHandlers(btn, lane, voice, index, isSingle) {
+    const getArr = () => isSingle ? lane.selected : voice.selected;
+    const getBtn = (i) => isSingle ? lane.buttons[i] : voice.buttons[i];
+    btn.setAttribute('aria-pressed', String(!!getArr()[index]));
+
+    btn.addEventListener('pointerdown', (e) => {
+        if (e.button === 2) return; // right-click handled by contextmenu
+        e.preventDefault();
+        if (e.shiftKey) {
+            const anchor = (lane._anchorIndex != null) ? lane._anchorIndex : index;
+            const [a, b] = anchor <= index ? [anchor, index] : [index, anchor];
+            const arr = getArr();
+            for (let i = a; i <= b; i++) setStepValue(arr, i, true, getBtn(i));
+            lane._anchorIndex = index;
+            return;
+        }
+        const arr = getArr();
+        const val = !arr[index];
+        _activeDrag = { lane, value: val, anchorIndex: index };
+        lane._anchorIndex = index;
+        setStepValue(arr, index, val, btn);
+    });
+
+    btn.addEventListener('pointerenter', (e) => {
+        if (!_activeDrag || _activeDrag.lane !== lane) return;
+        if (e.buttons === 0) { _activeDrag = null; return; }
+        setStepValue(getArr(), index, _activeDrag.value, btn);
+    });
+
+    btn.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        setStepValue(getArr(), index, false, btn);
+    });
+}
+
 /** Returns a human-readable ratio like "3/4" for the master-to-meter relationship. */
 function masterRateLabelForMeter(state, meterValue) {
     return reduceFraction(state.mainTeeth / meterValue, state.mainTeeth);
@@ -165,7 +226,9 @@ export function createLanes(ui, state) {
             stepId: 'meterA-phrase-step',
             count: () => state.phraseStepsA,
             label: () => 'Meter A Phrase',
-            description: () => `${state.phraseCyclesA} master cycle phrase • ${state.phraseStepsA} steps • clocked at ${masterRateLabelForMeter(state, state.A)} master rate`,
+            kind: 'phrase',
+            kindHint: 'across cycles',
+            description: () => `Phrase (across cycles): ${state.phraseCyclesA} master cycle phrase • ${state.phraseStepsA} steps • clocked at ${masterRateLabelForMeter(state, state.A)} master rate`,
             titleEl: ui.titleAPhrase,
             descriptionEl: ui.aPhraseDescription,
             infoBtn: ui.aPhraseInfoBtn,
@@ -189,8 +252,10 @@ export function createLanes(ui, state) {
             className: 'meterA-wheel-btn',
             stepId: 'meterA-wheel-step',
             count: () => state.A,
-            label: () => 'Meter A Wheel',
-            description: () => `${state.A} equal placements within one master cycle`,
+            label: () => 'Meter A Pulse',
+            kind: 'pulse',
+            kindHint: 'per cycle',
+            description: () => `Pulse (per cycle): ${state.A} equal placements within one master cycle`,
             titleEl: ui.titleAWheel,
             descriptionEl: ui.aWheelDescription,
             infoBtn: ui.aWheelInfoBtn,
@@ -213,7 +278,9 @@ export function createLanes(ui, state) {
             stepId: 'meterB-phrase-step',
             count: () => state.phraseStepsB,
             label: () => 'Meter B Phrase',
-            description: () => `${state.phraseCyclesB} master cycle phrase • ${state.phraseStepsB} steps • clocked at ${masterRateLabelForMeter(state, state.B)} master rate`,
+            kind: 'phrase',
+            kindHint: 'across cycles',
+            description: () => `Phrase (across cycles): ${state.phraseCyclesB} master cycle phrase • ${state.phraseStepsB} steps • clocked at ${masterRateLabelForMeter(state, state.B)} master rate`,
             titleEl: ui.titleBPhrase,
             descriptionEl: ui.bPhraseDescription,
             infoBtn: ui.bPhraseInfoBtn,
@@ -237,8 +304,10 @@ export function createLanes(ui, state) {
             className: 'meterB-wheel-btn',
             stepId: 'meterB-wheel-step',
             count: () => state.B,
-            label: () => 'Meter B Wheel',
-            description: () => `${state.B} equal placements within one master cycle`,
+            label: () => 'Meter B Pulse',
+            kind: 'pulse',
+            kindHint: 'per cycle',
+            description: () => `Pulse (per cycle): ${state.B} equal placements within one master cycle`,
             titleEl: ui.titleBWheel,
             descriptionEl: ui.bWheelDescription,
             infoBtn: ui.bWheelInfoBtn,
@@ -261,6 +330,24 @@ function updateLaneHeader(lane) {
         lane.descriptionEl.textContent = lane.description();
     }
     ensureGroupNudgeControl(lane);
+    ensureKindHint(lane);
+}
+
+/** Renders the always-visible Pulse/Phrase kind hint next to the lane title. */
+function ensureKindHint(lane) {
+    if (!lane.kindHint || !lane.titleEl) return;
+    const group = lane.titleEl.parentElement;
+    if (!group) return;
+    let hint = group.querySelector('.lane-kind-hint');
+    if (!hint) {
+        hint = document.createElement('span');
+        hint.className = 'lane-kind-hint';
+        group.appendChild(hint);
+    }
+    hint.textContent = lane.kindHint;
+    hint.classList.toggle('kind-pulse', lane.kind === 'pulse');
+    hint.classList.toggle('kind-phrase', lane.kind === 'phrase');
+    if (lane.color) hint.style.color = lane.color;
 }
 
 function createNudgeButton(label, title, onClick, className = 'voice-nudge-btn') {
@@ -456,10 +543,7 @@ function createStepButton(lane, voice, i, actualIndex) {
     applyGroupClasses(btn, lane, i);
     if (voice.selected[actualIndex]) btn.classList.add('active');
 
-    btn.addEventListener('click', () => {
-        voice.selected[actualIndex] = !voice.selected[actualIndex];
-        btn.classList.toggle('active', voice.selected[actualIndex]);
-    });
+    attachStepHandlers(btn, lane, voice, actualIndex, false);
 
     return btn;
 }
@@ -522,6 +606,9 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         labelArea.appendChild(nudgeControl);
     }
 
+    // Per-voice Copy/Paste (single-voice granularity) inside each multi-voice row
+    labelArea.appendChild(createVoiceEditControls(lane, voiceIndex));
+
     row.appendChild(labelArea);
 
     const stepsColumn = document.createElement('div');
@@ -534,6 +621,7 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     // Step buttons container
     const stepsContainer = document.createElement('div');
     stepsContainer.className = 'voice-steps';
+    stepsContainer.style.position = 'relative';
 
     const totalCycles = lane.totalCycles?.() ?? 1;
     const stepsPerCycle = lane.stepsPerCycle?.() ?? lane.count();
@@ -547,6 +635,15 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         stepsContainer.appendChild(btn);
         voice.buttons.push(btn);
     }
+
+    // Per-voice playhead column overlay (spans this voice's step row).
+    const playhead = document.createElement('div');
+    playhead.className = 'lane-playhead';
+    playhead.setAttribute('aria-hidden', 'true');
+    stepsContainer.appendChild(playhead);
+    lane._playheads = lane._playheads || [];
+    lane._playheads.push(playhead);
+
     stepsColumn.appendChild(stepsContainer);
     row.appendChild(stepsColumn);
 
@@ -633,6 +730,8 @@ function addCycleNavigation(lane, state) {
 /** Builds all voice rows for a multi-voice lane. */
 function buildMultiVoiceLane(lane, state) {
     lane.container.innerHTML = '';
+    lane.container.style.position = 'relative';
+    lane._playheads = [];
     updateLaneHeader(lane);
 
     const totalCycles = lane.totalCycles?.() ?? 1;
@@ -650,18 +749,34 @@ function buildMultiVoiceLane(lane, state) {
         const row = buildVoiceButtons(lane, voice, idx, state);
         lane.container.appendChild(row);
     });
+
+    // "Playhead is in another cycle" cue (shown when this lane is PINned away
+    // from the cycle currently playing).
+    const cue = document.createElement('div');
+    cue.className = 'lane-cycle-cue';
+    cue.hidden = true;
+    lane.container.appendChild(cue);
+    lane._cue = cue;
+
+    applyLaneMixState(lane);
 }
 
 /** Builds a single-voice lane. */
 function buildSingleLane(lane) {
     lane.container.innerHTML = '';
     updateLaneHeader(lane);
+    lane.container.style.position = 'relative';
     lane.buttons = [];
     for (let i = 0; i < lane.count(); i++) {
         const btn = createStepButtonForSingle(lane, i);
         lane.container.appendChild(btn);
         lane.buttons.push(btn);
     }
+    const playhead = document.createElement('div');
+    playhead.className = 'lane-playhead lane-playhead-single';
+    playhead.setAttribute('aria-hidden', 'true');
+    lane.container.appendChild(playhead);
+    lane._playhead = playhead;
 }
 
 /** Attaches click handlers to each lane's inline explanation toggle. */
@@ -687,10 +802,7 @@ function createStepButtonForSingle(lane, i) {
     applyGroupClasses(btn, lane, i);
     if (lane.selected[i]) btn.classList.add('active');
 
-    btn.addEventListener('click', () => {
-        lane.selected[i] = !lane.selected[i];
-        btn.classList.toggle('active', lane.selected[i]);
-    });
+    attachStepHandlers(btn, lane, null, i, true);
 
     return btn;
 }
@@ -702,6 +814,43 @@ export function buildLane(lane, state) {
     } else {
         buildSingleLane(lane);
     }
+    applyLaneMixState(lane);
+}
+
+/**
+ * Dim/suppress a lane (or individual voice rows) when its mixer channel is
+ * muted or when another channel is soloed. Driven by `channel.silenced`,
+ * which `audio.js` recomputes via `refreshSilenced()` on every mix change.
+ */
+function setVoiceRowDim(lane, voiceIndex, dim) {
+    const row = lane.container?.querySelector(`.voice-row[data-voice-index="${voiceIndex}"]`);
+    if (row) row.classList.toggle('lane-muted', dim);
+}
+
+function reflectLaneMix(lane) {
+    if (!lane.isMultiVoice) return;
+    lane.voices.forEach((voice, i) => {
+        setVoiceRowDim(lane, i, !!voice.channel?.silenced);
+    });
+}
+
+function reflectLaneMixSingle(lane) {
+    const silenced = lane.channel?.silenced;
+    if (lane.container) lane.container.classList.toggle('lane-muted', !!silenced);
+}
+
+function applyLaneMixState(lane) {
+    if (lane.isMultiVoice) reflectLaneMix(lane);
+    else reflectLaneMixSingle(lane);
+}
+
+/** Re-applies mix-driven dimming across every lane. Called by `onMixChange`. */
+export function applyMixVisuals(lanes) {
+    reflectLaneMix(lanes.master);
+    reflectLaneMix(lanes.Aphrase);
+    reflectLaneMix(lanes.Bphrase);
+    reflectLaneMixSingle(lanes.Awheel);
+    reflectLaneMixSingle(lanes.Bwheel);
 }
 
 /** Rebuilds every lane's DOM buttons. */
@@ -736,10 +885,145 @@ export function wireLaneClearButtons(lanes) {
     });
 }
 
+/** Replaces a lane's pattern with a random one (~40% density). */
+function randomizeLane(lane) {
+    if (lane.isMultiVoice) {
+        lane.voices.forEach(v => {
+            for (let i = 0; i < v.selected.length; i++) v.selected[i] = Math.random() < 0.4;
+        });
+    } else {
+        for (let i = 0; i < lane.selected.length; i++) lane.selected[i] = Math.random() < 0.4;
+    }
+    buildLane(lane);
+}
+
+/** Reverses every voice's pattern in place. */
+function reverseLane(lane) {
+    if (lane.isMultiVoice) lane.voices.forEach(v => v.selected.reverse());
+    else lane.selected.reverse();
+    buildLane(lane);
+}
+
+let _laneClipboard = null;
+
+/** Captures the lane's current pattern for later paste. */
+function copyLane(lane) {
+    if (lane.isMultiVoice) {
+        _laneClipboard = { multi: true, voices: lane.voices.map(v => [...v.selected]) };
+    } else {
+        _laneClipboard = { multi: false, selected: [...lane.selected] };
+    }
+}
+
+/** Pastes a previously copied pattern into the lane (voice/step counts must match). */
+function pasteLane(lane) {
+    if (!_laneClipboard) return;
+    if (_laneClipboard.multi && lane.isMultiVoice) {
+        const n = Math.min(_laneClipboard.voices.length, lane.voices.length);
+        for (let vi = 0; vi < n; vi++) {
+            const src = _laneClipboard.voices[vi];
+            const dst = lane.voices[vi].selected;
+            const len = Math.min(src.length, dst.length);
+            for (let i = 0; i < len; i++) dst[i] = src[i];
+        }
+    } else if (!_laneClipboard.multi && !lane.isMultiVoice) {
+        const src = _laneClipboard.selected;
+        const dst = lane.selected;
+        const len = Math.min(src.length, dst.length);
+        for (let i = 0; i < len; i++) dst[i] = src[i];
+    }
+    buildLane(lane);
+}
+
+/** Single-voice clipboard for per-voice copy/paste. */
+let _voiceClipboard = null;
+
+function copyVoice(voice) {
+    _voiceClipboard = [...voice.selected];
+}
+
+function pasteVoice(lane, voice) {
+    if (!_voiceClipboard) return;
+    const dst = voice.selected;
+    const len = Math.min(_voiceClipboard.length, dst.length);
+    for (let i = 0; i < len; i++) dst[i] = _voiceClipboard[i];
+    buildLane(lane);
+}
+
+/**
+ * Builds the per-voice Copy/Paste controls shown inside each multi-voice row,
+ * so a single voice can be copied and pasted into another voice (same lane or
+ * a different lane).
+ */
+function createVoiceEditControls(lane, voiceIndex) {
+    const group = document.createElement('div');
+    group.className = 'voice-edit-controls';
+    const mk = (label, title, fn) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'edit-btn edit-btn-sm';
+        b.textContent = label;
+        b.title = title;
+        b.addEventListener('click', fn);
+        return b;
+    };
+    group.append(
+        mk('Copy', `Copy voice ${voiceIndex + 1}`, () => copyVoice(lane.voices[voiceIndex])),
+        mk('Paste', `Paste into voice ${voiceIndex + 1}`, () => pasteVoice(lane, lane.voices[voiceIndex]))
+    );
+    return group;
+}
+
+/**
+ * Adds per-lane editing buttons (Randomize / Reverse / Copy / Paste) to the
+ * lane toolbar. Called once per lane during initialization.
+ */
+export function addLaneEditControls(lane) {
+    if (!lane.clearBtn) return;
+    const parent = lane.clearBtn.parentElement;
+    if (!parent || parent.querySelector('.lane-edit-controls')) return;
+
+    const mkBtn = (label, title, fn) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'edit-btn';
+        b.textContent = label;
+        b.title = title;
+        b.addEventListener('click', fn);
+        return b;
+    };
+
+    const group = document.createElement('div');
+    group.className = 'lane-edit-controls';
+    group.setAttribute('aria-label', `Edit ${lane.label()} pattern`);
+    const name = lane.label();
+    group.append(
+        mkBtn('Random', `Randomize ${name}`, () => randomizeLane(lane)),
+        mkBtn('Reverse', `Reverse ${name}`, () => reverseLane(lane)),
+        mkBtn('Copy Lane', `Copy entire ${name} (all voices)`, () => copyLane(lane)),
+        mkBtn('Paste Lane', `Paste into entire ${name} (all voices)`, () => pasteLane(lane))
+    );
+    parent.appendChild(group);
+}
+
+/** Moves a lane's playhead column overlay to the given visible step index. */
+function positionPlayhead(overlay, displayedIndex, stepsPerCycle) {
+    if (!overlay) return;
+    if (displayedIndex < 0 || displayedIndex >= stepsPerCycle) {
+        overlay.style.opacity = '0';
+        return;
+    }
+    overlay.style.opacity = '1';
+    overlay.style.left = (displayedIndex / stepsPerCycle) * 100 + '%';
+    overlay.style.width = (1 / stepsPerCycle) * 100 + '%';
+}
+
 function markMultiVoiceCurrentButtons(lane, state, previous, next) {
     const currentIndexes = Array.isArray(next) ? next : lane.voices.map(() => next);
     const totalCycles = lane.totalCycles?.() ?? 1;
     const stepsPerCycle = lane.stepsPerCycle?.() ?? lane.count();
+
+    if (lane._playheads) lane._playheads.forEach(p => { if (p) p.style.opacity = '0'; });
 
     if (totalCycles > 1) {
         const laneKey = cycleNavKey(lane);
@@ -756,8 +1040,29 @@ function markMultiVoiceCurrentButtons(lane, state, previous, next) {
                 const displayedCurr = currentIndexes[voiceIndex] - cycleStart;
                 if (displayedCurr >= 0 && displayedCurr < stepsPerCycle) {
                     addCurrentClass(voice.buttons[displayedCurr]);
+                    positionPlayhead(lane._playheads?.[voiceIndex], displayedCurr, stepsPerCycle);
                 }
             });
+            if (lane._cue) lane._cue.hidden = true;
+        } else {
+            // Pinned: only highlight if the active step lives in the visible cycle.
+            lane.voices.forEach((voice, voiceIndex) => {
+                const activeInVisible = currentIndexes[voiceIndex] - cycleStart;
+                if (activeInVisible >= 0 && activeInVisible < stepsPerCycle) {
+                    addCurrentClass(voice.buttons[activeInVisible]);
+                    positionPlayhead(lane._playheads?.[voiceIndex], activeInVisible, stepsPerCycle);
+                }
+            });
+            const anyElsewhere = lane.voices.some((_, vi) => Math.floor(currentIndexes[vi] / stepsPerCycle) !== visibleCycle);
+            if (lane._cue) {
+                if (anyElsewhere) {
+                    const activeCycle = Math.floor(currentIndexes[0] / stepsPerCycle);
+                    lane._cue.textContent = `▶ playhead in cycle ${activeCycle + 1}`;
+                    lane._cue.hidden = false;
+                } else {
+                    lane._cue.hidden = true;
+                }
+            }
         }
     } else {
         const previousIndexes = Array.isArray(previous) ? previous : lane.voices.map(() => previous);
@@ -765,13 +1070,16 @@ function markMultiVoiceCurrentButtons(lane, state, previous, next) {
         lane.voices.forEach((voice, voiceIndex) => {
             removeCurrentClass(voice.buttons[previousIndexes[voiceIndex]]);
             addCurrentClass(voice.buttons[currentIndexes[voiceIndex]]);
+            positionPlayhead(lane._playheads?.[voiceIndex], currentIndexes[voiceIndex], stepsPerCycle);
         });
+        if (lane._cue) lane._cue.hidden = true;
     }
 }
 
 function markSingleVoiceCurrentButtons(lane, previous, next) {
     removeCurrentClass(lane.buttons[previous]);
     addCurrentClass(lane.buttons[next]);
+    positionPlayhead(lane._playhead, next, lane.count());
 }
 
 /**

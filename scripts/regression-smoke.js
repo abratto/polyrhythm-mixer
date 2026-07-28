@@ -270,7 +270,7 @@ async function run() {
         assert(same(initial.active.master1, [0]), 'Master voice 1 should start on pulse 1.', initial.active.master1);
         assert(same(initial.active.A1, [0]), 'Meter A voice 1 should start on pulse 1.', initial.active.A1);
         assert(same(initial.active.B1, [0]), 'Meter B voice 1 should start on pulse 1.', initial.active.B1);
-        assert(initial.mixer.masterHeader === 'Master', 'Master strip should be present.', initial.mixer);
+        assert(initial.mixer.masterHeader === 'Master Wheel', 'Master wheel strip should be present and clearly labelled.', initial.mixer);
         assert(initial.voiceLabels.master1 === 'Bass Drum (Kick)' && initial.voiceLabels.A1 === 'Woodblock Clack' && initial.voiceLabels.B1 === 'Analog Cowbell', 'Voice rows should display their default mixer instruments.', initial.voiceLabels);
         assert(initial.helpLeads.length === 4, 'Help modal should expose four bold lead sentences.', initial.helpLeads);
         assert(await page.locator('#resetBtn').textContent() === 'Reset Mixer', 'Reset button should clearly describe full mixer reset.');

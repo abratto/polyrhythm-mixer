@@ -82,6 +82,7 @@ export function createChannels() {
             volume: 0.6,
             muted: false,
             soloed: false,
+            silenced: false,
             gainScale: 0.6
         },
         Awheel: {
@@ -93,6 +94,7 @@ export function createChannels() {
             volume: 0.45,
             muted: false,
             soloed: false,
+            silenced: false,
             gainScale: 0.5
         },
         Bwheel: {
@@ -104,6 +106,7 @@ export function createChannels() {
             volume: 0.35,
             muted: false,
             soloed: false,
+            silenced: false,
             gainScale: 0.4
         },
         // Multi-voice channels — populated dynamically
@@ -130,6 +133,7 @@ export function createVoiceChannel(container, voiceIndex, prefix, defaults, gain
         volume: 0.5,
         muted: false,
         soloed: false,
+        silenced: false,
         gainScale,
         voiceIndex,
         prefix,
@@ -183,6 +187,7 @@ export function addVoiceChannel(channels, prefix, container, voiceIndex) {
                 channel.muted = !channel.muted;
                 channel.muteEl.classList.toggle('muted', channel.muted);
                 channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
+                refreshSilenced(channels);
             });
         }
 
@@ -192,6 +197,7 @@ export function addVoiceChannel(channels, prefix, container, voiceIndex) {
                 channel.soloed = !channel.soloed;
                 channel.soloEl.classList.toggle('soloed', channel.soloed);
                 channel.soloEl.textContent = channel.soloed ? 'Soloed' : 'Solo';
+                refreshSilenced(channels);
             });
         }
 
@@ -272,6 +278,7 @@ export function wireChannels(channels) {
             channel.muted = !channel.muted;
             channel.muteEl.classList.toggle('muted', channel.muted);
             channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
+            refreshSilenced(channels);
         });
 
         // Solo button handler
@@ -280,6 +287,7 @@ export function wireChannels(channels) {
                 channel.soloed = !channel.soloed;
                 channel.soloEl.classList.toggle('soloed', channel.soloed);
                 channel.soloEl.textContent = channel.soloed ? 'Soloed' : 'Solo';
+                refreshSilenced(channels);
             });
         }
 
@@ -1800,6 +1808,28 @@ const instruments = {
     cajon_bass: playCajonBass,
     cajon_slap: playCajonSlap
 };
+
+/**
+ * Recomputes each channel's effective `silenced` flag (muted, or another
+ * channel is soloed) and notifies the UI so lanes can dim/suppress. Called
+ * from every mute/solo toggle and from bulk state restores (share/reset).
+ */
+export function refreshSilenced(channels) {
+    const anySolo = isAnyChannelSoloed(channels);
+    const all = [
+        channels.driver,
+        channels.Awheel,
+        channels.Bwheel,
+        ...(channels.masterVoices || []),
+        ...(channels.Avoices || []),
+        ...(channels.Bvoices || [])
+    ];
+    for (const c of all) {
+        if (!c) continue;
+        c.silenced = !!(c.muted || (anySolo && !c.soloed));
+    }
+    if (typeof channels.onMixChange === 'function') channels.onMixChange();
+}
 
 /** Returns true if any channel in the mixer has solo enabled. */
 function isAnyChannelSoloed(channels) {

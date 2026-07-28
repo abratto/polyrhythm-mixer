@@ -15,8 +15,8 @@
  */
 import { getDomRefs } from './dom.js';
 import { createState, resetFlashState, updateDerivedState, updatePhaseUI } from './state.js';
-import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons, addVoice, updateVoiceInstrumentLabels } from './lanes.js';
-import { createChannels, populateMenus, wireChannels, toggleAudio, addVoiceChannel, syncAudioStartTime, startAudioScheduler, stopAudioScheduler, resetAudioScheduler, updateWorkerScheduler, populateInstrumentSelect } from './audio.js';
+import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons, addVoice, updateVoiceInstrumentLabels, applyMixVisuals, addLaneEditControls } from './lanes.js';
+import { createChannels, populateMenus, wireChannels, toggleAudio, addVoiceChannel, syncAudioStartTime, startAudioScheduler, stopAudioScheduler, resetAudioScheduler, updateWorkerScheduler, populateInstrumentSelect, refreshSilenced } from './audio.js';
 import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } from './controls.js';
 import { copyShareLink, loadStateFromUrl } from './share.js';
 import { closeSaveRhythmModal, closeSavedRhythmsModal, openSaveRhythmModal, openSavedRhythmsModal, saveCurrentRhythm } from './saved-rhythms.js';
@@ -44,6 +44,15 @@ const { canvas, ctx, ui } = getDomRefs();
 const state = createState(ui);
 const lanes = createLanes(ui, state);
 const channels = createChannels();
+
+// Keep lane visuals in sync with mixer mute/solo state. Each lane voice holds
+// a reference to its audio channel; refreshSilenced() computes the effective
+// "silenced" flag and calls this callback so lanes can dim/suppress.
+channels.onMixChange = () => applyMixVisuals(lanes, channels);
+
+// Single-voice wheel lanes also map to a mixer channel (the fixed Awheel/Bwheel strips).
+lanes.Awheel.channel = channels.Awheel;
+lanes.Bwheel.channel = channels.Bwheel;
 
 const MIXER_LABELS = {
     master: 'Master',
@@ -236,6 +245,7 @@ function rebuildSystem() {
     syncAudioStartTime(state);
     resetAudioScheduler(state);
     updateWorkerScheduler(state, lanes, channels, getGlobalVolume());
+    refreshSilenced(channels);
 }
 
 /**
@@ -320,6 +330,7 @@ function resetMixerToStartingState() {
     syncAudioStartTime(state);
     resetAudioScheduler(state);
     updateWorkerScheduler(state, lanes, channels, getGlobalVolume());
+    refreshSilenced(channels);
 }
 
 function rebuildAllVoiceMixerStrips() {
@@ -523,6 +534,12 @@ updatePhaseUI(state, ui);
 buildAllLanes(lanes, state);
 createFixedLaneInstrumentSelects();
 
+// Add per-lane editing controls (randomize / reverse / copy / paste)
+Object.values(lanes).forEach(lane => addLaneEditControls(lane, state));
+
+// Initialize mix-driven lane visuals (dim when muted / solo-excluded)
+refreshSilenced(channels);
+
 // Async initialization: load shared state from URL, then start animation
 (async () => {
     const loadedFromUrl = await loadStateFromUrl(shareDeps);
@@ -530,6 +547,7 @@ createFixedLaneInstrumentSelects();
     // If loaded from URL, rebuild voice mixer strips to match restored voices
     if (loadedFromUrl) {
         rebuildAllVoiceMixerStrips();
+        refreshSilenced(channels);
     }
 
     // Phase 8: Show help modal for first-time visitors
@@ -546,6 +564,7 @@ createFixedLaneInstrumentSelects();
         ui,
         state,
         lanes,
+        channels,
         markCurrentButtons: (active, previousActive) => markCurrentButtons(state, lanes, active, previousActive),
         buildLane: (lane) => buildLane(lane, state)
     });
