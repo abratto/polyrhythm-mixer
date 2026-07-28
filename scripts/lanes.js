@@ -18,6 +18,40 @@ function masterRateLabelForMeter(state, meterValue) {
 }
 
 /**
+ * Beat grouping is anchored to the tool's single global rhythmic reference:
+ * the quarter-note grid. One master cycle (mainTeeth ticks) spans 4 quarter
+ * notes, so a quarter = mainTeeth/4 ticks. A lane step is a "beat" exactly when
+ * that lane's pulse lands on a quarter-note tick.
+ *
+ * This is musically exact for EVERY meter-A / meter-B pair:
+ *   - When mainTeeth is divisible by 4 (one of A/B even, etc.) the grid aligns
+ *     to the tick lattice and beats appear at regular intervals.
+ *   - When it isn't (e.g. 3:5, 3:7, 5:7) the quarter grid falls between ticks,
+ *     so the master lane shows no internal beats — which is the honest result.
+ *   - Phrase/wheel lanes show beats only where their pulses coincide with a
+ *     quarter, at a period of meter / gcd(meter, 4) steps.
+ */
+
+function gcd(a, b) {
+    a = Math.abs(a); b = Math.abs(b);
+    while (b) { [a, b] = [b, a % b]; }
+    return a || 1;
+}
+
+/** Number of steps between consecutive quarter-note beats for a lane of `n` steps per cycle. */
+function quarterBeatPeriod(n) {
+    return n / gcd(n, 4);
+}
+
+/** True when `tick` (in master-tick units) falls on a quarter-note boundary. */
+function isOnQuarter(tick, mainTeeth) {
+    const q = mainTeeth / 4;
+    if (q === 0) return false;
+    const r = ((tick % q) + q) % q;
+    return Math.min(r, q - r) < 1e-6;
+}
+
+/**
  * Creates a single voice object with empty selected pattern and no DOM refs yet.
  */
 function createVoice() {
@@ -108,7 +142,9 @@ export function createLanes(ui, state) {
             descriptionEl: ui.masterDescription,
             infoBtn: ui.masterInfoBtn,
             textForStep: i => (i % state.mainTeeth) + 1,
-            boundary: i => (i % state.mainTeeth) % Math.max(1, Math.floor(state.mainTeeth / 4)) === 0,
+            isBeat: i => isOnQuarter(i % state.mainTeeth, state.mainTeeth),
+            isBar: i => (i % state.mainTeeth) === 0,
+            beatPeriod: () => quarterBeatPeriod(state.mainTeeth),
             voices: [createVoice()],
             isMultiVoice: true,
             allowVoiceNudge: true,
@@ -133,7 +169,9 @@ export function createLanes(ui, state) {
             descriptionEl: ui.aPhraseDescription,
             infoBtn: ui.aPhraseInfoBtn,
             textForStep: i => (i % state.A) + 1,
-            boundary: i => i % state.A === 0,
+            isBeat: i => isOnQuarter((i * state.mainTeeth / state.A + state.phaseA) % state.mainTeeth, state.mainTeeth),
+            isBar: i => (i % state.A) === 0,
+            beatPeriod: () => quarterBeatPeriod(state.A),
             voices: [createVoice()],
             isMultiVoice: true,
             allowVoiceNudge: true,
@@ -156,7 +194,9 @@ export function createLanes(ui, state) {
             descriptionEl: ui.aWheelDescription,
             infoBtn: ui.aWheelInfoBtn,
             textForStep: i => i + 1,
-            boundary: () => false,
+            isBeat: i => isOnQuarter((i * state.mainTeeth / state.A + state.phaseA) % state.mainTeeth, state.mainTeeth),
+            isBar: i => (i % state.A) === 0,
+            beatPeriod: () => quarterBeatPeriod(state.A),
             selected: [],
             buttons: [],
             isMultiVoice: false,
@@ -177,7 +217,9 @@ export function createLanes(ui, state) {
             descriptionEl: ui.bPhraseDescription,
             infoBtn: ui.bPhraseInfoBtn,
             textForStep: i => (i % state.B) + 1,
-            boundary: i => i % state.B === 0,
+            isBeat: i => isOnQuarter((i * state.mainTeeth / state.B + state.phaseB) % state.mainTeeth, state.mainTeeth),
+            isBar: i => (i % state.B) === 0,
+            beatPeriod: () => quarterBeatPeriod(state.B),
             voices: [createVoice()],
             isMultiVoice: true,
             allowVoiceNudge: true,
@@ -200,7 +242,9 @@ export function createLanes(ui, state) {
             descriptionEl: ui.bWheelDescription,
             infoBtn: ui.bWheelInfoBtn,
             textForStep: i => i + 1,
-            boundary: () => false,
+            isBeat: i => isOnQuarter((i * state.mainTeeth / state.B + state.phaseB) % state.mainTeeth, state.mainTeeth),
+            isBar: i => (i % state.B) === 0,
+            beatPeriod: () => quarterBeatPeriod(state.B),
             selected: [],
             buttons: [],
             isMultiVoice: false,
@@ -356,6 +400,28 @@ export function removeVoice(lane, index) {
     lane.voices.splice(index, 1);
 }
 
+/**
+ * Applies beat/bar grouping classes to a step button for visual legibility.
+ * A "beat" marks the start of a musical subdivision; a "bar" marks the start
+ * of a full meter cycle (stronger divider). Rows alternate shading per beat
+ * group so the eye can count groups at a glance.
+ */
+function applyGroupClasses(btn, lane, i) {
+    const isBeat = lane.isBeat?.(i);
+    const isBar = lane.isBar?.(i);
+
+    if (isBar && i > 0) {
+        btn.classList.add('step-bar');
+    } else if (isBeat) {
+        btn.classList.add('step-beat');
+    }
+
+    const period = lane.beatPeriod?.();
+    if (period && period > 0 && Math.floor(i / period) % 2 === 1) {
+        btn.classList.add('step-alt');
+    }
+}
+
 /** Creates a single step button for a voice with click-to-toggle behavior. */
 function createStepButton(lane, voice, i, actualIndex) {
     actualIndex = actualIndex ?? i;
@@ -364,7 +430,7 @@ function createStepButton(lane, voice, i, actualIndex) {
     btn.id = `${lane.stepId}-${i}`;
     btn.textContent = lane.textForStep(i);
 
-    if (lane.boundary(i)) btn.classList.add('bar-boundary');
+    applyGroupClasses(btn, lane, i);
     if (voice.selected[actualIndex]) btn.classList.add('active');
 
     btn.addEventListener('click', () => {
@@ -600,7 +666,7 @@ function createStepButtonForSingle(lane, i) {
     btn.id = `${lane.stepId}-${i}`;
     btn.textContent = lane.textForStep(i);
 
-    if (lane.boundary(i)) btn.classList.add('bar-boundary');
+    applyGroupClasses(btn, lane, i);
     if (lane.selected[i]) btn.classList.add('active');
 
     btn.addEventListener('click', () => {
