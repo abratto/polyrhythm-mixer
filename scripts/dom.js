@@ -27,6 +27,9 @@ export function getDomRefs() {
         // Action buttons
         resetBtn: document.getElementById('resetBtn'),
         audioBtn: document.getElementById('audioBtn'),
+        playBtn: document.getElementById('playBtn'),
+        stopBtn: document.getElementById('stopBtn'),
+        transportReadout: document.getElementById('transportReadout'),
         helpBtn: document.getElementById('helpBtn'),
         saveRhythmBtn: document.getElementById('saveRhythmBtn'),
         loadRhythmBtn: document.getElementById('loadRhythmBtn'),

@@ -482,11 +482,27 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
 
         const prevMainAngle = state.mainAngle;
 
-        // Use audio clock for precise timing when active; fall back to frame accumulation
-        if (state.audioClockActive && state.audioCtx) {
-            state.mainAngle = (state.audioCtx.currentTime - state.audioStartTime) * radiansPerSecond;
-        } else {
-            state.mainAngle += angleDelta;
+        // Advance only while the transport is playing. The audio-clock path is
+        // precise; the frame-accumulation path is the fallback before audio is
+        // unlocked. When paused, mainAngle is frozen (both visual and audio).
+        if (state.playing) {
+            if (state.audioClockActive && state.audioCtx) {
+                state.mainAngle = (state.audioCtx.currentTime - state.audioStartTime) * radiansPerSecond;
+            } else {
+                state.mainAngle += angleDelta;
+            }
+        }
+
+        // Update the transport readout: a status when stopped/paused, otherwise
+        // the live position (beat within the measure, cycle within the pattern).
+        if (ui && ui.transportReadout) {
+            if (!state.playing) {
+                ui.transportReadout.textContent = state.transport === 'paused' ? 'Paused' : 'Stopped';
+            } else {
+                const beat = Math.floor(state.mainAngle / (Math.PI / 2)) + 1;
+                const cycleInPattern = ((Math.floor(state.mainAngle / (2 * Math.PI)) % state.fullPatternCycles) + state.fullPatternCycles) % state.fullPatternCycles + 1;
+                ui.transportReadout.textContent = `Beat ${beat} / 4  ·  Cycle ${cycleInPattern} / ${state.fullPatternCycles}`;
+            }
         }
 
           // Calculate gear geometry

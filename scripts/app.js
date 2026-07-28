@@ -235,7 +235,7 @@ function rebuildSystem() {
     state.mainAngle = 0;
     syncAudioStartTime(state);
     resetAudioScheduler(state);
-    updateWorkerScheduler(state, lanes, channels, cachedGlobalVolume);
+    updateWorkerScheduler(state, lanes, channels, getGlobalVolume());
 }
 
 /**
@@ -248,7 +248,7 @@ function resetAndRebuild() {
     state.visibleCycle = { master: 0, Aphrase: 0, Bphrase: 0 };
     syncAudioStartTime(state);
     resetAudioScheduler(state);
-    updateWorkerScheduler(state, lanes, channels, cachedGlobalVolume);
+    updateWorkerScheduler(state, lanes, channels, getGlobalVolume());
     resetFlashState(state);
     resetPatterns(state, lanes);
     buildAllLanes(lanes, state);
@@ -319,7 +319,7 @@ function resetMixerToStartingState() {
     state.mainAngle = 0;
     syncAudioStartTime(state);
     resetAudioScheduler(state);
-    updateWorkerScheduler(state, lanes, channels, cachedGlobalVolume);
+    updateWorkerScheduler(state, lanes, channels, getGlobalVolume());
 }
 
 function rebuildAllVoiceMixerStrips() {
@@ -383,6 +383,49 @@ function handleRemoveVoiceChannel(prefix, voiceIndex) {
     buildLane(lane, state); // Only rebuild the affected lane
 }
 
+/** Keeps the Play/Pause button label and active state in sync with transport. */
+function syncPlayButton() {
+    if (!ui.playBtn) return;
+    ui.playBtn.textContent = state.playing ? 'Pause' : 'Play';
+    ui.playBtn.classList.toggle('active', state.playing);
+}
+
+/** Play/Pause toggle. If audio isn't unlocked yet, the first click does that too. */
+async function handlePlayPause() {
+    if (!state.audioEnabled) {
+        await toggleAudio(state, ui);
+        if (state.playing) startAudioScheduler(state, lanes, channels, getGlobalVolume);
+        state.transport = state.playing ? 'playing' : 'paused';
+        syncPlayButton();
+        return;
+    }
+    if (state.playing) {
+        state.playing = false;
+        state.transport = 'paused';
+        stopAudioScheduler();
+    } else {
+        state.playing = true;
+        state.transport = 'playing';
+        if (state.audioCtx && state.audioCtx.state === 'suspended') state.audioCtx.resume();
+        syncAudioStartTime(state);
+        startAudioScheduler(state, lanes, channels, getGlobalVolume);
+    }
+    syncPlayButton();
+}
+
+/** Stop: halt the groove and return the playhead to the start of the pattern. */
+function handleStop() {
+    state.playing = false;
+    state.transport = 'stopped';
+    stopAudioScheduler();
+    state.mainAngle = 0;
+    state.followPlayhead = { master: true, Aphrase: true, Bphrase: true };
+    state.visibleCycle = { master: 0, Aphrase: 0, Bphrase: 0 };
+    if (state.audioCtx) state.audioStartTime = state.audioCtx.currentTime;
+    syncPlayButton();
+    if (ui.transportReadout) ui.transportReadout.textContent = 'Stopped';
+}
+
 // Shared dependency bag passing to share and animation functions
 const shareDeps = {
     state,
@@ -408,10 +451,19 @@ wireLaneInfoButtons(lanes);
 
 // Cache global volume to avoid Number.parseInt per trigger
 let cachedGlobalVolume = Number.parseInt(ui.masterVolumeSlider.value, 10) / 100;
+// Effective global volume: 0 while audio output is disabled (a pure mute /
+// "global volume zero"), otherwise the user's master volume. Fed to both the
+// main scheduler and the worker so muting silences everything.
+const getGlobalVolume = () => state.audioEnabled ? cachedGlobalVolume : 0;
 ui.masterVolumeSlider.addEventListener('input', () => {
     cachedGlobalVolume = Number.parseInt(ui.masterVolumeSlider.value, 10) / 100;
-    updateWorkerScheduler(state, lanes, channels, cachedGlobalVolume);
+    updateWorkerScheduler(state, lanes, channels, getGlobalVolume());
 });
+
+// Phase 4b: Wire transport (Play/Pause + Stop) — separate from audio unlock
+if (ui.playBtn) ui.playBtn.addEventListener('click', handlePlayPause);
+if (ui.stopBtn) ui.stopBtn.addEventListener('click', handleStop);
+syncPlayButton();
 
 // Phase 4: Initialize voice channels
 initVoiceChannels();
@@ -448,11 +500,14 @@ wireControls({
     resetMixerToStartingState,
     toggleAudio: async () => {
         await toggleAudio(state, ui);
-        if (state.audioEnabled) {
-            startAudioScheduler(state, lanes, channels, () => cachedGlobalVolume);
-        } else {
-            stopAudioScheduler();
+        // Enable/Disable Audio is an output mute: keep the groove running,
+        // just feed 0 global volume when disabled. Start the scheduler only
+        // if we're actually playing (otherwise paused stays paused).
+        if (state.audioEnabled && state.playing) {
+            startAudioScheduler(state, lanes, channels, getGlobalVolume);
         }
+        updateWorkerScheduler(state, lanes, channels, getGlobalVolume());
+        syncPlayButton();
     },
     onShare: () => copyShareLink(shareDeps),
     onOpenSaveRhythm: () => openSaveRhythmModal(ui, shareDeps),

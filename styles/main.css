@@ -50,21 +50,51 @@
             box-sizing: border-box;
         }
         .action-row {
-            display: grid;
-            grid-template-columns: minmax(160px, 1.2fr) minmax(0, 3fr);
+            display: flex;
+            flex-wrap: wrap;
             gap: 12px;
-            align-items: stretch;
+            align-items: center;
+        }
+        .transport-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .transport-btn {
+            background: #2a2a36;
+            color: #e5e5ea;
+            border: 1px solid #3a3a4c;
+            border-radius: 6px;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .transport-btn:hover { background: #343447; }
+        .transport-btn.active {
+            background: #ff9100;
+            border-color: #ff9100;
+            color: #000;
+        }
+        .transport-readout {
+            font-size: 12px;
+            color: #a1a1aa;
+            padding: 0 6px;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
         }
         .secondary-actions {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 8px;
+            margin-left: auto;
         }
-        .action-row button,
+        .action-row > button,
         .secondary-actions button {
             width: 100%;
             min-width: 0;
         }
+        .action-row > button { width: auto; }
         .polyrhythm-controls {
             display: flex;
             flex-direction: column;

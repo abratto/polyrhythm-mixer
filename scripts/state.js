@@ -40,6 +40,8 @@ export function createState(ui) {
         tempo: 90,          // beats per minute (1 beat = 1/4 master cycle)
         audioCtx: null,     // Web Audio API context (created on user gesture)
         audioEnabled: false,
+        playing: true,      // transport state — true when the groove is running
+        transport: 'playing', // 'stopped' | 'paused' | 'playing' — for status display
 
         // Audio clock reference for accurate timing (active after first audio enable)
         audioStartTime: 0,

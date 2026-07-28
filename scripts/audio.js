@@ -516,7 +516,7 @@ export function startAudioScheduler(state, lanes, channels, globalVolumeSource) 
     startWorkerScheduler(state, lanes, channels, currentGlobalVolume());
 
     function tick() {
-        if (!state.audioClockActive || !state.audioCtx || !state.audioEnabled) {
+        if (!state.audioClockActive || !state.audioCtx || !state.playing) {
             _schedulerTimer = null;
             return;
         }
@@ -606,6 +606,10 @@ export async function toggleAudio(state, ui) {
 
         ui.audioBtn.classList.toggle('active', state.audioEnabled);
         ui.audioBtn.textContent = state.audioEnabled ? 'Disable Audio' : 'Enable Audio';
+        // NOTE: Enable/Disable Audio is purely an output mute (global volume 0).
+        // It does NOT touch the transport (playing/transport) — the groove and
+        // visualization keep running. Muting is applied by the caller feeding a
+        // 0 global volume (see app.js getGlobalVolume).
     } catch (err) {
         console.error('Audio init failed:', err);
     }
