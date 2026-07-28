@@ -610,14 +610,14 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, markCurrentButto
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 13px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`MASTER WHEEL (${state.mainTeeth} TEETH / LCM)`, cx, cy - rMainOuter - 32);
+        ctx.fillText(`MASTER (${state.mainTeeth} TEETH / LCM)`, cx, cy - rMainOuter - 32);
         if (state.masterPhraseCycles > 1) {
             ctx.font = '11px sans-serif';
             ctx.fillStyle = '#ff9100';
             ctx.fillText(`C${currentCycle + 1} of ${state.masterPhraseCycles}`, cx, cy - rMainOuter - 50);
         }
-        ctx.fillText(`A: ${state.A} (${state.teethA}:${state.mainTeeth})`, cxA, cy + rAOuter + 50);
-        ctx.fillText(`B: ${state.B} (${state.teethB}:${state.mainTeeth})`, cxB, cy + rBOuter + 50);
+        ctx.fillText(`METER A ${state.A} (${state.teethA}:${state.mainTeeth})`, cxA, cy + rAOuter + 50);
+        ctx.fillText(`METER B ${state.B} (${state.teethB}:${state.mainTeeth})`, cxB, cy + rBOuter + 50);
 
         // Timelines
         const timelineX = (canvas.width - 700) / 2;

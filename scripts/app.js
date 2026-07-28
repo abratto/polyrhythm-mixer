@@ -46,7 +46,7 @@ const lanes = createLanes(ui, state);
 const channels = createChannels();
 
 const MIXER_LABELS = {
-    master: 'Master Cycle',
+    master: 'Master',
     A: 'Meter A Phrase',
     B: 'Meter B Phrase'
 };

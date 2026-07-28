@@ -21,8 +21,8 @@
  *   HEADFUL=1             Show Chromium while the test runs.
  *
  * What this verifies:
- *   - default first-pulse selections for Master Cycle, Meter A, and Meter B voice 1
- *   - Master Click label and mixer state
+ *   - default first-pulse selections for Master, Meter A, and Meter B voice 1
+ *   - Master label and mixer state
  *   - help modal lead text formatting
  *   - Reset Mixer restores the startup meter, voice, pattern, and mixer state
  *   - current save/load from a fresh page, including voices, nudges, mixer settings,
@@ -198,7 +198,7 @@ async function run() {
                 B2: activeIndexesFor('#meterBPhraseGrid .voice-row:nth-child(2) .step-btn.active')
             },
             mixer: {
-                masterClickHeader: document.querySelector('.fixed-controls-row .mixer-strip .strip-header')?.textContent?.trim() ?? null,
+                masterHeader: document.querySelector('.fixed-controls-row .mixer-strip .strip-header')?.textContent?.trim() ?? null,
                 masterClickSound: selectValue('#soundDriver'),
                 masterClickMute: muteText('#muteDriver'),
                 masterVoice1Sound: selectValue('#sound_master_0'),
@@ -266,10 +266,10 @@ async function run() {
         await waitForApp();
         const initial = await snapshot();
 
-        assert(same(initial.active.master1, [0]), 'Master Cycle voice 1 should start on pulse 1.', initial.active.master1);
+        assert(same(initial.active.master1, [0]), 'Master voice 1 should start on pulse 1.', initial.active.master1);
         assert(same(initial.active.A1, [0]), 'Meter A voice 1 should start on pulse 1.', initial.active.A1);
         assert(same(initial.active.B1, [0]), 'Meter B voice 1 should start on pulse 1.', initial.active.B1);
-        assert(initial.mixer.masterClickHeader === 'Master Click', 'Master Click strip should be present.', initial.mixer);
+        assert(initial.mixer.masterHeader === 'Master', 'Master strip should be present.', initial.mixer);
         assert(initial.voiceLabels.master1 === 'Bass Drum (Kick)' && initial.voiceLabels.A1 === 'Woodblock Clack' && initial.voiceLabels.B1 === 'Analog Cowbell', 'Voice rows should display their default mixer instruments.', initial.voiceLabels);
         assert(initial.helpLeads.length === 4, 'Help modal should expose four bold lead sentences.', initial.helpLeads);
         assert(await page.locator('#resetBtn').textContent() === 'Reset Mixer', 'Reset button should clearly describe full mixer reset.');

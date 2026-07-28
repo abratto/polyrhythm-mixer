@@ -15,7 +15,7 @@
             </div>
             <div class="modal-help-grid">
                 <div class="modal-help-item"><strong>Pick a polyrhythm.</strong> Choose <strong>Meter A</strong> and <strong>Meter B</strong> (try 3 against 4), set a tempo, and press <strong>Enable Audio</strong>. A default pulse is pre-tapped so you hear the groove right away.</div>
-                <div class="modal-help-item"><strong>Tap steps and add voices.</strong> Click boxes in any lane to toggle hits. <strong>+ Voice</strong> layers extra rhythms in the Master, A Phrase, or B Phrase lanes. <strong>Nudge</strong> shifts one voice; <strong>Nudge Group</strong> shifts the whole lane.</div>
+                <div class="modal-help-item"><strong>Tap steps and add voices.</strong> Click boxes in any lane to toggle hits. <strong>+ Voice</strong> layers extra rhythms in the Master, Meter A Phrase, or Meter B Phrase lanes. <strong>Nudge</strong> shifts one voice; <strong>Nudge Group</strong> shifts the whole lane.</div>
                 <div class="modal-help-item"><strong>Extend with phrase lengths.</strong> Set A, B, or Master <strong>Phrase Length</strong> to 2–8 cycles for longer repeating patterns. When a lane has multiple cycles, use <strong>Cycle ◀</strong> / <strong>▶</strong> to browse — the label shows <strong>AUTO</strong> (follows the playhead) or <strong>PIN</strong> (manual view).</div>
                 <div class="modal-help-item"><strong>Mix and share.</strong> In the <strong>Sound Mixer</strong>, swap instruments, solo, mute, and adjust volume per channel. <strong>Save</strong> stores rhythms locally; <strong>Share</strong> copies a link; <strong>Reset Mixer</strong> restores defaults.</div>
             </div>
@@ -177,7 +177,7 @@
         <summary>Polyrhythm Visualization <button id="vizInfoBtn" class="lane-info-btn" aria-label="Show visualization explanation" aria-expanded="false" aria-controls="vizDescription">?</button></summary>
         <div id="vizDescription" class="lane-description" hidden>
             <p><strong>Gears.</strong> The centre wheel has LCM(A, B) teeth and turns once per measure. Each side gear meshes with it and completes one full rotation every A (or B) teeth — spinning A&times; or B&times; faster than the master. Because each of those rotations spans one pulse, the A-side divides the measure into A equal beats and the B-side into B equal beats. Both share the same total duration but at different rates, and that simultaneous co-existence of two different equal divisions of the same span is the polyrhythm. Orange dots mark your tapped steps.</p>
-            <p><strong>Master Cycle Timeline.</strong> One measure, left to right. Markers: orange (master), pink ◆ (A wheel), cyan ◆ (B wheel), red ▲ (A phrase), cyan ▲ (B phrase). White line = playhead.</p>
+            <p><strong>Master Cycle Timeline.</strong> One measure, left to right. Markers: orange (master), pink ◆ (Meter A wheel), cyan ◆ (Meter B wheel), red ▲ (Meter A phrase), cyan ▲ (Meter B phrase). White line = playhead.</p>
             <p><strong>Full Pattern Timeline.</strong> All cycles end-to-end; shows the full repeating loop with cycle markers.</p>
         </div>
         <div id="canvasContainer">
@@ -189,7 +189,7 @@
         <div class="matrix-row master-pattern-row">
             <div class="matrix-header" id="masterHeaderContainer">
                 <div class="lane-title-group">
-                    <label id="masterTitle" style="color: #ff9100;">Master Wheel Sequence</label>
+                    <label id="masterTitle" style="color: #ff9100;">Master</label>
                     <button id="masterInfoBtn" class="lane-info-btn" aria-label="Show master wheel explanation" aria-expanded="false" aria-controls="masterDescription">?</button>
                 </div>
             </div>
@@ -209,7 +209,7 @@
             <div class="matrix-row">
                 <div class="matrix-header">
                     <div class="lane-title-group">
-                        <label id="titleAWheel" style="color: #ff6b8f;">Meter A Wheel Lane</label>
+                        <label id="titleAWheel" style="color: #ff6b8f;">Meter A Wheel</label>
                         <button id="aWheelInfoBtn" class="lane-info-btn" aria-label="Show Meter A wheel explanation" aria-expanded="false" aria-controls="aWheelDescription">?</button>
                     </div>
                 </div>
@@ -226,7 +226,7 @@
             <div class="matrix-row">
                 <div class="matrix-header" id="meterAPhraseHeaderContainer">
                     <div class="lane-title-group">
-                        <label id="titleAPhrase" style="color: #ff3366;">Meter A Phrase Sequencer</label>
+                        <label id="titleAPhrase" style="color: #ff3366;">Meter A Phrase</label>
                         <button id="aPhraseInfoBtn" class="lane-info-btn" aria-label="Show Meter A phrase explanation" aria-expanded="false" aria-controls="aPhraseDescription">?</button>
                     </div>
                 </div>
@@ -247,7 +247,7 @@
             <div class="matrix-row">
                 <div class="matrix-header">
                     <div class="lane-title-group">
-                        <label id="titleBWheel" style="color: #6ef2ff;">Meter B Wheel Lane</label>
+                        <label id="titleBWheel" style="color: #6ef2ff;">Meter B Wheel</label>
                         <button id="bWheelInfoBtn" class="lane-info-btn" aria-label="Show Meter B wheel explanation" aria-expanded="false" aria-controls="bWheelDescription">?</button>
                     </div>
                 </div>
@@ -264,7 +264,7 @@
             <div class="matrix-row">
                 <div class="matrix-header" id="meterBPhraseHeaderContainer">
                     <div class="lane-title-group">
-                        <label id="titleBPhrase" style="color: #00e5ff;">Meter B Phrase Sequencer</label>
+                        <label id="titleBPhrase" style="color: #00e5ff;">Meter B Phrase</label>
                         <button id="bPhraseInfoBtn" class="lane-info-btn" aria-label="Show Meter B phrase explanation" aria-expanded="false" aria-controls="bPhraseDescription">?</button>
                     </div>
                 </div>
@@ -286,7 +286,7 @@
           <!-- Row 1: Fixed controls (horizontal) -->
           <div class="fixed-controls-row">
               <div class="mixer-strip">
-                  <div class="strip-header" style="color: #7a8a9e;">Master Click</div>
+                  <div class="strip-header" style="color: #7a8a9e;">Master</div>
                   <select id="soundDriver" style="padding: 4px; width: 100%; font-size:12px;"></select>
                   <div class="fader-area">
                       <button id="soloDriver" class="solo-btn">Solo</button>
@@ -298,7 +298,7 @@
               </div>
 
               <div class="mixer-strip">
-                  <div class="strip-header" style="color: #ff6b8f;">Meter A Cycle</div>
+                  <div class="strip-header" style="color: #ff6b8f;">Meter A Wheel</div>
                   <select id="soundAWheel" style="padding: 4px; width: 100%; font-size:12px;"></select>
                   <div class="fader-area">
                       <button id="soloAWheel" class="solo-btn">Solo</button>
@@ -310,7 +310,7 @@
               </div>
 
               <div class="mixer-strip">
-                  <div class="strip-header" style="color: #6ef2ff;">Meter B Cycle</div>
+                  <div class="strip-header" style="color: #6ef2ff;">Meter B Wheel</div>
                   <select id="soundBWheel" style="padding: 4px; width: 100%; font-size:12px;"></select>
                   <div class="fader-area">
                       <button id="soloBWheel" class="solo-btn">Solo</button>
