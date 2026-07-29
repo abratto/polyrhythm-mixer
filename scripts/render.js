@@ -622,6 +622,8 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             bDots[t] = 1;
         });
         const markerRadius = rMainInner + ((rMainOuter - rMainInner) * 0.45);
+        ctx.save();
+        ctx.translate(cx, cy);
         [['#ff6b8f', aDots], ['#6ef2ff', bDots]].forEach(([color, dots]) => {
             ctx.save();
             ctx.fillStyle = color;
@@ -641,6 +643,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             }
             ctx.restore();
         });
+        ctx.restore();
 
         drawGear(ctx, cxA, cy, rAInner, rAOuter, state.teethA, angles.A, '#ff3366', true, state.flash.A, null, isMobile);
         drawGear(ctx, cxB, cy, rBInner, rBOuter, state.teethB, angles.B, '#00e5ff', true, state.flash.B, null, isMobile);
