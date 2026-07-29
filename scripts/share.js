@@ -91,9 +91,8 @@ function selectedIndexes(values) {
 /** Sets a boolean array to false, then marks the given indexes as true. */
 function applySelectedIndexes(target, indexes) {
     if (!Array.isArray(target)) return;
+    if (!Array.isArray(indexes) || indexes.length === 0) return;
     target.fill(false);
-    if (!Array.isArray(indexes)) return;
-
     indexes.forEach((index) => {
         if (Number.isInteger(index) && index >= 0 && index < target.length) {
             target[index] = true;
