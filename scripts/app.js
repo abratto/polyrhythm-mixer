@@ -420,7 +420,6 @@ const shareDeps = {
     resetPatterns,
     buildAllLanes,
     resetFlashState,
-    applyVoiceChannelState,
     syncAudioStartTime,
     resetAudioScheduler
 };

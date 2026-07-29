@@ -10,7 +10,7 @@
  * Each voice has its own selected[] pattern, DOM buttons, and audio channel.
  * Awheel and Bwheel remain single-voice (no pattern to layer).
  */
-import { reduceFraction } from './math.js';
+import { gcd, reduceFraction } from './math.js';
 import { populateInstrumentSelect, bindSoloMute } from './audio.js';
 
 /**
@@ -100,12 +100,6 @@ function masterRateLabelForMeter(state, meterValue) {
  *   - Phrase/wheel lanes show beats only where their pulses coincide with a
  *     quarter, at a period of meter / gcd(meter, 4) steps.
  */
-
-function gcd(a, b) {
-    a = Math.abs(a); b = Math.abs(b);
-    while (b) { [a, b] = [b, a % b]; }
-    return a || 1;
-}
 
 /** Number of steps between consecutive quarter-note beats for a lane of `n` steps per cycle. */
 function quarterBeatPeriod(n) {
@@ -1135,37 +1129,6 @@ function reverseVoice(lane, voice) {
 /** Clears a single voice's pattern (all steps off). */
 function clearVoice(lane, voice) {
     voice.selected.fill(false);
-    buildLane(lane);
-}
-
-let _laneClipboard = null;
-
-/** Captures the lane's current pattern for later paste. */
-function copyLane(lane) {
-    if (lane.isMultiVoice) {
-        _laneClipboard = { multi: true, voices: lane.voices.map(v => [...v.selected]) };
-    } else {
-        _laneClipboard = { multi: false, selected: [...lane.selected] };
-    }
-}
-
-/** Pastes a previously copied pattern into the lane (voice/step counts must match). */
-function pasteLane(lane) {
-    if (!_laneClipboard) return;
-    if (_laneClipboard.multi && lane.isMultiVoice) {
-        const n = Math.min(_laneClipboard.voices.length, lane.voices.length);
-        for (let vi = 0; vi < n; vi++) {
-            const src = _laneClipboard.voices[vi];
-            const dst = lane.voices[vi].selected;
-            const len = Math.min(src.length, dst.length);
-            for (let i = 0; i < len; i++) dst[i] = src[i];
-        }
-    } else if (!_laneClipboard.multi && !lane.isMultiVoice) {
-        const src = _laneClipboard.selected;
-        const dst = lane.selected;
-        const len = Math.min(src.length, dst.length);
-        for (let i = 0; i < len; i++) dst[i] = src[i];
-    }
     buildLane(lane);
 }
 

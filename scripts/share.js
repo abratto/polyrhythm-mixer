@@ -295,46 +295,6 @@ function migratePayload(payload) {
     return payload;
 }
 
-/** Applies a single voice's channel state (instrument, volume, mute).
- * Accepts both compact (i/v/u) and legacy (instrument/volume/muted) field names. */
-function applyVoiceChannelState(channel, voiceState) {
-    if (!channel || !voiceState) return;
-
-    const sound = voiceState.i ?? voiceState.instrument;
-    const volume = voiceState.v ?? voiceState.volume;
-    const muted = voiceState.u ?? voiceState.muted;
-
-    if (sound && channel.soundEl) {
-        const hasSoundOption = Array.from(channel.soundEl.options).some(opt => opt.value === sound);
-        if (hasSoundOption) {
-            channel.soundEl.value = sound;
-            channel.sound = sound;
-         }
-       }
-
-    if (typeof volume === 'number' && Number.isFinite(volume)) {
-        channel.volume = Math.max(0, Math.min(1, volume));
-        if (channel.volEl) channel.volEl.value = String(channel.volume);
-       }
-
-    if (muted !== undefined) {
-        channel.muted = !!muted;
-        if (channel.muteEl) {
-            channel.muteEl.classList.toggle('muted', channel.muted);
-            channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
-         }
-       }
-
-    const soloed = voiceState.o ?? voiceState.soloed;
-    if (soloed !== undefined) {
-        channel.soloed = !!soloed;
-        if (channel.soloEl) {
-            channel.soloEl.classList.toggle('soloed', channel.soloed);
-            channel.soloEl.textContent = channel.soloed ? 'Soloed' : 'Solo';
-        }
-    }
-}
-
 /** Applies a fixed channel's state (driver, Awheel, Bwheel) using compact s/v/u format. */
 function applyFixedChannelState(channel, channelState) {
     if (!channel || !channelState) return;

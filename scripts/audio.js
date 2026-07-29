@@ -191,19 +191,7 @@ export function addVoiceChannel(channels, prefix, container, voiceIndex) {
     }
 }
 
-/** Removes a voice channel from a multi-voice group. */
-export function removeVoiceChannel(channels, prefix, voiceIndex) {
-    const key = prefix === 'master' ? 'masterVoices' : prefix === 'A' ? 'Avoices' : 'Bvoices';
-    const voiceArray = channels[key];
-    if (!voiceArray || voiceArray.length <= 1) return;
 
-    // Remove DOM elements
-    const channel = voiceArray[voiceIndex];
-    const stripEl = document.getElementById(`strip_${prefix}_${voiceIndex}`);
-    if (stripEl) stripEl.remove();
-
-    voiceArray.splice(voiceIndex, 1);
-}
 
 /**
  * Populates each fixed channel's sound selector dropdown with the instrument catalog.
@@ -1850,41 +1838,6 @@ function _updateSoloFlag(channels) {
  * mute state, gain scale, and the global volume multiplier.
  * Respects solo: if any channel is soloed, only soloed channels play.
  */
-export function playChannelSound(state, channels, channelName, globalVolume = 1, voiceIndex = null, hitTime = null) {
-    if (!state.audioEnabled || !state.audioCtx) return;
-
-    const scheduleTime = hitTime ?? state.audioCtx.currentTime;
-    _updateSoloFlag(channels);
-
-    // Multi-voice channels: play specific voice or all voices
-    if (channelName === 'master') {
-        const voices = channels.masterVoices || [];
-        if (voiceIndex !== null) {
-            if (voices[voiceIndex]) playSingleChannel(state, voices[voiceIndex], globalVolume, scheduleTime);
-        } else {
-            voices.forEach(ch => { if (ch) playSingleChannel(state, ch, globalVolume, scheduleTime); });
-        }
-    } else if (channelName === 'A') {
-        const voices = channels.Avoices || [];
-        if (voiceIndex !== null) {
-            if (voices[voiceIndex]) playSingleChannel(state, voices[voiceIndex], globalVolume, scheduleTime);
-        } else {
-            voices.forEach(ch => { if (ch) playSingleChannel(state, ch, globalVolume, scheduleTime); });
-        }
-    } else if (channelName === 'B') {
-        const voices = channels.Bvoices || [];
-        if (voiceIndex !== null) {
-            if (voices[voiceIndex]) playSingleChannel(state, voices[voiceIndex], globalVolume, scheduleTime);
-        } else {
-            voices.forEach(ch => { if (ch) playSingleChannel(state, ch, globalVolume, scheduleTime); });
-        }
-    } else {
-        // Fixed single-voice channels
-        const channel = channels[channelName];
-        if (channel) playSingleChannel(state, channel, globalVolume, scheduleTime);
-    }
-}
-
 /** Plays a sound for a single channel if not muted. Uses a 25ms lookahead floor for audio thread prep. */
 export function playSingleChannel(state, channel, globalVolume, hitTime) {
     if (!channel || channel.muted) return;

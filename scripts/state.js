@@ -84,12 +84,6 @@ export function updateDerivedState(state) {
  * Keeps legacy phase offsets neutral after meter changes.
  */
 export function updatePhaseUI(state) {
-    if (state.phaseA >= state.mainTeeth) {
-        state.phaseA = 0;
-    }
-    if (state.phaseB >= state.mainTeeth) {
-        state.phaseB = 0;
-    }
     state.phaseA = 0;
     state.phaseB = 0;
 }

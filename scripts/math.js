@@ -49,7 +49,7 @@ export function getActivePhraseStep(masterStep, phaseShift, teethPerPulse, phras
  * Same logic as phrase steps but uses the wheel's own length (the meter value).
  */
 export function getActiveWheelStep(masterStep, phaseShift, teethPerPulse, wheelLength) {
-    return ((Math.floor((masterStep - phaseShift) / teethPerPulse) % wheelLength) + wheelLength) % wheelLength;
+    return getActivePhraseStep(masterStep, phaseShift, teethPerPulse, wheelLength);
 }
 
 /**
