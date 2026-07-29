@@ -625,7 +625,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(angles.main);
-        [['#ff6b8f', aDots], ['#6ef2ff', bDots]].forEach(([color, dots]) => {
+        [['#6ef2ff', bDots], ['#ff6b8f', aDots]].forEach(([color, dots]) => {
             ctx.save();
             ctx.fillStyle = color;
             ctx.strokeStyle = '#ffffff';
