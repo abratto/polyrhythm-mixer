@@ -645,12 +645,12 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         // Colored spokes for A-pulse (pink) and B-pulse (cyan) subdivisions on the
         // master wheel. When A and B coincide at the same tooth, they are splayed
         // slightly (pink CCW, cyan CW) so both colors remain visible.
-        const angleOffset = (aOn && bOn) ? Math.PI / (3 * state.mainTeeth) : 0;
         for (let t = 0; t < state.mainTeeth; t++) {
             const aOn = aDots[t];
             const bOn = bDots[t];
             if (!aOn && !bOn) continue;
             const baseTheta = (t / state.mainTeeth) * Math.PI * 2 - Math.PI / 2;
+            const angleOffset = (aOn && bOn) ? Math.PI / (3 * state.mainTeeth) : 0;
             ctx.save();
             ctx.lineWidth = 4;
             ctx.shadowBlur = 0;
