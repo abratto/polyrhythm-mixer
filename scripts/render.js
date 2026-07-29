@@ -457,6 +457,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
     // Grow it on demand so higher meter pairs such as 17 against 18 still render correctly.
 
     function animate(timestamp) {
+        try {
         // On mobile, throttle rendering to ~30fps; audio is handled by scheduler
         if (isMobile && timestamp - lastDrawTime < MIN_FRAME_MS) {
             requestAnimationFrame(animate);
@@ -731,6 +732,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         }
 
         requestAnimationFrame(animate);
+        } catch (err) { console.error('Animation error:', err); requestAnimationFrame(animate); }
     }
 
     requestAnimationFrame(animate);
