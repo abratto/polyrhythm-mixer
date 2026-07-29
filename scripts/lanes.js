@@ -879,12 +879,15 @@ function buildMasterBeatReference(lane, state) {
     const total = stepsPerCycle * totalCycles;
     const mainTeeth = state.mainTeeth;
 
+    const quarterCells = [0, 1, 2, 3].map(
+        q => Math.round(q * mainTeeth / 4) % mainTeeth
+    );
     for (let i = 0; i < total; i++) {
         const t = ((i % mainTeeth) + mainTeeth) % mainTeeth;
         const cell = document.createElement('div');
         cell.className = 'step-btn master-beat-cell';
-        if (t === 0) cell.classList.add('bar');
-        else if (isOnQuarter(t, mainTeeth)) cell.classList.add('beat');
+        if (t === quarterCells[0]) cell.classList.add('bar');
+        else if (quarterCells.includes(t)) cell.classList.add('beat');
         else cell.classList.add('teeth');
         steps.appendChild(cell);
     }
