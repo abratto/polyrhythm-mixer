@@ -643,31 +643,33 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         ctx.translate(cx, cy);
         ctx.rotate(angles.main);
         // Colored spokes for A-pulse (pink) and B-pulse (cyan) subdivisions on the
-        // master wheel, showing the polyrhythm overlay alongside the 4 quarter spokes.
-        // Where A and B coincide (same tooth), draw a bright white spoke to highlight
-        // that alignment point — the beats where the two meters sync up.
+        // master wheel. When A and B coincide at the same tooth, they are splayed
+        // slightly (pink CCW, cyan CW) so both colors remain visible.
+        const angleOffset = (aOn && bOn) ? Math.PI / (3 * state.mainTeeth) : 0;
         for (let t = 0; t < state.mainTeeth; t++) {
             const aOn = aDots[t];
             const bOn = bDots[t];
             if (!aOn && !bOn) continue;
-            const theta = (t / state.mainTeeth) * Math.PI * 2 - Math.PI / 2;
+            const baseTheta = (t / state.mainTeeth) * Math.PI * 2 - Math.PI / 2;
             ctx.save();
             ctx.lineWidth = 4;
-            if (aOn && bOn) {
-                ctx.strokeStyle = '#ffffff';
-                ctx.shadowBlur = 8;
-                ctx.shadowColor = 'rgba(255,255,255,0.5)';
-            } else if (aOn) {
+            ctx.shadowBlur = 0;
+            if (aOn) {
                 ctx.strokeStyle = '#ff6b8f';
-                ctx.shadowBlur = 0;
-            } else {
-                ctx.strokeStyle = '#6ef2ff';
-                ctx.shadowBlur = 0;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(rMainInner * Math.cos(baseTheta - angleOffset),
+                           rMainInner * Math.sin(baseTheta - angleOffset));
+                ctx.stroke();
             }
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(rMainInner * Math.cos(theta), rMainInner * Math.sin(theta));
-            ctx.stroke();
+            if (bOn) {
+                ctx.strokeStyle = '#6ef2ff';
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(rMainInner * Math.cos(baseTheta + angleOffset),
+                           rMainInner * Math.sin(baseTheta + angleOffset));
+                ctx.stroke();
+            }
             ctx.restore();
         }
 
