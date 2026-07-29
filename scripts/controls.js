@@ -47,8 +47,7 @@ export function wireControls({ ui, state, rebuildSystem, resetMixerToStartingSta
     const polyrhythmView = document.getElementById('polyrhythmView');
     const mobileLayout = globalThis.matchMedia(MOBILE_LAYOUT_QUERY);
     const syncResponsiveDisclosureState = () => {
-        const shouldOpen = !mobileLayout.matches;
-        if (polyrhythmView) polyrhythmView.open = shouldOpen;
+        if (polyrhythmView) polyrhythmView.open = false;
     };
 
     syncResponsiveDisclosureState();
