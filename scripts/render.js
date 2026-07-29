@@ -624,6 +624,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         const markerRadius = rMainInner + ((rMainOuter - rMainInner) * 0.45);
         ctx.save();
         ctx.translate(cx, cy);
+        ctx.rotate(angles.main);
         [['#ff6b8f', aDots], ['#6ef2ff', bDots]].forEach(([color, dots]) => {
             ctx.save();
             ctx.fillStyle = color;
