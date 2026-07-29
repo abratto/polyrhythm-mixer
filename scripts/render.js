@@ -552,7 +552,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         const currentQuarter = Math.floor(state.mainAngle / quarterSize);
         const prevQuarter = Math.floor(prevMainAngle / quarterSize);
 
-        if (currentQuarter !== prevQuarter && !(channels && channels.driver && channels.driver.silenced)) {
+        if (currentQuarter !== prevQuarter) {
             state.flash.driver = 12;
         }
 
