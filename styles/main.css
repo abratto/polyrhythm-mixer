@@ -1684,7 +1684,7 @@
             border-left: 1px solid rgba(255, 234, 0, 0.55);
             border-right: 1px solid rgba(255, 234, 0, 0.55);
             box-shadow: 0 0 10px rgba(255, 234, 0, 0.25);
-            transition: left 60ms linear, width 60ms linear, opacity 120ms ease;
+            transition: opacity 120ms ease;
         }
 
         /* Softened per-button current marker (the column carries the read now). */
