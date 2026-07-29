@@ -46,12 +46,7 @@ export function shouldAutoOpenHelpModal() {
 export function wireControls({ ui, state, rebuildSystem, resetMixerToStartingState, toggleAudio, onShare, onOpenSaveRhythm, onConfirmSaveRhythm, onCloseSaveRhythm, onOpenSavedRhythms, onCloseSavedRhythms }) {
     const polyrhythmView = document.getElementById('polyrhythmView');
     const mobileLayout = globalThis.matchMedia(MOBILE_LAYOUT_QUERY);
-    const syncResponsiveDisclosureState = () => {
-        if (polyrhythmView) polyrhythmView.open = false;
-    };
 
-    syncResponsiveDisclosureState();
-    mobileLayout.addEventListener('change', syncResponsiveDisclosureState);
 
     if (ui.vizInfoBtn && ui.vizDescription) {
         ui.vizInfoBtn.addEventListener('click', (e) => {
