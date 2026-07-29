@@ -326,6 +326,11 @@ function syncPlayButton() {
 async function handlePlayPause() {
     if (!state.audioEnabled) {
         await toggleAudio(state, ui);
+        if (state.playing) {
+            // user clicked Pause — don't start playback, just enable audio
+            syncPlayButton();
+            return;
+        }
         state.playing = true;
         state.transport = 'playing';
         syncAudioStartTime(state);
