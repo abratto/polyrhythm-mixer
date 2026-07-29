@@ -622,28 +622,40 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             bDots[t] = 1;
         });
         const markerRadius = rMainInner + ((rMainOuter - rMainInner) * 0.45);
+        const dotRadius = Math.max(4, rMainOuter * 0.035);
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(angles.main);
-        [['#6ef2ff', bDots], ['#ff6b8f', aDots]].forEach(([color, dots]) => {
-            ctx.save();
-            ctx.fillStyle = color;
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = isMobile ? 1 : 2;
-            ctx.shadowBlur = isMobile ? 0 : 10;
-            ctx.shadowColor = color;
-            for (let t = 0; t < dots.length; t++) {
-                if (!dots[t]) continue;
-                const theta = (t / state.mainTeeth) * Math.PI * 2 - Math.PI / 2;
-                const x = markerRadius * Math.cos(theta);
-                const y = markerRadius * Math.sin(theta);
+        // Draw A-pulse (pink) and B-pulse (cyan) dots on each master tooth.
+        // When both land on the same tooth, offset them radially so both show.
+        for (let t = 0; t < state.mainTeeth; t++) {
+            const aOn = aDots[t];
+            const bOn = bDots[t];
+            if (!aOn && !bOn) continue;
+            const theta = (t / state.mainTeeth) * Math.PI * 2 - Math.PI / 2;
+            const defDraw = (color, rOff) => {
+                const r = markerRadius + rOff;
+                ctx.save();
+                ctx.fillStyle = color;
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = isMobile ? 1 : 2;
+                ctx.shadowBlur = isMobile ? 0 : 10;
+                ctx.shadowColor = color;
                 ctx.beginPath();
-                ctx.arc(x, y, Math.max(4, rMainOuter * 0.035), 0, 2 * Math.PI);
+                ctx.arc(r * Math.cos(theta), r * Math.sin(theta), dotRadius, 0, 2 * Math.PI);
                 ctx.fill();
                 ctx.stroke();
+                ctx.restore();
+            };
+            if (aOn && bOn) {
+                defDraw('#ff6b8f', -5);   // pink inward
+                defDraw('#6ef2ff', 5);    // cyan outward
+            } else if (aOn) {
+                defDraw('#ff6b8f', 0);
+            } else {
+                defDraw('#6ef2ff', 0);
             }
-            ctx.restore();
-        });
+        }
         ctx.restore();
 
         drawGear(ctx, cxA, cy, rAInner, rAOuter, state.teethA, angles.A, '#ff3366', true, state.flash.A, null, isMobile);
