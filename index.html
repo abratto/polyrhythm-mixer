@@ -92,9 +92,9 @@
     <details id="polyrhythmView" class="visual-guide">
         <summary>Polyrhythm Visualization <button id="vizInfoBtn" class="lane-info-btn" aria-label="Show visualization explanation" aria-expanded="false" aria-controls="vizDescription">?</button></summary>
         <div id="vizDescription" class="lane-description" hidden>
-            <p><strong>Gears.</strong> The centre wheel has LCM(A, B) teeth and turns once per measure. Each side gear meshes with it and completes one full rotation every A (or B) teeth — spinning A&times; or B&times; faster than the master. Because each of those rotations spans one pulse, the A-side divides the measure into A equal beats and the B-side into B equal beats. Both share the same total duration but at different rates, and that simultaneous co-existence of two different equal divisions of the same span is the polyrhythm. Orange dots mark your tapped steps.</p>
-            <p><strong>Master Cycle Timeline.</strong> One measure, left to right. Markers: orange (master), pink ◆ (Meter A wheel), cyan ◆ (Meter B wheel), red ▲ (Meter A phrase), cyan ▲ (Meter B phrase). White line = playhead.</p>
-            <p><strong>Full Pattern Timeline.</strong> All cycles end-to-end; shows the full repeating loop with cycle markers.</p>
+            <p><strong>Gears.</strong> The two side gears turn A&times; and B&times; faster than the centre wheel, dividing the same measure into A vs. B equal beats — that's the polyrhythm. Orange dots show tapped steps.</p>
+            <p><strong>Master Cycle Timeline.</strong> One measure, left to right. ◆ = A/B wheel positions, ▲ = phrase starts, white line = playhead.</p>
+            <p><strong>Full Pattern Timeline.</strong> All cycles chained end-to-end, showing the repeating loop.</p>
         </div>
         <div id="canvasContainer">
             <canvas id="simCanvas" width="960" height="580"></canvas>
