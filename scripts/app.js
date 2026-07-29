@@ -326,8 +326,10 @@ function syncPlayButton() {
 async function handlePlayPause() {
     if (!state.audioEnabled) {
         await toggleAudio(state, ui);
-        if (state.playing) startAudioScheduler(state, lanes, channels, getGlobalVolume);
-        state.transport = state.playing ? 'playing' : 'paused';
+        state.playing = true;
+        state.transport = 'playing';
+        syncAudioStartTime(state);
+        startAudioScheduler(state, lanes, channels, getGlobalVolume);
         syncPlayButton();
         return;
     }
