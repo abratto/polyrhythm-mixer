@@ -334,11 +334,7 @@
             background-color: #2b2b3a;
         }
         #audioBtn {
-            background-color: #00e676;
-            font-weight: 700;
-            border: none;
-            color: #000;
-            min-width: 140px;
+            white-space: nowrap;
             text-transform: uppercase;
         }
         #audioBtn.active {
@@ -1189,9 +1185,7 @@
                 font-size: 11px;
                 padding: 8px 4px;
             }
-            #audioBtn {
-                min-height: 42px;
-            }
+
             .utility-row {
                 flex-direction: column;
                 align-items: stretch;
@@ -1555,6 +1549,11 @@
         @media (max-width: 720px) {
             body {
                 overflow-x: hidden;
+            }
+            .transport-btn {
+                height: 36px;
+                line-height: 1;
+                white-space: nowrap;
             }
             .voice-row {
                 align-items: stretch;
