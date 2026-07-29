@@ -644,25 +644,32 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         ctx.rotate(angles.main);
         // Colored spokes for A-pulse (pink) and B-pulse (cyan) subdivisions on the
         // master wheel, showing the polyrhythm overlay alongside the 4 quarter spokes.
-        ctx.strokeStyle = 'rgba(255, 107, 143, 0.4)';
-        ctx.lineWidth = 2;
-        aDots.forEach((on, t) => {
-            if (!on) return;
+        // Where A and B coincide (same tooth), draw a bright white spoke to highlight
+        // that alignment point — the beats where the two meters sync up.
+        for (let t = 0; t < state.mainTeeth; t++) {
+            const aOn = aDots[t];
+            const bOn = bDots[t];
+            if (!aOn && !bOn) continue;
             const theta = (t / state.mainTeeth) * Math.PI * 2 - Math.PI / 2;
+            ctx.save();
+            ctx.lineWidth = 4;
+            if (aOn && bOn) {
+                ctx.strokeStyle = '#ffffff';
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = 'rgba(255,255,255,0.5)';
+            } else if (aOn) {
+                ctx.strokeStyle = '#ff6b8f';
+                ctx.shadowBlur = 0;
+            } else {
+                ctx.strokeStyle = '#6ef2ff';
+                ctx.shadowBlur = 0;
+            }
             ctx.beginPath();
             ctx.moveTo(0, 0);
             ctx.lineTo(rMainInner * Math.cos(theta), rMainInner * Math.sin(theta));
             ctx.stroke();
-        });
-        ctx.strokeStyle = 'rgba(110, 242, 255, 0.4)';
-        bDots.forEach((on, t) => {
-            if (!on) return;
-            const theta = (t / state.mainTeeth) * Math.PI * 2 - Math.PI / 2;
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(rMainInner * Math.cos(theta), rMainInner * Math.sin(theta));
-            ctx.stroke();
-        });
+            ctx.restore();
+        }
 
         // Draw A-pulse (pink) and B-pulse (cyan) dots on each master tooth.
         // When both land on the same tooth, offset them radially so both show.
