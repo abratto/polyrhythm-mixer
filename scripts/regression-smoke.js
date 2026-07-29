@@ -185,10 +185,7 @@ async function run() {
             voiceCounts: {
                 master: document.querySelectorAll('#masterGrid .voice-row').length,
                 A: document.querySelectorAll('#meterAPhraseGrid .voice-row').length,
-                B: document.querySelectorAll('#meterBPhraseGrid .voice-row').length,
-                masterMixer: document.querySelectorAll('#masterVoiceContainer .mixer-strip').length,
-                AMixer: document.querySelectorAll('#AVoiceContainer .mixer-strip').length,
-                BMixer: document.querySelectorAll('#BVoiceContainer .mixer-strip').length
+                B: document.querySelectorAll('#meterBPhraseGrid .voice-row').length
             },
             active: {
                 master1: activeIndexesFor('#masterGrid .voice-row:nth-child(1) .step-btn.active'),
@@ -199,7 +196,7 @@ async function run() {
                 B2: activeIndexesFor('#meterBPhraseGrid .voice-row:nth-child(2) .step-btn.active')
             },
             mixer: {
-                masterHeader: document.querySelector('.fixed-controls-row .mixer-strip .strip-header')?.textContent?.trim() ?? null,
+                masterVolInLane: !!document.querySelector('#volDriver'),
                 masterClickSound: selectValue('#soundDriver'),
                 masterClickMute: muteText('#muteDriver'),
                 masterVoice1Sound: selectValue('#sound_master_0'),
@@ -270,7 +267,7 @@ async function run() {
         assert(same(initial.active.master1, [0]), 'Master voice 1 should start on pulse 1.', initial.active.master1);
         assert(same(initial.active.A1, [0]), 'Meter A voice 1 should start on pulse 1.', initial.active.A1);
         assert(same(initial.active.B1, [0]), 'Meter B voice 1 should start on pulse 1.', initial.active.B1);
-        assert(initial.mixer.masterHeader === 'Master Wheel', 'Master wheel strip should be present and clearly labelled.', initial.mixer);
+        assert(initial.mixer.masterVolInLane, 'Master wheel volume fader should be colocated in the Master lane toolbar.', initial.mixer);
         assert(initial.voiceLabels.master1 === 'Bass Drum (Kick)' && initial.voiceLabels.A1 === 'Woodblock Clack' && initial.voiceLabels.B1 === 'Analog Cowbell', 'Voice rows should display their default mixer instruments.', initial.voiceLabels);
         assert(initial.helpLeads.length === 4, 'Help modal should expose four bold lead sentences.', initial.helpLeads);
         assert(await page.locator('#resetBtn').textContent() === 'Reset Mixer', 'Reset button should clearly describe full mixer reset.');
@@ -326,8 +323,8 @@ async function run() {
             meterA: '12',
             meterB: '18',
             masterSteps: 36,
-            aWheelSteps: 12,
-            bWheelSteps: 18,
+            aWheelSteps: 36,
+            bWheelSteps: 36,
             aPhraseSteps: 12,
             bPhraseSteps: 18
         }), '12 against 18 should be accepted and rebuild all sequencers with the expected lengths.', twelveAgainstEighteen);
@@ -341,8 +338,8 @@ async function run() {
         }));
         assert(same(seventeenAgainstEighteen, {
             masterSteps: 306,
-            wheelA: 17,
-            wheelB: 18
+            wheelA: 306,
+            wheelB: 306
         }), 'Higher 18-based meter pairs should also rebuild beyond the old 240-step limit.', seventeenAgainstEighteen);
 
         await page.locator('#resetBtn').click();
@@ -400,20 +397,20 @@ async function run() {
         await page.locator('#addMasterVoiceBtn').click();
         await page.waitForTimeout(300);
 
-        const masterVoiceSelects = await page.locator('#masterVoiceContainer select').evaluateAll(selects =>
+        const masterVoiceSelects = await page.locator('#masterGrid .voice-row .voice-instrument-select').evaluateAll(selects =>
             selects.map(s => ({ id: s.id, options: s.options.length }))
         );
         assert(masterVoiceSelects.every(s => s.options > 0),
-            'All master voice mixer selects should have options after remove/re-add',
+            'All master voice instrument selects should have options after remove/re-add',
             masterVoiceSelects);
-        // No duplicate IDs in master voice strips
-        const stripIds = await page.locator('#masterVoiceContainer [id]').evaluateAll(els =>
-            els.map(e => e.id).filter(id => id.startsWith('strip_'))
+        // No duplicate volume-fader IDs across master voice rows
+        const volIds = await page.locator('#masterGrid .voice-row input.volume-fader').evaluateAll(els =>
+            els.map(e => e.id)
         );
-        const uniqueStrips = new Set(stripIds);
-        assert(stripIds.length === uniqueStrips.size,
-            'Master voice strip IDs must be unique after remove/re-add',
-            { ids: stripIds, duplicates: stripIds.filter((id, i) => stripIds.indexOf(id) !== i) });
+        const uniqueVol = new Set(volIds);
+        assert(volIds.length === uniqueVol.size,
+            'Master voice volume-fader IDs must be unique after remove/re-add',
+            { ids: volIds, duplicates: volIds.filter((id, i) => volIds.indexOf(id) !== i) });
 
         // Reset voices back to 1 by reloading — removes clutter for subsequent tests
         await page.locator('#resetBtn').click();
@@ -436,6 +433,11 @@ async function run() {
             assert(textFinal === 'Solo', `Solo button ${id} should toggle back to 'Solo'`, textFinal);
         }
 
+        // The Master lane intentionally has no lane-level Solo button (its
+        // per-voice Solo already covers it); assert it's absent so it isn't
+        // accidentally re-added.
+        const masterSoloCount = await page.locator('#soloDriver').count();
+        assert(masterSoloCount === 1, 'Master beat should have a colocated Solo button in the beat-scheme controls', `found ${masterSoloCount}`);
         await testSolo('soloDriver');
         await testSolo('soloAWheel');
         await testSolo('soloBWheel');

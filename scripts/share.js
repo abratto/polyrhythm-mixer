@@ -464,7 +464,7 @@ function restoreFromPayload(payload, deps) {
     syncAudioStartTime(state);
     resetAudioScheduler(state);
     resetFlashState(state);
-    buildAllLanes(lanes);
+    buildAllLanes(lanes, state);
 }
 
 /** Returns the current app state as a versioned payload for sharing or saving. */

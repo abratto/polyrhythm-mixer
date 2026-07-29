@@ -15,7 +15,7 @@
  */
 import { getDomRefs } from './dom.js';
 import { createState, resetFlashState, updateDerivedState, updatePhaseUI } from './state.js';
-import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons, addVoice, updateVoiceInstrumentLabels, applyMixVisuals, addLaneEditControls } from './lanes.js';
+import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons, addVoice, updateVoiceInstrumentLabels, applyMixVisuals, addLaneEditControls, setMixChannels, wireLaneMixButtons } from './lanes.js';
 import { createChannels, populateMenus, wireChannels, toggleAudio, addVoiceChannel, syncAudioStartTime, startAudioScheduler, stopAudioScheduler, resetAudioScheduler, updateWorkerScheduler, populateInstrumentSelect, refreshSilenced } from './audio.js';
 import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } from './controls.js';
 import { copyShareLink, loadStateFromUrl } from './share.js';
@@ -44,6 +44,8 @@ const { canvas, ctx, ui } = getDomRefs();
 const state = createState(ui);
 const lanes = createLanes(ui, state);
 const channels = createChannels();
+// Let lane-rendered Solo/Mute controls reach the audio engine.
+setMixChannels(channels);
 
 // Keep lane visuals in sync with mixer mute/solo state. Each lane voice holds
 // a reference to its audio channel; refreshSilenced() computes the effective
@@ -59,29 +61,6 @@ const MIXER_LABELS = {
     A: 'Meter A Phrase',
     B: 'Meter B Phrase'
 };
-
-/**
- * Creates the initial voice channel DOM strips for a multi-voice group.
- */
-function createVoiceStripDOM(container, prefix, voiceIndex, color, label) {
-    const id = `${prefix}_${voiceIndex}`;
-    const strip = document.createElement('div');
-    strip.className = `mixer-strip voice-${prefix.toLowerCase()}`;
-    strip.id = `strip_${id}`;
-
-    strip.innerHTML = `
-        <div class="strip-header" style="color: ${color};">${label} Voice ${voiceIndex + 1}</div>
-        <div class="fader-area">
-            <button id="solo_${id}" class="solo-btn">Solo</button>
-            <button id="mute_${id}" class="mute-btn">Mute</button>
-        </div>
-        <div class="fader-area volume-only-area">
-            <input type="range" id="vol_${id}" class="volume-fader" min="0" max="1" step="0.05" value="0.5">
-        </div>
-    `;
-
-    container.appendChild(strip);
-}
 
 function laneForPrefix(prefix) {
     if (prefix === 'master') return lanes.master;
@@ -111,10 +90,8 @@ function bindChannelToVoice(prefix, voiceIndex, channel) {
 function rebuildVoiceMixerStrips(prefix, container, color, label) {
     const lane = laneForPrefix(prefix);
     const key = voiceChannelKeyForPrefix(prefix);
-    container.innerHTML = '';
     channels[key] = [];
     lane.voices.forEach((voice, idx) => {
-        createVoiceStripDOM(container, prefix, idx, color, label);
         const channel = bindChannelToVoice(prefix, idx, addVoiceChannel(channels, prefix, container, idx));
         // Restore channel state from payload if present
         if (voice._channelState && channel) {
@@ -171,32 +148,18 @@ function applyVoiceChannelState(channel, voiceState) {
  * Initializes voice channels for all multi-voice groups.
  */
 function initVoiceChannels() {
-    // Master voices
-    const masterContainer = ui.masterVoiceContainer;
-    if (masterContainer) {
-        lanes.master.voices.forEach((_, idx) => {
-            createVoiceStripDOM(masterContainer, 'master', idx, '#ff9100', MIXER_LABELS.master);
-            bindChannelToVoice('master', idx, addVoiceChannel(channels, 'master', masterContainer, idx));
+    // Voice volume faders now live inside each voice row (built by buildVoiceButtons),
+    // so we only create the channel objects here — no Sound Mixer strip DOM.
+    const groups = [
+        { prefix: 'master', lane: lanes.master },
+        { prefix: 'A', lane: lanes.Aphrase },
+        { prefix: 'B', lane: lanes.Bphrase }
+    ];
+    groups.forEach(({ prefix, lane }) => {
+        lane.voices.forEach((_, idx) => {
+            bindChannelToVoice(prefix, idx, addVoiceChannel(channels, prefix, null, idx));
         });
-    }
-
-    // A phrase voices
-    const aContainer = ui.AVoiceContainer;
-    if (aContainer) {
-        lanes.Aphrase.voices.forEach((_, idx) => {
-            createVoiceStripDOM(aContainer, 'A', idx, '#ff3366', MIXER_LABELS.A);
-            bindChannelToVoice('A', idx, addVoiceChannel(channels, 'A', aContainer, idx));
-        });
-    }
-
-    // B phrase voices
-    const bContainer = ui.BVoiceContainer;
-    if (bContainer) {
-        lanes.Bphrase.voices.forEach((_, idx) => {
-            createVoiceStripDOM(bContainer, 'B', idx, '#00e5ff', MIXER_LABELS.B);
-            bindChannelToVoice('B', idx, addVoiceChannel(channels, 'B', bContainer, idx));
-        });
-    }
+    });
 }
 
 /**
@@ -211,7 +174,7 @@ function createFixedLaneInstrumentSelects() {
         document.getElementById(gridId)?.closest('.matrix-row')?.querySelector('.lane-actions') || null;
 
     const defs = [
-        { id: 'soundDriver', channel: channels.driver, mount: ui.masterHeaderContainer, color: '#ff9100' },
+        { id: 'soundDriver', channel: channels.driver, mount: document.getElementById('masterBeatControls'), color: '#ff9100' },
         { id: 'soundAWheel', channel: channels.Awheel, mount: mountForGrid('meterAWheelGrid'), color: '#ff6b8f' },
         { id: 'soundBWheel', channel: channels.Bwheel, mount: mountForGrid('meterBWheelGrid'), color: '#6ef2ff' }
     ];
@@ -246,6 +209,14 @@ function rebuildSystem() {
     resetAudioScheduler(state);
     updateWorkerScheduler(state, lanes, channels, getGlobalVolume());
     refreshSilenced(channels);
+    updateBeatSchemeSummary();
+}
+
+/** Parameterized one-line summary of the current meter ratio, shown in the
+ *  Polyrhythm Beat Scheme header (e.g. "6 × 4 — 6 against 4 Polyrhythm Beat Scheme"). */
+function updateBeatSchemeSummary() {
+    if (!ui.beatSchemeSummary) return;
+    ui.beatSchemeSummary.textContent = `${state.A} × ${state.B} — ${state.A} against ${state.B} Polyrhythm Beat Scheme`;
 }
 
 /**
@@ -345,7 +316,6 @@ function rebuildAllVoiceMixerStrips() {
 function handleAddVoice(lane, prefix, container, color, label) {
     addVoice(lane);
     const voiceIndex = lane.voices.length - 1;
-    createVoiceStripDOM(container, prefix, voiceIndex, color, label);
     bindChannelToVoice(prefix, voiceIndex, addVoiceChannel(channels, prefix, container, voiceIndex));
     buildLane(lane, state); // Only rebuild the affected lane, not all lanes
 }
@@ -532,7 +502,11 @@ wireControls({
 resetPatterns(state, lanes);
 updatePhaseUI(state, ui);
 buildAllLanes(lanes, state);
+updateBeatSchemeSummary();
 createFixedLaneInstrumentSelects();
+// Mount Solo/Mute inside the lanes (single-channel + master wheel) now that the
+// lane toolbars exist; per-voice Solo/Mute are created in each voice row above.
+wireLaneMixButtons(lanes, channels);
 
 // Add per-lane editing controls (randomize / reverse / copy / paste)
 Object.values(lanes).forEach(lane => addLaneEditControls(lane, state));

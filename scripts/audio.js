@@ -176,28 +176,11 @@ export function addVoiceChannel(channels, prefix, container, voiceIndex) {
         if (!channels[key]) channels[key] = [];
         channels[key].push(channel);
 
-        // Wire volume and mute handlers
+        // Volume is owned by the mixer strip; Solo/Mute are mounted inside the
+        // lane voice rows and bound there via bindSoloMute.
         if (channel.volEl) {
             channel.volEl.addEventListener('input', () => {
                 channel.volume = parseFloat(channel.volEl.value);
-            });
-        }
-        if (channel.muteEl) {
-            channel.muteEl.addEventListener('click', () => {
-                channel.muted = !channel.muted;
-                channel.muteEl.classList.toggle('muted', channel.muted);
-                channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
-                refreshSilenced(channels);
-            });
-        }
-
-        // Wire solo handler
-        if (channel.soloEl) {
-            channel.soloEl.addEventListener('click', () => {
-                channel.soloed = !channel.soloed;
-                channel.soloEl.classList.toggle('soloed', channel.soloed);
-                channel.soloEl.textContent = channel.soloed ? 'Soloed' : 'Solo';
-                refreshSilenced(channels);
             });
         }
 
@@ -261,35 +244,46 @@ export function populateInstrumentSelect(el, selectedValue) {
     });
 }
 
+/**
+ * Wires (or re-wires) a channel's Solo/Mute buttons. Null-safe: if the buttons
+ * aren't present yet (e.g. before the lane mounts them), this is a no-op and can
+ * be called again once the elements exist. Using assignment (not addEventListener)
+ * keeps it idempotent across re-binds.
+ */
+export function bindSoloMute(channel, channels) {
+    if (!channel) return;
+    if (channel.muteEl) {
+        channel.muteEl.classList.toggle('muted', channel.muted);
+        channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
+        channel.muteEl.onclick = () => {
+            channel.muted = !channel.muted;
+            channel.muteEl.classList.toggle('muted', channel.muted);
+            channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
+            refreshSilenced(channels);
+        };
+    }
+    if (channel.soloEl) {
+        channel.soloEl.classList.toggle('soloed', channel.soloed);
+        channel.soloEl.textContent = channel.soloed ? 'Soloed' : 'Solo';
+        channel.soloEl.onclick = () => {
+            channel.soloed = !channel.soloed;
+            channel.soloEl.classList.toggle('soloed', channel.soloed);
+            channel.soloEl.textContent = channel.soloed ? 'Soloed' : 'Solo';
+            refreshSilenced(channels);
+        };
+    }
+}
+
 /** Attaches input/click handlers to each fixed channel's volume fader and mute button. */
 export function wireChannels(channels) {
     const fixedChannels = ['driver', 'Awheel', 'Bwheel'];
     fixedChannels.forEach(name => {
         const channel = channels[name];
         if (!channel) return;
-        channel.muteEl.classList.toggle('muted', channel.muted);
-        channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
 
         channel.volEl.addEventListener('input', () => {
             channel.volume = parseFloat(channel.volEl.value);
         });
-
-        channel.muteEl.addEventListener('click', () => {
-            channel.muted = !channel.muted;
-            channel.muteEl.classList.toggle('muted', channel.muted);
-            channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
-            refreshSilenced(channels);
-        });
-
-        // Solo button handler
-        if (channel.soloEl) {
-            channel.soloEl.addEventListener('click', () => {
-                channel.soloed = !channel.soloed;
-                channel.soloEl.classList.toggle('soloed', channel.soloed);
-                channel.soloEl.textContent = channel.soloed ? 'Soloed' : 'Solo';
-                refreshSilenced(channels);
-            });
-        }
 
         // Cache instrument changes (soundEl is created inline in the lane,
         // so it may not exist yet when wireChannels runs at startup)
@@ -298,6 +292,9 @@ export function wireChannels(channels) {
                 channel.sound = channel.soundEl.value;
             });
         }
+
+        // Solo/Mute are mounted inside the lanes; bind them once they exist.
+        bindSoloMute(channel, channels);
     });
 }
 

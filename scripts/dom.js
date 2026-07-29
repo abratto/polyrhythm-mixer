@@ -13,6 +13,8 @@ export function getDomRefs() {
         // Meter selectors (A and B rhythm values)
         selectA: document.getElementById('rhythmA'),
         selectB: document.getElementById('rhythmB'),
+        // Parameterized summary of the current A × B polyrhythm beat scheme
+        beatSchemeSummary: document.getElementById('beatSchemeSummary'),
         // Phrase length selectors (number of master cycles per phrase)
         phraseCyclesA: document.getElementById('phraseCyclesA'),
         phraseCyclesB: document.getElementById('phraseCyclesB'),

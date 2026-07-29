@@ -395,11 +395,111 @@
         .meter-pattern-group .matrix-row {
             padding-left: 10px;
         }
+        /* Group the two sequencer families into distinct cards so the
+           Polyrhythm Beat Scheme (pulses) and Rhythm Tracks (phrases) read as
+           separate, clearly bounded sections rather than one long list. */
+        .lane-group-section {
+            position: relative;
+            background: #15151f;
+            border: 1px solid #262638;
+            border-radius: 10px;
+            padding: 12px 14px 14px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02) inset;
+        }
+        .lane-group-section:last-child {
+            margin-bottom: 0;
+        }
+        .lane-group-section::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 12px;
+            bottom: 12px;
+            width: 3px;
+            border-radius: 3px;
+        }
+        .pulses-section::before {
+            background: linear-gradient(180deg, #ff6b8f, #6ef2ff);
+        }
+        .phrases-section::before {
+            background: linear-gradient(180deg, #ff9100, #ff3366 50%, #00e5ff);
+        }
+        .lane-group-heading {
+            display: flex;
+            align-items: baseline;
+            gap: 9px;
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 1.1px;
+            text-transform: uppercase;
+            color: #ededf2;
+            margin: 0 0 11px;
+            padding: 0 0 9px;
+            border-bottom: 1px solid #2b2b3e;
+        }
+        .lane-group-sub {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            color: #8a8a99;
+        }
+        .lane-group-summary {
+            margin: -4px 0 11px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            color: #c9c9d6;
+        }
         .matrix-header {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-start;
             align-items: center;
             gap: 8px;
+            flex-wrap: wrap;
+        }
+        /* Meter A/B ratio selectors relocated into the pulse lane headers so the
+           control that defines each pulse grid sits right beside its lane. */
+        .lane-meter-select {
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+        }
+        .lane-meter-select label {
+            letter-spacing: 1px;
+        }
+        .lane-meter-select select {
+            font-weight: 700;
+            padding: 7px 12px;
+        }
+        .meter-a-select select {
+            border-color: #ff6b8f;
+            color: #ffd3e2;
+            background-color: #2a1620;
+            box-shadow: 0 0 0 1px rgba(255, 107, 143, 0.25);
+        }
+        .meter-a-select label {
+            color: #ff9bbd;
+        }
+        .meter-b-select select {
+            border-color: #6ef2ff;
+            color: #d2f7ff;
+            background-color: #10242a;
+            box-shadow: 0 0 0 1px rgba(110, 242, 255, 0.25);
+        }
+        .meter-b-select label {
+            color: #9becf5;
+        }
+        .meter-master-select select {
+            border-color: #ff9100;
+            color: #ffd9a8;
+            background-color: #2a1f0e;
+            box-shadow: 0 0 0 1px rgba(255, 145, 0, 0.25);
+        }
+        .meter-master-select label {
+            color: #ffb866;
         }
         .lane-title-group {
             display: flex;
@@ -428,6 +528,100 @@
             align-items: center;
             gap: 6px;
             flex: 0 0 auto;
+        }
+        /* Per-lane volume fader (Meter A/B wheel) moved out of the Sound Mixer and
+           colocated with its sequencer in the lane toolbar. */
+        .lane-volume {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .lane-volume-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #a1a1aa;
+        }
+        .lane-volume .volume-fader {
+            width: 110px;
+        }
+        /* Master Beat (4/4) reference strip — a read-only visual of the steady click
+           track the polyrhythm is measured against. Surfaces the otherwise-invisible
+           beat so it is no longer a "ghost". */
+        .master-beat-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+            background: rgba(255, 145, 0, 0.05);
+            border-radius: 8px;
+            padding: 4px 6px;
+        }
+        .master-beat-label {
+            align-items: baseline;
+        }
+        .master-beat-title {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            color: #ffb866;
+        }
+        .master-beat-sub {
+            font-size: 10px;
+            color: #8a8a99;
+        }
+        .voice-steps .master-beat-cell {
+            pointer-events: none;
+            cursor: default;
+            background: #181820;
+            border: 1px solid #26262f;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .voice-steps .master-beat-cell.teeth {
+            opacity: 0.45;
+        }
+        .voice-steps .master-beat-cell.beat::after {
+            content: '';
+            width: 3px;
+            height: 62%;
+            background: #ff9100;
+            border-radius: 2px;
+        }
+        .voice-steps .master-beat-cell.bar::after {
+            content: '';
+            width: 4px;
+            height: 72%;
+            background: #ffce7a;
+            border-radius: 2px;
+            box-shadow: 0 0 6px rgba(255, 206, 122, 0.5);
+        }
+        /* Master Beat controls row (instrument select), colocated with the reference
+           strip at the bottom of the Polyryhthm Beat Scheme section. */
+        .master-beat-controls {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 8px 0;
+            border-top: 1px solid #232332;
+        }
+        .master-beat-control-label {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            color: #ffb866;
+        }
+        /* Solo/Mute controls colocated with each sequence (lane header or voice row). */
+        .voice-mix-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: auto;
         }
         .lane-info-btn {
             align-items: center;
@@ -529,6 +723,16 @@
         .step-btn.current {
             border-color: #ffea00 !important;
             box-shadow: 0 0 8px #ffea00;
+        }
+        /* Pulse-grouping lane: dim fill for non-onset pulses and a faint tint
+           for inactive groups. The colored block of pulses per group is the
+           core polyrhythm read. */
+        .step-btn.pulse-fill {
+            color: #d8d8e4;
+        }
+        .step-btn.inactive-group {
+            color: #4a4a5a;
+            border-color: #23232f;
         }
         .short-lane .step-btn {
             height: 36px;
@@ -1045,18 +1249,14 @@
                 flex-direction: column;
                 gap: 6px;
             }
-            .voice-label-area {
+            .lane-label-area {
                 min-width: 0;
             }
-            .voice-steps,
             .short-lane {
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
                 gap: 6px;
                 width: 100%;
-            }
-            .voice-steps {
-                flex: none;
             }
             .step-btn,
             .short-lane .step-btn {
@@ -1137,17 +1337,18 @@
         }
         .voice-row {
             display: flex;
-            align-items: center;
-            gap: 8px;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 6px;
             width: 100%;
             margin-bottom: 4px;
         }
-        .voice-label-area {
+        .lane-label-area {
             display: flex;
             align-items: center;
             gap: 6px;
-            min-width: 230px;
-            flex-shrink: 0;
+            flex-wrap: wrap;
+            width: 100%;
         }
         .voice-nudge-control {
             align-items: center;
@@ -1244,6 +1445,11 @@
             display: flex;
             gap: 4px;
             min-width: 0;
+            width: 100%;
+        }
+        .voice-steps .step-btn {
+            flex: 1 1 0;
+            min-width: 0;
         }
         /* Multi-voice sequencer containers stack rows vertically */
         #masterGrid, #meterAPhraseGrid, #meterBPhraseGrid {
@@ -1333,7 +1539,7 @@
                 flex-direction: column;
                 gap: 6px;
             }
-            .voice-label-area {
+            .lane-label-area {
                 min-width: 0;
                 flex-wrap: wrap;
             }
@@ -1374,6 +1580,7 @@
             z-index: 50;
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 14px;
             padding: 8px 12px;
             margin-bottom: 12px;
@@ -1382,6 +1589,22 @@
             border: 1px solid #232332;
             border-radius: 8px;
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+        }
+        /* Global Tempo / Master Output / Reset now live in the sticky bar
+           alongside transport; lay them out inline rather than as a grid. */
+        .sticky-bar .timing-control-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+        .sticky-bar .timing-control-row .control-group {
+            width: auto;
+            min-width: 0;
+        }
+        .sticky-bar .tempo-display input[type="range"],
+        .sticky-bar .volume-display input[type="range"] {
+            width: 130px;
         }
 
         /* Compact playhead track (one master cycle). */
