@@ -1611,6 +1611,11 @@
             border: 1px solid #232332;
             border-radius: 8px;
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+            max-width: 960px;
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+            box-sizing: border-box;
         }
         /* Global Tempo / Master Output / Reset now live in the sticky bar
            alongside transport; lay them out inline rather than as a grid. */
