@@ -643,33 +643,28 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         ctx.translate(cx, cy);
         ctx.rotate(angles.main);
         // Colored spokes for A-pulse (pink) and B-pulse (cyan) subdivisions on the
-        // master wheel. When A and B coincide at the same tooth, they are splayed
-        // slightly (pink CCW, cyan CW) so both colors remain visible.
+        // master wheel. When A and B coincide at the same tooth, a blended magenta
+        // spoke is used (pink + cyan = magenta in additive color mixing), preserving
+        // the exact geometric position while showing both divisions.
         for (let t = 0; t < state.mainTeeth; t++) {
             const aOn = aDots[t];
             const bOn = bDots[t];
             if (!aOn && !bOn) continue;
-            const baseTheta = (t / state.mainTeeth) * Math.PI * 2 - Math.PI / 2;
-            const angleOffset = (aOn && bOn) ? Math.PI / (3 * state.mainTeeth) : 0;
+            const theta = (t / state.mainTeeth) * Math.PI * 2 - Math.PI / 2;
             ctx.save();
             ctx.lineWidth = 4;
             ctx.shadowBlur = 0;
-            if (aOn) {
+            if (aOn && bOn) {
+                ctx.strokeStyle = '#c07ae6';
+            } else if (aOn) {
                 ctx.strokeStyle = '#ff6b8f';
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(rMainInner * Math.cos(baseTheta - angleOffset),
-                           rMainInner * Math.sin(baseTheta - angleOffset));
-                ctx.stroke();
-            }
-            if (bOn) {
+            } else {
                 ctx.strokeStyle = '#6ef2ff';
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(rMainInner * Math.cos(baseTheta + angleOffset),
-                           rMainInner * Math.sin(baseTheta + angleOffset));
-                ctx.stroke();
             }
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(rMainInner * Math.cos(theta), rMainInner * Math.sin(theta));
+            ctx.stroke();
             ctx.restore();
         }
 
