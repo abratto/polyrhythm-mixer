@@ -604,27 +604,44 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         if (f.A > 0) f.A--;
         if (f.B > 0) f.B--;
 
-        // Merge master voice selections for gear display — only the current cycle
-        if (masterSelectedBuffer.length < state.mainTeeth) {
-            masterSelectedBuffer = new Uint8Array(state.mainTeeth);
-        }
-        masterSelectedBuffer.fill(0, 0, state.mainTeeth);
-        const currentCycle = state.masterPhraseCycles > 1
-            ? Math.floor(currentStep / state.mainTeeth) % state.masterPhraseCycles
-            : 0;
-        const cycleStart = currentCycle * state.mainTeeth;
-        const cycleEnd = cycleStart + state.mainTeeth;
-        const voices = lanes.master.voices;
-        for (let v = 0; v < voices.length; v++) {
-            const sel = voices[v].selected;
-            for (let i = cycleStart; i < cycleEnd && i < sel.length; i++) {
-                if (sel[i]) masterSelectedBuffer[i - cycleStart] = 1;
-            }
-        }
-        const masterSelected = masterSelectedBuffer.subarray(0, state.mainTeeth);
+        // Draw gears — the master wheel now shows the A-pulse and B-pulse patterns
+        // (pink and cyan dots) instead of the Master voice selected steps.
+        drawGear(ctx, cx, cy, rMainInner, rMainOuter, state.mainTeeth, angles.main, '#7a8a9e', true, Math.max(state.flash.driver, state.flash.custom), null, isMobile);
 
-        // Draw gears
-        drawGear(ctx, cx, cy, rMainInner, rMainOuter, state.mainTeeth, angles.main, '#7a8a9e', true, Math.max(state.flash.driver, state.flash.custom), masterSelected, isMobile);
+        // A-pulse and B-pulse dots on the master wheel, color-coded pink and cyan
+        const aDots = new Uint8Array(state.mainTeeth);
+        lanes.Awheel.selected.forEach((on, i) => {
+            if (!on) return;
+            const t = (i * state.teethA + state.phaseA) % state.mainTeeth;
+            aDots[t] = 1;
+        });
+        const bDots = new Uint8Array(state.mainTeeth);
+        lanes.Bwheel.selected.forEach((on, i) => {
+            if (!on) return;
+            const t = (i * state.teethB + state.phaseB) % state.mainTeeth;
+            bDots[t] = 1;
+        });
+        const markerRadius = rMainInner + ((rMainOuter - rMainInner) * 0.45);
+        [['#ff6b8f', aDots], ['#6ef2ff', bDots]].forEach(([color, dots]) => {
+            ctx.save();
+            ctx.fillStyle = color;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = isMobile ? 1 : 2;
+            ctx.shadowBlur = isMobile ? 0 : 10;
+            ctx.shadowColor = color;
+            for (let t = 0; t < dots.length; t++) {
+                if (!dots[t]) continue;
+                const theta = (t / state.mainTeeth) * Math.PI * 2 - Math.PI / 2;
+                const x = markerRadius * Math.cos(theta);
+                const y = markerRadius * Math.sin(theta);
+                ctx.beginPath();
+                ctx.arc(x, y, Math.max(4, rMainOuter * 0.035), 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.stroke();
+            }
+            ctx.restore();
+        });
+
         drawGear(ctx, cxA, cy, rAInner, rAOuter, state.teethA, angles.A, '#ff3366', true, state.flash.A, null, isMobile);
         drawGear(ctx, cxB, cy, rBInner, rBOuter, state.teethB, angles.B, '#00e5ff', true, state.flash.B, null, isMobile);
 
