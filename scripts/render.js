@@ -481,6 +481,8 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         const angleDelta = radiansPerSecond * deltaTime;
 
         const prevMainAngle = state.mainAngle;
+        const prevAngleA = state.prevAngleA ?? 0;
+        const prevAngleB = state.prevAngleB ?? 0;
 
         // Advance only while the transport is playing. The audio-clock path is
         // precise; the frame-accumulation path is the fallback before audio is
@@ -539,6 +541,8 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             A: getMeshedWheelAngle(state.mainAngle, state.phaseA, state.mainTeeth, state.teethA),
             B: getMeshedWheelAngle(state.mainAngle, state.phaseB, state.mainTeeth, state.teethB)
         };
+        state.prevAngleA = angles.A;
+        state.prevAngleB = angles.B;
 
         const currentStep = Math.floor(state.mainAngle / stepSize);
         const prevStep = Math.floor(prevMainAngle / stepSize);
@@ -550,6 +554,18 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
 
         if (currentQuarter !== prevQuarter && !(channels && channels.driver && channels.driver.silenced)) {
             state.flash.driver = 12;
+        }
+
+        // Flash the A and B wheel reference dots once per full rotation
+        if (channels && channels.Awheel && !channels.Awheel.silenced) {
+            const aRot = Math.floor(angles.A / (2 * Math.PI));
+            const prevARot = Math.floor(prevAngleA / (2 * Math.PI));
+            if (aRot !== prevARot) state.flash.A = 12;
+        }
+        if (channels && channels.Bwheel && !channels.Bwheel.silenced) {
+            const bRot = Math.floor(angles.B / (2 * Math.PI));
+            const prevBRot = Math.floor(prevAngleB / (2 * Math.PI));
+            if (bRot !== prevBRot) state.flash.B = 12;
         }
 
         // Step-level visual tracking — audio handled by scheduler
