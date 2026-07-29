@@ -138,18 +138,7 @@
         .master-volume-group {
             min-width: 0;
         }
-        .reset-action-btn {
-            background-color: #272735;
-            border-color: #4a2d35;
-            color: #f0d2d8;
-            font-size: 11px;
-            min-width: 110px;
-            text-transform: uppercase;
-        }
-        .reset-action-btn:hover {
-            background-color: #3a242d;
-            color: #fff;
-        }
+
         .utility-row {
             display: flex;
             justify-content: space-between;

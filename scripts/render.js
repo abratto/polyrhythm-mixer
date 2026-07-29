@@ -455,7 +455,6 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
 
     // Reused buffer for merging master voice selections.
     // Grow it on demand so higher meter pairs such as 17 against 18 still render correctly.
-    let masterSelectedBuffer = new Uint8Array(0);
 
     function animate(timestamp) {
         // On mobile, throttle rendering to ~30fps; audio is handled by scheduler
