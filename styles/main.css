@@ -1549,17 +1549,10 @@
         }
 
         @media (max-width: 720px) {
-            html {
-                overflow-x: hidden;
-                width: 100%;
-            }
-            body {
-                overflow-x: hidden;
-                width: 100%;
-                min-width: 0;
-                position: relative;
-            }
             .transport-controls {
+                flex-wrap: wrap;
+            }
+            .sticky-secondary {
                 flex-wrap: wrap;
             }
             .transport-btn {
