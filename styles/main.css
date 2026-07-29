@@ -380,6 +380,12 @@
         .meter-pattern-group .matrix-row:last-child {
             border-bottom: none;
         }
+        /* Visually separate the three phrase lanes (Master, A, B) in the Rhythm
+           Tracks section so their groups don't bleed together. */
+        .phrases-section .matrix-row + .matrix-row {
+            margin-top: 6px;
+            padding-top: 14px;
+        }
         .meter-pattern-group {
             border-top: 1px solid #27273a;
             padding-top: 9px;
@@ -608,6 +614,10 @@
             gap: 10px;
             padding: 8px 0;
             border-top: 1px solid #232332;
+        }
+        #masterBeatControls .voice-mix-controls,
+        #masterBeatControls .lane-instrument-select {
+            margin-left: 0;
         }
         .master-beat-control-label {
             font-size: 11px;
@@ -1341,25 +1351,31 @@
             align-items: stretch;
             gap: 6px;
             width: 100%;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #22222b;
+        }
+        .voice-row:first-child {
+            border-top: 1px solid #22222b;
+            padding-top: 4px;
         }
         .lane-label-area {
             display: flex;
             align-items: center;
             gap: 6px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            overflow-x: auto;
             width: 100%;
         }
         .voice-nudge-control {
+            display: flex;
             align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
             background: #181820;
             border: 1px solid #2d2d3d;
             border-radius: 6px;
-            display: flex;
-            flex-shrink: 0;
-            gap: 4px;
-            min-height: 30px;
-            padding: 3px 5px;
+            padding: 2px 4px;
         }
         .voice-nudge-label {
             color: #a1a1aa;
@@ -1732,6 +1748,25 @@
         .edit-btn-sm {
             padding: 2px 6px;
             font-size: 9px;
+        }
+
+        /* Uniform button sizing inside voice rows -- all buttons in the lane-label-area
+           get the same height, padding, and font-size for a clean horizontal line. */
+        .lane-label-area button,
+        .lane-label-area .edit-btn-sm {
+            height: 26px;
+            padding: 0 10px;
+            font-size: 11px;
+            line-height: 1;
+            box-sizing: border-box;
+        }
+        /* Icon-only buttons stay square (nudge arrows, nudge reset, remove). */
+        .lane-label-area .voice-nudge-btn,
+        .lane-label-area .voice-nudge-reset-btn,
+        .lane-label-area .remove-voice-btn {
+            width: 26px;
+            padding: 0;
+            font-size: 14px;
         }
 
         @media (max-width: 720px) {

@@ -566,15 +566,25 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     row.className = 'voice-row';
     row.dataset.voiceIndex = voiceIndex;
 
-    // Voice label area (fixed width to prevent shifting)
+    // Voice label area — two rows: row1 (voice + mix) and row2 (edit + nudge).
     const labelArea = document.createElement('div');
     labelArea.className = 'lane-label-area';
+    labelArea.style.flexDirection = 'column';
+    labelArea.style.flexWrap = 'nowrap';
+    labelArea.style.overflowX = 'visible';
+    labelArea.style.alignItems = 'flex-start';
+
+    const row1 = document.createElement('div');
+    row1.style.display = 'flex';
+    row1.style.alignItems = 'center';
+    row1.style.gap = '6px';
+    row1.style.flexWrap = 'wrap';
 
     const label = document.createElement('span');
     label.className = 'voice-label';
     label.textContent = `Voice ${voiceIndex + 1}`;
     label.style.color = lane.color;
-    labelArea.appendChild(label);
+    row1.appendChild(label);
 
     // Remove button (not for first voice)
     if (voiceIndex > 0) {
@@ -589,10 +599,10 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
             }
             buildMultiVoiceLane(lane, state);
         });
-        labelArea.appendChild(removeBtn);
+        row1.appendChild(removeBtn);
     }
 
-    // Nudge control — built here, appended later in the requested order.
+    // Nudge control — built here, appended to row2.
     let nudgeControl = null;
     if (lane.allowVoiceNudge) {
         nudgeControl = document.createElement('div');
@@ -622,20 +632,17 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     // Per-voice edit controls (Rnd/Rev/Copy)
     const editControls = createVoiceEditControls(lane, voiceIndex);
 
-    // Per-voice instrument selector — kept in the controls row above the sequencer.
+    // Per-voice instrument selector
     const instrumentSelect = buildVoiceInstrumentSelect(lane, voice, voiceIndex);
     instrumentSelect.title = `Voice ${voiceIndex + 1} instrument`;
 
-    // Per-voice Solo/Mute — colocated with the sequence it affects.
+    // Per-voice Solo/Mute
     let soloMuteControls = null;
     if (voice.channel) {
         soloMuteControls = createSoloMuteControls(voice.channel, `solo_${lane.channelPrefix}_${voiceIndex}`, `mute_${lane.channelPrefix}_${voiceIndex}`);
     }
 
-    // Per-voice volume fader — colocated with the sequence it controls. Bound here
-    // because the channel exists by the time the lane is built (channels are created
-    // before the lanes), and createVoiceChannel only resolves volEl via id if the
-    // fader is already in the DOM.
+    // Per-voice volume fader
     let volWrap = null;
     if (voice.channel) {
         volWrap = document.createElement('div');
@@ -656,13 +663,34 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         vol.addEventListener('input', () => { voice.channel.volume = parseFloat(vol.value); });
     }
 
-    // Requested order: Voice n (+ remove) -> instrument -> Vol -> Rnd/Rev/Copy -> Nudge -> Solo -> Mute
-    if (instrumentSelect) labelArea.appendChild(instrumentSelect);
-    if (volWrap) labelArea.appendChild(volWrap);
-    if (editControls) labelArea.appendChild(editControls);
-    if (nudgeControl) labelArea.appendChild(nudgeControl);
-    if (soloMuteControls) labelArea.appendChild(soloMuteControls);
+    // Clr button for this voice (separate from the edit group, goes in row1)
+    let clrBtn = null;
+    if (voice.channel) {
+        clrBtn = document.createElement('button');
+        clrBtn.type = 'button';
+        clrBtn.className = 'edit-btn edit-btn-sm';
+        clrBtn.textContent = 'Clear';
+        clrBtn.title = `Clear voice ${voiceIndex + 1}`;
+        clrBtn.addEventListener('click', () => clearVoice(lane, lane.voices[voiceIndex]));
+    }
 
+    // Row 1: Voice n, (remove), instrument, Vol, Solo, Mute, Clr
+    if (instrumentSelect) row1.appendChild(instrumentSelect);
+    if (volWrap) row1.appendChild(volWrap);
+    if (soloMuteControls) row1.appendChild(soloMuteControls);
+    if (clrBtn) row1.appendChild(clrBtn);
+
+    // Row 2: Rnd, Rev, Copy, Paste, Nudge
+    const row2 = document.createElement('div');
+    row2.style.display = 'flex';
+    row2.style.alignItems = 'center';
+    row2.style.gap = '6px';
+    row2.style.flexWrap = 'wrap';
+    if (editControls) row2.appendChild(editControls);
+    if (nudgeControl) row2.appendChild(nudgeControl);
+
+    labelArea.appendChild(row1);
+    labelArea.appendChild(row2);
     row.appendChild(labelArea);
 
 
@@ -1104,6 +1132,12 @@ function reverseVoice(lane, voice) {
     buildLane(lane);
 }
 
+/** Clears a single voice's pattern (all steps off). */
+function clearVoice(lane, voice) {
+    voice.selected.fill(false);
+    buildLane(lane);
+}
+
 let _laneClipboard = null;
 
 /** Captures the lane's current pattern for later paste. */
@@ -1168,8 +1202,8 @@ function createVoiceEditControls(lane, voiceIndex) {
         return b;
     };
     group.append(
-        mk('Rnd', `Randomize voice ${voiceIndex + 1}`, () => randomizeVoice(lane, lane.voices[voiceIndex])),
-        mk('Rev', `Reverse voice ${voiceIndex + 1}`, () => reverseVoice(lane, lane.voices[voiceIndex])),
+        mk('Random', `Randomize voice ${voiceIndex + 1}`, () => randomizeVoice(lane, lane.voices[voiceIndex])),
+        mk('Reverse', `Reverse voice ${voiceIndex + 1}`, () => reverseVoice(lane, lane.voices[voiceIndex])),
         mk('Copy', `Copy voice ${voiceIndex + 1}`, () => copyVoice(lane.voices[voiceIndex])),
         mk('Paste', `Paste into voice ${voiceIndex + 1}`, () => pasteVoice(lane, lane.voices[voiceIndex]))
     );
@@ -1204,15 +1238,6 @@ export function addLaneEditControls(lane) {
         mkBtn('Random', `Randomize ${name}`, () => randomizeLane(lane)),
         mkBtn('Reverse', `Reverse ${name}`, () => reverseLane(lane))
     );
-    // Copy/Paste Lane operate on the whole lane. The Master lane relies on its
-    // per-voice Copy/Paste instead, so the lane-level pair is omitted there to
-    // reduce clutter; A/B Phrase lanes keep it for whole-lane transfers.
-    if (lane.channelPrefix !== 'master') {
-        group.append(
-            mkBtn('Copy Lane', `Copy entire ${name} (all voices)`, () => copyLane(lane)),
-            mkBtn('Paste Lane', `Paste into entire ${name} (all voices)`, () => pasteLane(lane))
-        );
-    }
     parent.appendChild(group);
 }
 
@@ -1270,14 +1295,16 @@ export function wireLaneMixButtons(lanes, channels) {
     add(lanes.Awheel, channels.Awheel, 'soloAWheel', 'muteAWheel');
     add(lanes.Bwheel, channels.Bwheel, 'soloBWheel', 'muteBWheel');
 
-        // 'driver' is the master wheel channel; colocate its Mute on the Master
-        // lane. Solo is intentionally omitted here — each Master voice already has
-        // its own per-voice Solo in its row, so a lane-level Solo would be redundant.
+        // 'driver' is the master wheel (the Master Beat reference). Its instrument,
+        // volume, solo, and mute are colocated in the Polyryhthm Beat Scheme controls
+        // row (#masterBeatControls), alongside the reference strip.
         const beatControls = document.getElementById('masterBeatControls');
         if (beatControls && channels.driver) {
             if (!beatControls.querySelector('#soloDriver')) {
                 beatControls.appendChild(createSoloMuteControls(channels.driver, 'soloDriver', 'muteDriver'));
             }
+            // Reorder master beat controls: label, instrument, volume, solo, mute
+            reorderWheelLaneControls(beatControls, ['.master-beat-control-label', 'soundDriver', '.lane-volume', '.voice-mix-controls']);
         }
 
         // Arrange A/B pulse lane controls as: Instrument -> Volume -> Solo -> Mute -> Clear
@@ -1285,6 +1312,11 @@ export function wireLaneMixButtons(lanes, channels) {
         // Solo/Mute wrapper, and Clear) so we don't pull buttons out of their wrappers.
         reorderWheelLaneControls(mountFor(lanes.Awheel), ['soundAWheel', '.lane-volume', '.voice-mix-controls', 'clearAWheelBtn']);
         reorderWheelLaneControls(mountFor(lanes.Bwheel), ['soundBWheel', '.lane-volume', '.voice-mix-controls', 'clearBWheelBtn']);
+
+        // Reorder phrase lane toolbar controls: +Voice, Random/Reverse, Clear, Nudge Group
+        reorderWheelLaneControls(mountFor(lanes.master), ['addMasterVoiceBtn', '.lane-edit-controls', 'clearMasterBtn', '.group-nudge-control']);
+        reorderWheelLaneControls(mountFor(lanes.Aphrase), ['addAPhraseVoiceBtn', '.lane-edit-controls', 'clearAPhraseBtn', '.group-nudge-control']);
+        reorderWheelLaneControls(mountFor(lanes.Bphrase), ['addBPhraseVoiceBtn', '.lane-edit-controls', 'clearBPhraseBtn', '.group-nudge-control']);
     }
 
     function reorderWheelLaneControls(mount, selectors) {

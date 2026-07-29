@@ -506,10 +506,11 @@ updateBeatSchemeSummary();
 createFixedLaneInstrumentSelects();
 // Mount Solo/Mute inside the lanes (single-channel + master wheel) now that the
 // lane toolbars exist; per-voice Solo/Mute are created in each voice row above.
-wireLaneMixButtons(lanes, channels);
-
-// Add per-lane editing controls (randomize / reverse / copy / paste)
+// Add per-lane editing controls (randomize / reverse) before wireLaneMixButtons
+// so the phrase lane reorder inside it can position the edit controls correctly.
 Object.values(lanes).forEach(lane => addLaneEditControls(lane, state));
+
+wireLaneMixButtons(lanes, channels);
 
 // Initialize mix-driven lane visuals (dim when muted / solo-excluded)
 refreshSilenced(channels);
