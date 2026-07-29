@@ -334,6 +334,8 @@
             background-color: #2b2b3a;
         }
         #audioBtn {
+            background-color: #00e676;
+            color: #000;
             white-space: nowrap;
             text-transform: uppercase;
         }
