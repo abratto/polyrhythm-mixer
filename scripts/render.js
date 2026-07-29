@@ -622,7 +622,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
 
         // Draw gears — the master wheel now shows the A-pulse and B-pulse patterns
         // (pink and cyan dots) instead of the Master voice selected steps.
-        drawGear(ctx, cx, cy, rMainInner, rMainOuter, state.mainTeeth, angles.main, '#7a8a9e', true, Math.max(state.flash.driver, state.flash.custom), null, isMobile);
+        drawGear(ctx, cx, cy, rMainInner, rMainOuter, state.mainTeeth, angles.main, '#7a8a9e', true, state.flash.driver, null, isMobile);
 
         // A-pulse and B-pulse dots on the master wheel, color-coded pink and cyan
         const aDots = new Uint8Array(state.mainTeeth);
