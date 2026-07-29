@@ -1635,9 +1635,20 @@
         }
 
         /* Compact playhead track (one master cycle). */
+        .sticky-secondary {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+        }
+        .sticky-secondary .secondary-actions {
+            margin-left: 0;
+        }
+        .sticky-secondary .transport-readout {
+            margin-left: auto;
+        }
         .mini-playhead {
             position: relative;
-            flex: 1;
             height: 10px;
             min-width: 80px;
             background: #1c1c26;
