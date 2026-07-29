@@ -84,6 +84,7 @@ function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop
 
     // Spoke lines — always 4 spokes at quarter-turn positions (the master beat)
     if (!isMobile) {
+        ctx.lineWidth = 4;
         ctx.strokeStyle = 'rgba(255,255,255,0.35)';
         for (let q = 0; q < 4; q++) {
             const theta = q * Math.PI / 2 - Math.PI / 2;
