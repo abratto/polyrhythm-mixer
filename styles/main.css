@@ -1549,8 +1549,14 @@
         }
 
         @media (max-width: 720px) {
+            html {
+                overflow-x: hidden;
+            }
             body {
                 overflow-x: hidden;
+            }
+            .transport-controls {
+                flex-wrap: wrap;
             }
             .transport-btn {
                 height: 36px;
