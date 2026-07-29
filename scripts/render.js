@@ -708,6 +708,9 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 13px sans-serif';
         ctx.textAlign = 'center';
+        const currentCycle = state.masterPhraseCycles > 1
+            ? Math.floor(currentStep / state.mainTeeth) % state.masterPhraseCycles
+            : 0;
         ctx.fillText(`MASTER (${state.mainTeeth} TEETH / LCM)`, cx, cy - rMainOuter - 32);
         if (state.masterPhraseCycles > 1) {
             ctx.font = '11px sans-serif';
