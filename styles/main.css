@@ -1553,6 +1553,9 @@
         }
 
         @media (max-width: 720px) {
+            body {
+                overflow-x: hidden;
+            }
             .voice-row {
                 align-items: stretch;
                 flex-direction: column;
