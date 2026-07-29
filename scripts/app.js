@@ -218,7 +218,7 @@ function updateBeatSchemeSummary() {
     if (!ui.beatSchemeSummary) return;
     ui.beatSchemeSummary.textContent = `— ${state.A} against ${state.B}`;
     const sub = document.querySelector('.pulses-section .lane-group-sub');
-    if (sub) sub.textContent = `${state.mainTeeth} pulses per cycle`;
+    if (sub) sub.textContent = `(${state.mainTeeth} pulses per cycle)`;
 }
 
 /**
