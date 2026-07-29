@@ -1247,6 +1247,7 @@
             }
             .lane-actions {
                 width: 100%;
+                flex-wrap: wrap;
             }
             .lane-view-actions {
                 width: 100%;
