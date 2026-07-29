@@ -295,13 +295,13 @@ function migratePayload(payload) {
     return payload;
 }
 
-/** Applies a fixed channel's state (driver, Awheel, Bwheel) using compact s/v/u format. */
-function applyFixedChannelState(channel, channelState) {
-    if (!channel || !channelState) return;
+/** Applies channel state (instrument, volume, mute, solo) from a compact or legacy payload. */
+export function applyChannelState(channel, stateObj, soundKey = 's') {
+    if (!channel || !stateObj) return;
 
-    const sound = channelState.s ?? channelState.instrument;
-    const volume = channelState.v ?? channelState.volume;
-    const muted = channelState.u ?? channelState.muted;
+    const sound = stateObj[soundKey] ?? stateObj.instrument;
+    const volume = stateObj.v ?? stateObj.volume;
+    const muted = stateObj.u ?? stateObj.muted;
 
     if (sound && channel.soundEl) {
         const hasSoundOption = Array.from(channel.soundEl.options).some(opt => opt.value === sound);
@@ -309,12 +309,12 @@ function applyFixedChannelState(channel, channelState) {
             channel.soundEl.value = sound;
             channel.sound = sound;
         }
-      }
+    }
 
     if (typeof volume === 'number' && Number.isFinite(volume)) {
         channel.volume = Math.max(0, Math.min(1, volume));
         if (channel.volEl) channel.volEl.value = String(channel.volume);
-      }
+    }
 
     if (muted !== undefined) {
         channel.muted = !!muted;
@@ -322,16 +322,21 @@ function applyFixedChannelState(channel, channelState) {
             channel.muteEl.classList.toggle('muted', channel.muted);
             channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
         }
-      }
+    }
 
-    const soloed = channelState.o ?? channelState.soloed;
+    const soloed = stateObj.o ?? stateObj.soloed;
     if (soloed !== undefined) {
         channel.soloed = !!soloed;
         if (channel.soloEl) {
             channel.soloEl.classList.toggle('soloed', channel.soloed);
             channel.soloEl.textContent = channel.soloed ? 'Soloed' : 'Solo';
         }
-      }
+    }
+}
+
+/** Applies a fixed channel's state (driver, Awheel, Bwheel) using compact s/v/u format. */
+function applyFixedChannelState(channel, channelState) {
+    applyChannelState(channel, channelState, 's');
 }
 
 /**

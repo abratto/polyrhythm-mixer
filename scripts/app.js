@@ -16,9 +16,9 @@
 import { getDomRefs } from './dom.js';
 import { createState, resetFlashState, updateDerivedState, updatePhaseUI } from './state.js';
 import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons, addVoice, updateVoiceInstrumentLabels, applyMixVisuals, addLaneEditControls, setMixChannels, wireLaneMixButtons } from './lanes.js';
-import { createChannels, populateMenus, wireChannels, toggleAudio, addVoiceChannel, syncAudioStartTime, startAudioScheduler, stopAudioScheduler, resetAudioScheduler, updateWorkerScheduler, populateInstrumentSelect, refreshSilenced } from './audio.js';
+import { createChannels, populateMenus, wireChannels, toggleAudio, addVoiceChannel, syncAudioStartTime, startAudioScheduler, stopAudioScheduler, resetAudioScheduler, populateInstrumentSelect, refreshSilenced } from './audio.js';
 import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } from './controls.js';
-import { copyShareLink, loadStateFromUrl } from './share.js';
+import { copyShareLink, loadStateFromUrl, applyChannelState } from './share.js';
 import { closeSaveRhythmModal, closeSavedRhythmsModal, openSaveRhythmModal, openSavedRhythmsModal, saveCurrentRhythm } from './saved-rhythms.js';
 import { startAnimation } from './render.js';
 
@@ -56,23 +56,14 @@ channels.onMixChange = () => applyMixVisuals(lanes, channels);
 lanes.Awheel.channel = channels.Awheel;
 lanes.Bwheel.channel = channels.Bwheel;
 
-const MIXER_LABELS = {
-    master: 'Master',
-    A: 'Meter A Phrase',
-    B: 'Meter B Phrase'
+const PREFIX_CONFIG = {
+    master: { lane: lanes.master,  voiceKey: 'masterVoices', container: ui.masterVoiceContainer, color: '#ff9100', label: 'Master' },
+    A:      { lane: lanes.Aphrase, voiceKey: 'Avoices',      container: ui.AVoiceContainer,      color: '#ff3366', label: 'Meter A Phrase' },
+    B:      { lane: lanes.Bphrase, voiceKey: 'Bvoices',      container: ui.BVoiceContainer,      color: '#00e5ff', label: 'Meter B Phrase' }
 };
 
-function laneForPrefix(prefix) {
-    if (prefix === 'master') return lanes.master;
-    if (prefix === 'A') return lanes.Aphrase;
-    return lanes.Bphrase;
-}
-
-function voiceChannelKeyForPrefix(prefix) {
-    if (prefix === 'master') return 'masterVoices';
-    if (prefix === 'A') return 'Avoices';
-    return 'Bvoices';
-}
+function laneForPrefix(prefix) { return PREFIX_CONFIG[prefix].lane; }
+function voiceChannelKeyForPrefix(prefix) { return PREFIX_CONFIG[prefix].voiceKey; }
 
 function bindChannelToVoice(prefix, voiceIndex, channel) {
     const lane = laneForPrefix(prefix);
@@ -87,13 +78,12 @@ function bindChannelToVoice(prefix, voiceIndex, channel) {
  * Rebuilds voice mixer strips to match the current voice count.
  * Used after loading a share URL with multiple voices.
  */
-function rebuildVoiceMixerStrips(prefix, container, color, label) {
-    const lane = laneForPrefix(prefix);
-    const key = voiceChannelKeyForPrefix(prefix);
-    channels[key] = [];
+function rebuildVoiceMixerStrips(prefix) {
+    const cfg = PREFIX_CONFIG[prefix];
+    const lane = cfg.lane;
+    channels[cfg.voiceKey] = [];
     lane.voices.forEach((voice, idx) => {
-        const channel = bindChannelToVoice(prefix, idx, addVoiceChannel(channels, prefix, container, idx));
-        // Restore channel state from payload if present
+        const channel = bindChannelToVoice(prefix, idx, addVoiceChannel(channels, prefix, cfg.container, idx));
         if (voice._channelState && channel) {
             applyVoiceChannelState(channel, voice._channelState);
             delete voice._channelState;
@@ -104,44 +94,9 @@ function rebuildVoiceMixerStrips(prefix, container, color, label) {
 
 /**
  * Applies voice channel state (instrument, volume, mute) from a share payload.
- * Exported for use by share.js.
  */
 function applyVoiceChannelState(channel, voiceState) {
-    if (!channel || !voiceState) return;
-
-    const sound = voiceState.i ?? voiceState.instrument;
-    const volume = voiceState.v ?? voiceState.volume;
-    const muted = voiceState.u ?? voiceState.muted;
-
-    if (sound && channel.soundEl) {
-        const hasSoundOption = Array.from(channel.soundEl.options).some(opt => opt.value === sound);
-        if (hasSoundOption) {
-            channel.soundEl.value = sound;
-            channel.sound = sound;
-        }
-    }
-
-    if (typeof volume === 'number' && Number.isFinite(volume)) {
-        channel.volume = Math.max(0, Math.min(1, volume));
-        if (channel.volEl) channel.volEl.value = String(channel.volume);
-    }
-
-    if (muted !== undefined) {
-        channel.muted = !!muted;
-        if (channel.muteEl) {
-            channel.muteEl.classList.toggle('muted', channel.muted);
-            channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
-        }
-    }
-
-    const soloed = voiceState.o ?? voiceState.soloed;
-    if (soloed !== undefined) {
-        channel.soloed = !!soloed;
-        if (channel.soloEl) {
-            channel.soloEl.classList.toggle('soloed', channel.soloed);
-            channel.soloEl.textContent = channel.soloed ? 'Soloed' : 'Solo';
-        }
-    }
+    applyChannelState(channel, voiceState, 'i');
 }
 
 /**
@@ -192,28 +147,30 @@ function createFixedLaneInstrumentSelects() {
     });
 }
 
+function _syncAudioAndVisualState() {
+    state.followPlayhead = { master: true, Aphrase: true, Bphrase: true };
+    state.visibleCycle = { master: 0, Aphrase: 0, Bphrase: 0 };
+    state.mainAngle = 0;
+    syncAudioStartTime(state);
+    resetAudioScheduler(state);
+}
+
 /**
  * Rebuilds the entire system after a meter or phrase cycle change.
  * Recalculates derived state, resizes lanes (preserving patterns),
  * rebuilds lane buttons, and resets the animation angle to zero.
  */
 function rebuildSystem() {
-    state.followPlayhead = { master: true, Aphrase: true, Bphrase: true };
-    state.visibleCycle = { master: 0, Aphrase: 0, Bphrase: 0 };
+    _syncAudioAndVisualState();
     updateDerivedState(state);
     updatePhaseUI(state, ui);
     resizeAllLanes(state, lanes);
     buildAllLanes(lanes, state);
-    state.mainAngle = 0;
-    syncAudioStartTime(state);
-    resetAudioScheduler(state);
-    updateWorkerScheduler(state, lanes, channels, getGlobalVolume());
     refreshSilenced(channels);
     updateBeatSchemeSummary();
 }
 
-/** Parameterized one-line summary of the current meter ratio, shown in the
- *  Polyrhythm Beat Scheme header (e.g. "6 × 4 — 6 against 4 Polyrhythm Beat Scheme"). */
+/** One-line summary of the current meter ratio shown in the Polyrhythm Beat Scheme header. */
 function updateBeatSchemeSummary() {
     if (!ui.beatSchemeSummary) return;
     ui.beatSchemeSummary.textContent = `— ${state.A} against ${state.B}`;
@@ -226,12 +183,7 @@ function updateBeatSchemeSummary() {
  * Used by the "Sync System" button.
  */
 function resetAndRebuild() {
-    state.mainAngle = 0;
-    state.followPlayhead = { master: true, Aphrase: true, Bphrase: true };
-    state.visibleCycle = { master: 0, Aphrase: 0, Bphrase: 0 };
-    syncAudioStartTime(state);
-    resetAudioScheduler(state);
-    updateWorkerScheduler(state, lanes, channels, getGlobalVolume());
+    _syncAudioAndVisualState();
     resetFlashState(state);
     resetPatterns(state, lanes);
     buildAllLanes(lanes, state);
@@ -302,14 +254,11 @@ function resetMixerToStartingState() {
     state.mainAngle = 0;
     syncAudioStartTime(state);
     resetAudioScheduler(state);
-    updateWorkerScheduler(state, lanes, channels, getGlobalVolume());
     refreshSilenced(channels);
 }
 
 function rebuildAllVoiceMixerStrips() {
-    rebuildVoiceMixerStrips('master', ui.masterVoiceContainer, '#ff9100', MIXER_LABELS.master);
-    rebuildVoiceMixerStrips('A', ui.AVoiceContainer, '#ff3366', MIXER_LABELS.A);
-    rebuildVoiceMixerStrips('B', ui.BVoiceContainer, '#00e5ff', MIXER_LABELS.B);
+    Object.keys(PREFIX_CONFIG).forEach(prefix => rebuildVoiceMixerStrips(prefix));
 }
 
 /**
@@ -439,7 +388,6 @@ let cachedGlobalVolume = Number.parseInt(ui.masterVolumeSlider.value, 10) / 100;
 const getGlobalVolume = () => state.audioEnabled ? cachedGlobalVolume : 0;
 ui.masterVolumeSlider.addEventListener('input', () => {
     cachedGlobalVolume = Number.parseInt(ui.masterVolumeSlider.value, 10) / 100;
-    updateWorkerScheduler(state, lanes, channels, getGlobalVolume());
 });
 
 // Phase 4b: Wire transport (Play/Pause + Stop) — separate from audio unlock
@@ -463,15 +411,15 @@ lanes.Bphrase.onRemoveVoice = (voiceIndex) => {
 
 // Phase 5: Wire add/remove voice buttons
 ui.addMasterVoiceBtn.addEventListener('click', () => {
-    handleAddVoice(lanes.master, 'master', ui.masterVoiceContainer, '#ff9100', MIXER_LABELS.master);
+    handleAddVoice(lanes.master, 'master', ui.masterVoiceContainer, '#ff9100', PREFIX_CONFIG.master.label);
 });
 
 ui.addAPhraseVoiceBtn.addEventListener('click', () => {
-    handleAddVoice(lanes.Aphrase, 'A', ui.AVoiceContainer, '#ff3366', MIXER_LABELS.A);
+    handleAddVoice(lanes.Aphrase, 'A', ui.AVoiceContainer, '#ff3366', PREFIX_CONFIG.A.label);
 });
 
 ui.addBPhraseVoiceBtn.addEventListener('click', () => {
-    handleAddVoice(lanes.Bphrase, 'B', ui.BVoiceContainer, '#00e5ff', MIXER_LABELS.B);
+    handleAddVoice(lanes.Bphrase, 'B', ui.BVoiceContainer, '#00e5ff', PREFIX_CONFIG.B.label);
 });
 
 // Phase 6: Wire all user controls
@@ -488,7 +436,6 @@ wireControls({
         if (state.audioEnabled && state.playing) {
             startAudioScheduler(state, lanes, channels, getGlobalVolume);
         }
-        updateWorkerScheduler(state, lanes, channels, getGlobalVolume());
         syncPlayButton();
     },
     onShare: () => copyShareLink(shareDeps),
