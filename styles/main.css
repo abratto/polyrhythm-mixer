@@ -1261,6 +1261,8 @@
             }
             .lane-label-area {
                 min-width: 0;
+                flex-wrap: wrap !important;
+                overflow-x: visible !important;
             }
             .short-lane {
                 display: grid;
@@ -1557,7 +1559,8 @@
             }
             .lane-label-area {
                 min-width: 0;
-                flex-wrap: wrap;
+                flex-wrap: wrap !important;
+                overflow-x: visible !important;
             }
             .voice-nudge-control {
                 align-self: flex-start;
