@@ -216,7 +216,7 @@ function rebuildSystem() {
  *  Polyrhythm Beat Scheme header (e.g. "6 × 4 — 6 against 4 Polyrhythm Beat Scheme"). */
 function updateBeatSchemeSummary() {
     if (!ui.beatSchemeSummary) return;
-    ui.beatSchemeSummary.textContent = `${state.A} × ${state.B} — ${state.A} against ${state.B} Polyrhythm Beat Scheme`;
+    ui.beatSchemeSummary.textContent = `${state.A} against ${state.B} Polyrhythm Beat Scheme`;
 }
 
 /**
