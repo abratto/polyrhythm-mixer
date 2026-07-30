@@ -464,6 +464,13 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
     const MIN_FRAME_MS = isMobile ? 33 : 0;
     let lastDrawTime = 0;
 
+    // Lane rebuild queue — defer DOM rebuilds from the animation loop to avoid
+    // innerHTML teardown + recreation mid-rAF, which guarantees a frame drop.
+    const _laneRebuildQueue = [];
+    function _requestDeferredRebuild(lane) {
+        if (!_laneRebuildQueue.includes(lane)) _laneRebuildQueue.push(lane);
+    }
+
     // Reused buffer for merging master voice selections.
     // Grow it on demand so higher meter pairs such as 17 against 18 still render correctly.
 
@@ -482,6 +489,12 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             return;
         }
         lastDrawTime = timestamp;
+
+        // Flush deferred lane rebuilds before drawing (avoids DOM churn during rAF)
+        while (_laneRebuildQueue.length > 0) {
+            const lane = _laneRebuildQueue.shift();
+            buildLane(lane, state);
+        }
 
         if (lastTime === null) {
             lastTime = timestamp;
@@ -589,7 +602,13 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
 
         // Step-level visual tracking — audio handled by scheduler
         if (currentStep !== prevStep) {
-            const previousActive = { ...state.lastActive };
+            const previousActive = {
+                master: state.lastActive.master,
+                Aphrase: state.lastActive.Aphrase,
+                Bphrase: state.lastActive.Bphrase,
+                Awheel: state.lastActive.Awheel,
+                Bwheel: state.lastActive.Bwheel
+            };
             let lastActive = null;
             for (let s = prevStep + 1; s <= currentStep; s++) {
                 const active = {
@@ -609,7 +628,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
                 const masterCycle = Math.floor(currentStep / state.mainTeeth) % state.masterPhraseCycles;
                 if (masterCycle !== state.visibleCycle.master) {
                     state.visibleCycle.master = masterCycle;
-                    buildLane(lanes.master, state);
+                    _requestDeferredRebuild(lanes.master);
                 }
             }
 
@@ -618,7 +637,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
                 const aCycle = Math.floor(aStep / state.A);
                 if (aCycle !== state.visibleCycle.Aphrase) {
                     state.visibleCycle.Aphrase = aCycle;
-                    buildLane(lanes.Aphrase, state);
+                    _requestDeferredRebuild(lanes.Aphrase);
                 }
             }
 
@@ -627,7 +646,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
                 const bCycle = Math.floor(bStep / state.B);
                 if (bCycle !== state.visibleCycle.Bphrase) {
                     state.visibleCycle.Bphrase = bCycle;
-                    buildLane(lanes.Bphrase, state);
+                    _requestDeferredRebuild(lanes.Bphrase);
                 }
             }
         }

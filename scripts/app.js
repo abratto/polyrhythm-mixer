@@ -507,8 +507,11 @@ refreshSilenced(channels);
 // The canvas scales via CSS (width:100%; height:auto), so the render loop
 // does not need coordinate changes. Reading canvas.offsetWidth forces the
 // browser to reflow the canvas container — important on iOS after rotation.
-window.addEventListener('resize', function () {
-    requestAnimationFrame(function () {
+let _resizeDebounce = null;
+window.addEventListener('resize', () => {
+    if (_resizeDebounce) return;
+    _resizeDebounce = requestAnimationFrame(() => {
         void canvas.offsetWidth;
+        _resizeDebounce = null;
     });
 });

@@ -833,6 +833,7 @@ function buildMultiVoiceLane(lane, state) {
     }
 
     lane.voices.forEach((voice, idx) => {
+        voice._currentIndex = undefined;
         const row = buildVoiceButtons(lane, voice, idx, state);
         lane.container.appendChild(row);
     });
@@ -1316,28 +1317,32 @@ function markMultiVoiceCurrentButtons(lane, state, previous, next) {
         const visibleCycle = state?.visibleCycle?.[laneKey] ?? 0;
         const cycleStart = visibleCycle * stepsPerCycle;
 
-        lane.voices.forEach((voice) => {
-            voice.buttons.forEach(btn => btn?.classList.remove('current'));
-        });
-
-        if (following) {
-            lane.voices.forEach((voice, voiceIndex) => {
-                const displayedCurr = currentIndexes[voiceIndex] - cycleStart;
-                if (displayedCurr >= 0 && displayedCurr < stepsPerCycle) {
+        lane.voices.forEach((voice, voiceIndex) => {
+            if (voice._currentIndex != null) {
+                removeCurrentClass(voice.buttons[voice._currentIndex]);
+                voice._currentIndex = undefined;
+            }
+            const displayedCurr = currentIndexes[voiceIndex] - cycleStart;
+            const isInView = displayedCurr >= 0 && displayedCurr < stepsPerCycle;
+            if (following) {
+                if (isInView) {
                     addCurrentClass(voice.buttons[displayedCurr]);
+                    voice._currentIndex = displayedCurr;
                     positionPlayhead(lane._playheads?.[voiceIndex], displayedCurr, stepsPerCycle);
                 }
-            });
-            if (lane._cue) lane._cue.hidden = true;
-        } else {
-            // Pinned: only highlight if the active step lives in the visible cycle.
-            lane.voices.forEach((voice, voiceIndex) => {
+            } else {
                 const activeInVisible = currentIndexes[voiceIndex] - cycleStart;
                 if (activeInVisible >= 0 && activeInVisible < stepsPerCycle) {
                     addCurrentClass(voice.buttons[activeInVisible]);
+                    voice._currentIndex = activeInVisible;
                     positionPlayhead(lane._playheads?.[voiceIndex], activeInVisible, stepsPerCycle);
                 }
-            });
+            }
+        });
+
+        if (following) {
+            if (lane._cue) lane._cue.hidden = true;
+        } else {
             const anyElsewhere = lane.voices.some((_, vi) => Math.floor(currentIndexes[vi] / stepsPerCycle) !== visibleCycle);
             if (lane._cue) {
                 if (anyElsewhere) {
