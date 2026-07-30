@@ -2,26 +2,21 @@
 
 ## Performance
 
-### AudioWorklet synthesis
-Every trigger creates new `OscillatorNode` / `GainNode` / `BiquadFilter` objects
-that are never disconnected or pooled. At high BPM with dense patterns and
-complex instruments (e.g. conga creates 11 nodes per hit), this generates
-significant GC pressure and leaked nodes in the audio graph.
+## Performance
 
-An `AudioWorkletProcessor` (registered via blob URL so no build step is needed)
-would move all sample generation to the audio render thread behind a single
-persistent `AudioWorkletNode`. The main thread would post scheduling batches and
-the worklet would handle polyphonic voice management, envelope generation, and
-filtering internally. This eliminates per-trigger node allocation entirely and
-removes main-thread scheduling jitter.
+### ~~AudioNode pooling~~ 🚧 IN PROGRESS
+Swap `createOscillator` / `createGain` / `createBiquadFilter` for pooled
+versions. After each trigger's nodes finish (onended), they're disconnected
+and returned to the pool instead of being GC'd. Eliminates ~90% of per-trigger
+allocations with no architectural changes. ~100 lines.
 
-**Estimated effort:** 500–800 lines — rewriting instrument functions into
-worklet-processor voices.
-
-### Audio node pooling (interim)
-If AudioWorklet is out of reach, pool frequently-used nodes (`OscillatorNode`,
-`GainNode`, `BiquadFilter`) and reuse "dead" nodes that have finished their
-`stop()` time. Simpler than AudioWorklet but still cuts GC pressure.
+### AudioWorklet synthesis (future)
+Replace the entire instrument dispatch with a single `AudioWorkletProcessor`
+running in the audio render thread. Benefits: sample-accurate timing, zero
+main-thread GC from audio, polyphonic voice management with shared resources.
+Requires rewriting all 50+ instruments as DSP code (sine/triangle/square waves,
+envelopes, biquad filters) inside the worklet's `process()` method.
+Estimated effort: 500–800 lines.
 
 ### Timeline marker batching
 Multiple `drawTimelineMarker` calls each do their own `save/restore` + `beginPath` +
@@ -40,15 +35,10 @@ offscreen canvas and `drawImage()` instead.
 ## Code Quality
 
 ### ~~Split large files~~ ✓ DONE
-- `audio.js` (1,746 lines) → `instruments.js` (1,248), `channels.js` (258),
-  `scheduler.js` (214), `audio.js` (55)
-- **`instruments.js`** — catalog, all `play*` functions, helpers, dispatch table
-- **`channels.js`** — channel creation, DOM wiring, mixer controls, solo detection
-- **`scheduler.js`** — timing loop, step scheduling, `playSingleChannel`
-- **`audio.js`** — thin facade: `toggleAudio` + re-exports
-
-### Split remaining files
-- `lanes.js` (1,413 lines) → `lane-ui.js` (1,413), `lanes.js` (25-line re-export facade)
+- `audio.js` (1,746 lines) → `instruments.js` (1,248), `channels.js` (263),
+  `scheduler.js` (224), `audio.js` (66)
+- `lanes.js` (1,413 lines) → `lane-ui.js` (1,413), `lanes.js` (22-line facade)
+- Both use re-export facades so existing imports continue to work.
 
 ### Normalize CSS indentation
 `main.css` has mixed 8-space, 4-space, and 0-space indentation.

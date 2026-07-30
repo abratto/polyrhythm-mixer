@@ -5,6 +5,10 @@
  * and filter nodes to synthesize percussion sounds. No samples — pure synthesis.
  */
 
+import { acquireOsc as poolAcquireOsc } from './pool.js';
+
+function acquireOsc(state) { return poolAcquireOsc(state.audioCtx); }
+
 /**
  * Available percussion instruments, sorted alphabetically by display label.
  * Each entry maps a short value key (used in serialization) to a human-readable label.
@@ -1187,13 +1191,7 @@ function createMetalBellStrike(state, frequency, startTime, volume, duration) {
     });
 }
 
-function acquireOsc(state) {
-    return state.audioCtx.createOscillator();
-}
-
-function acquireGain(state) {
-    return state.audioCtx.createGain();
-}
+function acquireGain(state) { return state.audioCtx.createGain(); }
 
 /** Dispatch table mapping instrument value keys to their synthesis functions. */
 export const instruments = {
