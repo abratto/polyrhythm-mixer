@@ -6,6 +6,7 @@
  */
 
 import { acquireOsc as poolAcquireOsc } from './pool.js';
+import { instrumentData } from './instrument-data.js';
 
 function acquireOsc(state) { return poolAcquireOsc(state.audioCtx); }
 
@@ -443,16 +444,17 @@ function playBongoLow(state, now, vol, channelName) {
     masterGain.gain.setValueAtTime(vol, now);
     masterGain.connect(state.audioCtx.destination);
 
-    const baseFreq = channelName.startsWith('A') ? 160 : 145;
-    const decay = 0.35;
+    const p = instrumentData.bongo_low.params.reduce((a, {k, v}) => { a[k] = v; return a; }, {});
+    const baseFreq = channelName.startsWith('A') ? p.baseFreq + 15 : p.baseFreq;
+    const decay = p.bodyDecay;
 
     // 1. Fundamental (sine)
     const osc1 = acquireOsc(state);
     const gain1 = acquireGain(state);
     osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(baseFreq * 1.19, now);
+    osc1.frequency.setValueAtTime(baseFreq * p.pitchBend, now);
     osc1.frequency.exponentialRampToValueAtTime(baseFreq, now + 0.025);
-    gain1.gain.setValueAtTime(0.7, now);
+    gain1.gain.setValueAtTime(p.bodyVol, now);
     gain1.gain.exponentialRampToValueAtTime(0.001, now + decay);
     osc1.connect(gain1); gain1.connect(masterGain);
     osc1.start(now); osc1.stop(now + decay);
@@ -461,10 +463,10 @@ function playBongoLow(state, now, vol, channelName) {
     const osc2 = acquireOsc(state);
     const gain2 = acquireGain(state);
     osc2.type = 'triangle';
-    osc2.frequency.setValueAtTime(baseFreq * 1.593 * 1.19, now);
-    osc2.frequency.exponentialRampToValueAtTime(baseFreq * 1.593, now + 0.025);
-    gain2.gain.setValueAtTime(0.25, now);
-    gain2.gain.exponentialRampToValueAtTime(0.001, now + (decay * 0.45));
+    osc2.frequency.setValueAtTime(baseFreq * p.overRatio * p.pitchBend, now);
+    osc2.frequency.exponentialRampToValueAtTime(baseFreq * p.overRatio, now + 0.025);
+    gain2.gain.setValueAtTime(p.overVol, now);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + (decay * p.overDecay));
     osc2.connect(gain2); gain2.connect(masterGain);
     osc2.start(now); osc2.stop(now + (decay * 0.45));
 
@@ -473,11 +475,11 @@ function playBongoLow(state, now, vol, channelName) {
     if (noise) {
         const noiseFilter = state.audioCtx.createBiquadFilter();
         noiseFilter.type = 'bandpass';
-        noiseFilter.frequency.setValueAtTime(3070, now);
-        noiseFilter.Q.setValueAtTime(1.5, now);
+        noiseFilter.frequency.setValueAtTime(p.noiseFreq, now);
+        noiseFilter.Q.setValueAtTime(p.noiseQ, now);
         const noiseGain = acquireGain(state);
-        noiseGain.gain.setValueAtTime(0.4, now);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
+        noiseGain.gain.setValueAtTime(p.noiseVol, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + p.noiseDecay);
         noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(masterGain);
         noise.start(now);
     }
@@ -500,7 +502,7 @@ function playBongoHigh(state, now, vol, channelName) {
     osc1.type = 'sine';
     osc1.frequency.setValueAtTime(baseFreq * 1.15, now);
     osc1.frequency.exponentialRampToValueAtTime(baseFreq, now + 0.02);
-    gain1.gain.setValueAtTime(0.7, now);
+    gain1.gain.setValueAtTime(p.bodyVol, now);
     gain1.gain.exponentialRampToValueAtTime(0.001, now + decay);
     osc1.connect(gain1); gain1.connect(masterGain);
     osc1.start(now); osc1.stop(now + decay);
@@ -700,7 +702,7 @@ function playFrameDrum(state, now, vol, channelName) {
         filter.frequency.setValueAtTime(1500, now);
         filter.Q.setValueAtTime(1.0, now);
         const noiseGain = acquireGain(state);
-        noiseGain.gain.setValueAtTime(0.4, now);
+        noiseGain.gain.setValueAtTime(p.noiseVol, now);
         noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
         noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(masterGain);
         noise.start(now);
