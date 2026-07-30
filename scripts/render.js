@@ -748,11 +748,11 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         }
         ctx.fillText(`Meter A (${state.A} beats per cycle)`, cxA, cy + rAOuter + 48);
         ctx.font = '12px sans-serif';
-        ctx.fillText(`${state.A} groups of ${state.mainTeeth} beats`, cxA, cy + rAOuter + 66);
+        ctx.fillText(`${state.A} groups of ${state.teethA} beats`, cxA, cy + rAOuter + 66);
         ctx.font = 'bold 13px sans-serif';
         ctx.fillText(`Meter B (${state.B} beats per cycle)`, cxB, cy + rBOuter + 48);
         ctx.font = '12px sans-serif';
-        ctx.fillText(`${state.B} groups of ${state.mainTeeth} beats`, cxB, cy + rBOuter + 66);
+        ctx.fillText(`${state.B} groups of ${state.teethB} beats`, cxB, cy + rBOuter + 66);
         ctx.font = 'bold 13px sans-serif';
 
         // Timelines — push down when many master voices to avoid overlapping the gear
