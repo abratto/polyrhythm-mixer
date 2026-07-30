@@ -554,7 +554,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
           // The master gear has a fixed size, and smaller gears are scaled proportionally
           // but with a compression factor so they remain visible even at extreme ratios.
          const cx = canvas.width / 2;
-         const cy = 205;
+         const cy = 218;
          const masterRadius = 145;           // fixed master wheel radius
          const compressionRatio = 0.55;      // compress size ratio for visibility
 
