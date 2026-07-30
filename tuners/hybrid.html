@@ -38,10 +38,9 @@ textarea { width: 100%; height: 200px; font-family: monospace; font-size: 11px; 
 <textarea id="codeArea"></textarea>
 <p id="status">Select an instrument to begin</p>
 
-<script>
+<script type="module">
+import { instrumentData } from '../scripts/instrument-data.js';
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-// ── Reusable helpers ──
 function acquireNoise(state) {
   const buf = (() => {
     const s = state.audioCtx.sampleRate;
@@ -56,243 +55,22 @@ function acquireNoise(state) {
 }
 
 // ── Instrument parameter database ──
-const instruments = {
-  bongo_low: {
-    label: 'Bongo (Low) — Hembra',
-    layers: ['body', 'overtone', 'impact'],
-    params: [
-      { section: 'body', key: 'baseFreq', label: 'Base Frequency', unit: 'Hz', min: 60, max: 300, step: 1, val: 145, gloss: 'Fundamental pitch (C3–Eb3). Warm body tone.' },
-      { section: 'body', key: 'pitchBend', label: 'Pitch Bend', unit: '', min: 1.0, max: 1.4, step: 0.01, val: 1.15, gloss: 'Impact tension bend multiplier. >1 gives a brief upward pitch hit.' },
-      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.70, gloss: 'Volume of the fundamental sine wave.' },
-      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.05, max: 0.8, step: 0.01, val: 0.35, gloss: 'How long the fundamental rings out.' },
-      { section: 'overtone', key: 'overRatio', label: 'Overtone Ratio', unit: '', min: 1.2, max: 3.0, step: 0.001, val: 1.593, gloss: 'Frequency ratio of the first membrane overtone (Bessel zero). 1.593 gives authentic inharmonic ring.' },
-      { section: 'overtone', key: 'overVol', label: 'Overtone Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.25, gloss: 'Volume of the overtone triangle wave.' },
-      { section: 'overtone', key: 'overDecay', label: 'Overtone Decay Factor', unit: '', min: 0.1, max: 1.0, step: 0.01, val: 0.45, gloss: 'Overtone decay = bodyDecay × this factor. Lower = faster damping.' },
-      { section: 'impact', key: 'noiseFreq', label: 'Noise Filter Freq', unit: 'Hz', min: 500, max: 8000, step: 10, val: 3000, gloss: 'Bandpass centre frequency for the hand-slap transient.' },
-      { section: 'impact', key: 'noiseQ', label: 'Noise Filter Q', unit: '', min: 0.5, max: 5.0, step: 0.1, val: 1.5, gloss: 'Filter resonance. Higher = more tonal ping.' },
-      { section: 'impact', key: 'noiseVol', label: 'Noise Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.40, gloss: 'Volume of the noise transient.' },
-      { section: 'impact', key: 'noiseDecay', label: 'Noise Decay', unit: 's', min: 0.003, max: 0.08, step: 0.001, val: 0.015, gloss: 'Duration of the slap transient. Very short for Bongo.' }
-    ]
-  },
-  bongo_high: {
-    label: 'Bongo (High) — Macho',
-    layers: ['body', 'overtone', 'impact'],
-    params: [
-      { section: 'body', key: 'baseFreq', label: 'Base Frequency', unit: 'Hz', min: 80, max: 400, step: 1, val: 215, gloss: 'Fundamental pitch (G3–Bb3). Brighter, tighter skin.' },
-      { section: 'body', key: 'pitchBend', label: 'Pitch Bend', unit: '', min: 1.0, max: 1.4, step: 0.01, val: 1.15, gloss: 'Impact tension bend.' },
-      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.70, gloss: 'Volume of the fundamental.' },
-      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.05, max: 0.6, step: 0.01, val: 0.22, gloss: 'Tighter skin = shorter sustain.' },
-      { section: 'overtone', key: 'overRatio', label: 'Overtone Ratio', unit: '', min: 1.2, max: 3.0, step: 0.001, val: 1.593, gloss: 'Membrane overtone ratio.' },
-      { section: 'overtone', key: 'overVol', label: 'Overtone Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.30, gloss: 'Slightly more prominent rim ring on the Macho.' },
-      { section: 'overtone', key: 'overDecay', label: 'Overtone Decay Factor', unit: '', min: 0.1, max: 1.0, step: 0.01, val: 0.40, gloss: 'Overtone decay factor.' },
-      { section: 'impact', key: 'noiseFreq', label: 'Noise Filter Freq', unit: 'Hz', min: 500, max: 8000, step: 10, val: 4000, gloss: 'Higher slap frequency for the tighter Macho skin.' },
-      { section: 'impact', key: 'noiseQ', label: 'Noise Filter Q', unit: '', min: 0.5, max: 5.0, step: 0.1, val: 1.8, gloss: 'Filter resonance.' },
-      { section: 'impact', key: 'noiseVol', label: 'Noise Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.45, gloss: 'Noise transient volume.' },
-      { section: 'impact', key: 'noiseDecay', label: 'Noise Decay', unit: 's', min: 0.003, max: 0.08, step: 0.001, val: 0.012, gloss: 'Very short slap transient.' }
-    ]
-  },
-  conga_low: {
-    label: 'Conga (Low)',
-    layers: ['body', 'overtone', 'impact'],
-    params: [
-      { section: 'body', key: 'baseFreq', label: 'Base Frequency', unit: 'Hz', min: 60, max: 250, step: 1, val: 130, gloss: 'Fundamental pitch (low conga body).' },
-      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.70, gloss: 'Fundamental sine volume.' },
-      { section: 'body', key: 'bodyPitchBend', label: 'Pitch Bend', unit: '', min: 1.0, max: 1.5, step: 0.01, val: 1.2, gloss: 'Impact pitch bend multiplier.' },
-      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.05, max: 0.8, step: 0.01, val: 0.2, gloss: 'Overall conga decay.' },
-      { section: 'overtone', key: 'overRatio1', label: 'Shell Ratio 1', unit: '', min: 1.2, max: 3.0, step: 0.01, val: 1.5, gloss: 'First shell overtone ratio (triangle wave).' },
-      { section: 'overtone', key: 'overVol1', label: 'Shell Vol 1', unit: '', min: 0, max: 1, step: 0.01, val: 0.25, gloss: 'Volume of first overtone.' },
-      { section: 'overtone', key: 'overRatio2', label: 'Shell Ratio 2', unit: '', min: 1.5, max: 4.0, step: 0.01, val: 2.2, gloss: 'Second shell overtone ratio.' },
-      { section: 'overtone', key: 'overVol2', label: 'Shell Vol 2', unit: '', min: 0, max: 1, step: 0.01, val: 0.12, gloss: 'Volume of second overtone.' },
-      { section: 'impact', key: 'slapFreq', label: 'Slap Filter Freq', unit: 'Hz', min: 500, max: 6000, step: 10, val: 2500, gloss: 'Bandpass centre for the conga slap noise.' },
-      { section: 'impact', key: 'slapVol', label: 'Slap Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.30, gloss: 'Slap noise volume.' },
-      { section: 'impact', key: 'slapDecay', label: 'Slap Decay', unit: 's', min: 0.003, max: 0.1, step: 0.001, val: 0.025, gloss: 'Slap transient duration.' }
-    ]
-  },
-  conga_middle: {
-    label: 'Conga (Middle)',
-    layers: ['body', 'overtone', 'impact'],
-    params: [
-      { section: 'body', key: 'baseFreq', label: 'Base Frequency', unit: 'Hz', min: 80, max: 300, step: 1, val: 160, gloss: 'Fundamental pitch (mid conga).' },
-      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.65, gloss: 'Fundamental sine volume.' },
-      { section: 'body', key: 'bodyPitchBend', label: 'Pitch Bend', unit: '', min: 1.0, max: 1.5, step: 0.01, val: 1.2, gloss: 'Impact pitch bend.' },
-      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.05, max: 0.6, step: 0.01, val: 0.18, gloss: 'Overall decay.' },
-      { section: 'overtone', key: 'overRatio1', label: 'Shell Ratio 1', unit: '', min: 1.2, max: 3.0, step: 0.01, val: 1.5, gloss: 'First shell overtone.' },
-      { section: 'overtone', key: 'overVol1', label: 'Shell Vol 1', unit: '', min: 0, max: 1, step: 0.01, val: 0.25, gloss: 'First overtone volume.' },
-      { section: 'overtone', key: 'overRatio2', label: 'Shell Ratio 2', unit: '', min: 1.5, max: 4.0, step: 0.01, val: 2.2, gloss: 'Second shell overtone.' },
-      { section: 'overtone', key: 'overVol2', label: 'Shell Vol 2', unit: '', min: 0, max: 1, step: 0.01, val: 0.12, gloss: 'Second overtone volume.' },
-      { section: 'impact', key: 'slapFreq', label: 'Slap Filter Freq', unit: 'Hz', min: 500, max: 6000, step: 10, val: 2800, gloss: 'Bandpass centre for slap.' },
-      { section: 'impact', key: 'slapVol', label: 'Slap Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.35, gloss: 'Slap noise volume.' },
-      { section: 'impact', key: 'slapDecay', label: 'Slap Decay', unit: 's', min: 0.003, max: 0.1, step: 0.001, val: 0.02, gloss: 'Slap transient.' }
-    ]
-  },
-  conga_high: {
-    label: 'Conga (High)',
-    layers: ['body', 'overtone', 'impact'],
-    params: [
-      { section: 'body', key: 'baseFreq', label: 'Base Frequency', unit: 'Hz', min: 100, max: 400, step: 1, val: 195, gloss: 'Fundamental pitch (high conga).' },
-      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.6, gloss: 'Fundamental volume.' },
-      { section: 'body', key: 'bodyPitchBend', label: 'Pitch Bend', unit: '', min: 1.0, max: 1.5, step: 0.01, val: 1.2, gloss: 'Pitch bend.' },
-      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.05, max: 0.5, step: 0.01, val: 0.15, gloss: 'Overall decay.' },
-      { section: 'overtone', key: 'overRatio1', label: 'Shell Ratio 1', unit: '', min: 1.2, max: 3.0, step: 0.01, val: 1.5, gloss: 'First shell overtone.' },
-      { section: 'overtone', key: 'overVol1', label: 'Shell Vol 1', unit: '', min: 0, max: 1, step: 0.01, val: 0.25, gloss: 'First overtone volume.' },
-      { section: 'overtone', key: 'overRatio2', label: 'Shell Ratio 2', unit: '', min: 1.5, max: 4.0, step: 0.01, val: 2.2, gloss: 'Second shell overtone.' },
-      { section: 'overtone', key: 'overVol2', label: 'Shell Vol 2', unit: '', min: 0, max: 1, step: 0.01, val: 0.12, gloss: 'Second overtone volume.' },
-      { section: 'impact', key: 'slapFreq', label: 'Slap Filter Freq', unit: 'Hz', min: 500, max: 6000, step: 10, val: 3200, gloss: 'Bandpass centre for slap.' },
-      { section: 'impact', key: 'slapVol', label: 'Slap Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.40, gloss: 'Slap volume.' },
-      { section: 'impact', key: 'slapDecay', label: 'Slap Decay', unit: 's', min: 0.003, max: 0.1, step: 0.001, val: 0.018, gloss: 'Slap transient.' }
-    ]
-  },
-  conga_slap: {
-    label: 'Conga Slap',
-    layers: ['body', 'overtone', 'impact'],
-    params: [
-      { section: 'body', key: 'baseFreq', label: 'Base Frequency', unit: 'Hz', min: 100, max: 450, step: 1, val: 240, gloss: 'Higher fundamental for the slap tone.' },
-      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.5, gloss: 'Body volume, quieter than open tone.' },
-      { section: 'body', key: 'bodyPitchBend', label: 'Pitch Bend', unit: '', min: 1.0, max: 1.5, step: 0.01, val: 1.15, gloss: 'Gentler pitch bend for slap.' },
-      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.02, max: 0.3, step: 0.005, val: 0.08, gloss: 'Short body decay for slap.' },
-      { section: 'overtone', key: 'overRatio1', label: 'Shell Ratio 1', unit: '', min: 1.2, max: 3.0, step: 0.01, val: 1.5, gloss: 'Shell overtone.' },
-      { section: 'overtone', key: 'overVol1', label: 'Shell Vol 1', unit: '', min: 0, max: 1, step: 0.01, val: 0.2, gloss: 'Overtone volume.' },
-      { section: 'impact', key: 'slapFreq', label: 'Slap Filter Freq', unit: 'Hz', min: 1000, max: 8000, step: 10, val: 4000, gloss: 'High slap filter (bright crack).' },
-      { section: 'impact', key: 'slapQ', label: 'Slap Filter Q', unit: '', min: 0.5, max: 5.0, step: 0.1, val: 2.0, gloss: 'Slap resonance.' },
-      { section: 'impact', key: 'slapVol', label: 'Slap Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.60, gloss: 'Dominant slap noise volume.' },
-      { section: 'impact', key: 'slapDecay', label: 'Slap Decay', unit: 's', min: 0.002, max: 0.06, step: 0.001, val: 0.015, gloss: 'Very short slap transient.' }
-    ]
-  },
-  snare: {
-    label: 'Snare Drum',
-    layers: ['body', 'noise'],
-    params: [
-      { section: 'body', key: 'bodyFreq', label: 'Body Frequency', unit: 'Hz', min: 80, max: 400, step: 1, val: 180, gloss: 'Snare drum body pitch (triangle wave).' },
-      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.35, gloss: 'Body oscillator volume.' },
-      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.01, max: 0.3, step: 0.005, val: 0.08, gloss: 'Body decay time.' },
-      { section: 'noise', key: 'noiseFreq', label: 'Noise HP Freq', unit: 'Hz', min: 200, max: 5000, step: 10, val: 1200, gloss: 'Highpass filter for snare-wire noise.' },
-      { section: 'noise', key: 'noiseVol', label: 'Noise Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.65, gloss: 'Snare noise volume.' },
-      { section: 'noise', key: 'noiseDecay', label: 'Noise Decay', unit: 's', min: 0.01, max: 0.3, step: 0.005, val: 0.12, gloss: 'Noise decay (snare wire rattle).' }
-    ]
-  },
-  electronic_snare: {
-    label: 'Electronic Snare',
-    layers: ['body', 'noise'],
-    params: [
-      { section: 'body', key: 'bodyFreq', label: 'Body Start Freq', unit: 'Hz', min: 60, max: 400, step: 1, val: 200, gloss: 'Sine oscillator start frequency (drops to end freq).' },
-      { section: 'body', key: 'bodyEndFreq', label: 'Body End Freq', unit: 'Hz', min: 30, max: 300, step: 1, val: 100, gloss: 'Resting frequency after pitch sweep.' },
-      { section: 'body', key: 'bodySweep', label: 'Body Sweep', unit: 's', min: 0.01, max: 0.3, step: 0.005, val: 0.1, gloss: 'Pitch sweep duration.' },
-      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.5, gloss: 'Body oscillator volume.' },
-      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.01, max: 0.3, step: 0.005, val: 0.1, gloss: 'Body decay.' },
-      { section: 'noise', key: 'noiseFreq', label: 'Noise BP Freq', unit: 'Hz', min: 500, max: 6000, step: 10, val: 2500, gloss: 'Bandpass centre for noise.' },
-      { section: 'noise', key: 'noiseQ', label: 'Noise Q', unit: '', min: 0.5, max: 8.0, step: 0.1, val: 3.0, gloss: 'Bandpass resonance.' },
-      { section: 'noise', key: 'noiseVol', label: 'Noise Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.6, gloss: 'Noise volume.' },
-      { section: 'noise', key: 'noiseDecay', label: 'Noise Decay', unit: 's', min: 0.01, max: 0.3, step: 0.005, val: 0.12, gloss: 'Noise decay.' }
-    ]
-  },
-  timbale: {
-    label: 'Timbale',
-    layers: ['body', 'noise'],
-    params: [
-      { section: 'body', key: 'bodyFreq', label: 'Body Start Freq', unit: 'Hz', min: 100, max: 800, step: 1, val: 500, gloss: 'High sine pitch, drops quickly.' },
-      { section: 'body', key: 'bodyEndFreq', label: 'Body End Freq', unit: 'Hz', min: 80, max: 600, step: 1, val: 350, gloss: 'Resting pitch.' },
-      { section: 'body', key: 'bodySweep', label: 'Body Sweep', unit: 's', min: 0.005, max: 0.2, step: 0.001, val: 0.06, gloss: 'Fast pitch drop.' },
-      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.6, gloss: 'Body volume (linear ramp up + exponential decay).' },
-      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.01, max: 0.25, step: 0.005, val: 0.08, gloss: 'Body decay.' },
-      { section: 'noise', key: 'noiseFreq', label: 'Noise HP Freq', unit: 'Hz', min: 200, max: 5000, step: 10, val: 3000, gloss: 'Highpass filter for metallic rim ring.' },
-      { section: 'noise', key: 'noiseVol', label: 'Noise Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.25, gloss: 'Noise volume.' },
-      { section: 'noise', key: 'noiseDecay', label: 'Noise Decay', unit: 's', min: 0.005, max: 0.15, step: 0.001, val: 0.03, gloss: 'Short noise decay (sharp metallic ring).' }
-    ]
-  },
-  cajon_bass: {
-    label: 'Cajón Bass',
-    layers: ['body', 'resonance'],
-    params: [
-      { section: 'body', key: 'bodyFreq', label: 'Body Start Freq', unit: 'Hz', min: 40, max: 200, step: 1, val: 90, gloss: 'Low sine sweep start.' },
-      { section: 'body', key: 'bodyEndFreq', label: 'Body End Freq', unit: 'Hz', min: 20, max: 150, step: 1, val: 45, gloss: 'Low resting pitch.' },
-      { section: 'body', key: 'bodySweep', label: 'Body Sweep', unit: 's', min: 0.01, max: 0.3, step: 0.005, val: 0.1, gloss: 'Pitch drop time.' },
-      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 1.0, gloss: 'Sub oscillator volume.' },
-      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.03, max: 0.4, step: 0.005, val: 0.15, gloss: 'Sub decay.' },
-      { section: 'resonance', key: 'resFreq', label: 'Resonance Start', unit: 'Hz', min: 60, max: 350, step: 1, val: 150, gloss: 'Box resonance triangle oscillator start.' },
-      { section: 'resonance', key: 'resEndFreq', label: 'Resonance End', unit: 'Hz', min: 30, max: 250, step: 1, val: 80, gloss: 'Resonance resting pitch.' },
-      { section: 'resonance', key: 'resSweep', label: 'Resonance Sweep', unit: 's', min: 0.01, max: 0.2, step: 0.001, val: 0.06, gloss: 'Resonance sweep time.' },
-      { section: 'resonance', key: 'resVol', label: 'Resonance Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.5, gloss: 'Resonance oscillator volume.' }
-    ]
-  },
-  cajon_slap: {
-    label: 'Cajón Slap',
-    layers: ['body', 'noise'],
-    params: [
-      { section: 'noise', key: 'noiseFreq', label: 'Noise HP Freq', unit: 'Hz', min: 500, max: 8000, step: 10, val: 3000, gloss: 'Highpass for wood crack.' },
-      { section: 'noise', key: 'noiseVol', label: 'Noise Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.5, gloss: 'Noise volume.' },
-      { section: 'noise', key: 'noiseDecay', label: 'Noise Decay', unit: 's', min: 0.005, max: 0.15, step: 0.001, val: 0.06, gloss: 'Short crack duration.' },
-      { section: 'body', key: 'bodyFreq', label: 'Slap Tone Freq', unit: 'Hz', min: 100, max: 600, step: 1, val: 350, gloss: 'Mid triangle slap tone frequency.' },
-      { section: 'body', key: 'bodySweep', label: 'Slap Tone Sweep', unit: 's', min: 0.005, max: 0.15, step: 0.001, val: 0.03, gloss: 'Slap tone pitch drop.' },
-      { section: 'body', key: 'bodyVol', label: 'Slap Tone Vol', unit: '', min: 0, max: 1, step: 0.01, val: 0.5, gloss: 'Slap tone volume.' },
-      { section: 'body', key: 'bodyDecay', label: 'Slap Tone Decay', unit: 's', min: 0.005, max: 0.15, step: 0.001, val: 0.04, gloss: 'Slap tone decay.' }
-    ]
-  },
-  slap: {
-    label: 'Hand Slap',
-    layers: ['noise', 'body'],
-    params: [
-      { section: 'noise', key: 'noiseFreq', label: 'Noise BP Freq', unit: 'Hz', min: 500, max: 5000, step: 10, val: 2000, gloss: 'Bandpass centre for the slap noise.' },
-      { section: 'noise', key: 'noiseVol', label: 'Noise Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.55, gloss: 'Noise volume.' },
-      { section: 'noise', key: 'noiseDecay', label: 'Noise Decay', unit: 's', min: 0.005, max: 0.15, step: 0.001, val: 0.05, gloss: 'Noise decay.' },
-      { section: 'body', key: 'bodyFreq', label: 'Body Start Freq', unit: 'Hz', min: 100, max: 1200, step: 1, val: 800, gloss: 'Slap sine tone start.' },
-      { section: 'body', key: 'bodyEndFreq', label: 'Body End Freq', unit: 'Hz', min: 50, max: 800, step: 1, val: 400, gloss: 'Slap tone end.' },
-      { section: 'body', key: 'bodySweep', label: 'Body Sweep', unit: 's', min: 0.005, max: 0.15, step: 0.001, val: 0.04, gloss: 'Pitch drop time.' },
-      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.55, gloss: 'Body oscillator volume.' },
-      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.005, max: 0.15, step: 0.001, val: 0.06, gloss: 'Body decay.' }
-    ]
-  },
-  djembe: {
-    label: 'Djembe',
-    layers: ['body', 'body', 'impact'],
-    params: [
-      { section: 'body', key: 'bassFreq', label: 'Bass Frequency', unit: 'Hz', min: 30, max: 120, step: 1, val: 55, gloss: 'Helmholtz cavity resonance (deep sub-bass).' },
-      { section: 'body', key: 'bassPitchBend', label: 'Bass Pitch Bend', unit: '', min: 1.0, max: 1.4, step: 0.01, val: 1.1, gloss: 'Cavity pitch bend on impact.' },
-      { section: 'body', key: 'bassVol', label: 'Bass Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.85, gloss: 'Sub-bass volume.' },
-      { section: 'body', key: 'bassDecay', label: 'Bass Decay', unit: 's', min: 0.05, max: 0.8, step: 0.01, val: 0.45, gloss: 'Long decay for the booming open tone.' },
-      { section: 'body', key: 'skinRatio', label: 'Skin Ratio', unit: '', min: 2.0, max: 8.0, step: 0.1, val: 5.5, gloss: 'Skin overtone = bassFreq × this value. Tight djembe skin is ~5-6×.' },
-      { section: 'body', key: 'skinPitchBend', label: 'Skin Pitch Bend', unit: '', min: 1.0, max: 1.4, step: 0.01, val: 1.15, gloss: 'Skin pitch bend' },
-      { section: 'body', key: 'skinVol', label: 'Skin Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.25, gloss: 'Skin triangle-wave volume.' },
-      { section: 'body', key: 'skinDecay', label: 'Skin Decay', unit: 's', min: 0.03, max: 0.4, step: 0.01, val: 0.15, gloss: 'Faster skin decay.' },
-      { section: 'impact', key: 'slapFreq', label: 'Slap Filter Freq', unit: 'Hz', min: 1000, max: 8000, step: 10, val: 4500, gloss: 'Bright slap transient frequency.' },
-      { section: 'impact', key: 'slapQ', label: 'Slap Q', unit: '', min: 0.5, max: 3.0, step: 0.1, val: 1.2, gloss: 'Slap filter resonance.' },
-      { section: 'impact', key: 'slapVol', label: 'Slap Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.5, gloss: 'Slap noise volume.' },
-      { section: 'impact', key: 'slapDecay', label: 'Slap Decay', unit: 's', min: 0.005, max: 0.1, step: 0.001, val: 0.04, gloss: 'Slap transient duration.' }
-    ]
-  },
-  frame_drum: {
-    label: 'Frame Drum (Tar)',
-    layers: ['body', 'overtone', 'impact'],
-    params: [
-      { section: 'body', key: 'baseFreq', label: 'Base Frequency', unit: 'Hz', min: 50, max: 200, step: 1, val: 95, gloss: 'Membrane fundamental. Frame drum lacks deep cavity — pure skin tone.' },
-      { section: 'body', key: 'pitchBend', label: 'Pitch Bend', unit: '', min: 1.0, max: 1.8, step: 0.01, val: 1.4, gloss: 'Aggressive 40% pitch drop for that "thud/boing" stretch.' },
-      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.8, gloss: 'Fundamental volume.' },
-      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.05, max: 0.5, step: 0.01, val: 0.22, gloss: 'Shorter sustain than djembe (shallow shell).' },
-      { section: 'overtone', key: 'overRatio', label: 'Overtone Ratio', unit: '', min: 1.2, max: 2.5, step: 0.001, val: 1.593, gloss: 'Inharmonic Bessel ratio for the edge tone (triangle).' },
-      { section: 'overtone', key: 'overPitchBend', label: 'Over. Pitch Bend', unit: '', min: 1.0, max: 1.6, step: 0.01, val: 1.3, gloss: 'Overtone pitch bend on impact.' },
-      { section: 'overtone', key: 'overVol', label: 'Overtone Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.2, gloss: 'Overtone volume.' },
-      { section: 'overtone', key: 'overDecayFactor', label: 'Over. Decay Factor', unit: '', min: 0.2, max: 1.0, step: 0.01, val: 0.6, gloss: 'Overtone = bodyDecay × this factor.' },
-      { section: 'impact', key: 'noiseFreq', label: 'Transient Freq', unit: 'Hz', min: 500, max: 4000, step: 10, val: 1500, gloss: 'Softer mid-range flesh transient.' },
-      { section: 'impact', key: 'noiseQ', label: 'Transient Q', unit: '', min: 0.5, max: 3.0, step: 0.1, val: 1.0, gloss: 'Transient filter Q.' },
-      { section: 'impact', key: 'noiseVol', label: 'Transient Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.4, gloss: 'Flesh impact volume.' },
-      { section: 'impact', key: 'noiseDecay', label: 'Transient Decay', unit: 's', min: 0.005, max: 0.08, step: 0.001, val: 0.02, gloss: 'Short finger/thumb transient.' }
-    ]
-  },
-  synth_kick: {
-    label: 'EDM Synth Kick',
-    layers: ['body', 'noise'],
-    params: [
-      { section: 'body', key: 'bodyFreq', label: 'Sub Start Freq', unit: 'Hz', min: 30, max: 120, step: 1, val: 60, gloss: 'Low sub oscillator start.' },
-      { section: 'body', key: 'bodyEndFreq', label: 'Sub End Freq', unit: 'Hz', min: 15, max: 80, step: 1, val: 30, gloss: 'Sub resting pitch.' },
-      { section: 'body', key: 'bodySweep', label: 'Sub Sweep', unit: 's', min: 0.03, max: 0.4, step: 0.01, val: 0.2, gloss: 'Pitch drop duration (longer = deeper sub-bass sweep).' },
-      { section: 'body', key: 'bodyVol', label: 'Sub Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.9, gloss: 'Sub oscillator volume.' },
-      { section: 'body', key: 'bodyDecay', label: 'Sub Decay', unit: 's', min: 0.05, max: 0.5, step: 0.01, val: 0.25, gloss: 'Sub decay.' },
-      { section: 'noise', key: 'clickFreq', label: 'Click BP Freq', unit: 'Hz', min: 500, max: 8000, step: 10, val: 4000, gloss: 'Bandpass centre for the attack click.' },
-      { section: 'noise', key: 'clickQ', label: 'Click Q', unit: '', min: 0.5, max: 5.0, step: 0.1, val: 3.0, gloss: 'Click filter resonance.' },
-      { section: 'noise', key: 'clickVol', label: 'Click Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.3, gloss: 'Click noise volume.' },
-      { section: 'noise', key: 'clickDecay', label: 'Click Decay', unit: 's', min: 0.002, max: 0.06, step: 0.001, val: 0.01, gloss: 'Very short click transient.' }
-    ]
-  }
-};
+
+
+// ── Instruments loaded from instrument-data.js ──
+const instruments = {};
+Object.keys(instrumentData).forEach(k => {
+  const src = instrumentData[k];
+  instruments[k] = {
+    label: src.label,
+    layers: [...new Set(src.params.map(p => p.section))],
+    params: src.params.map(p => ({
+      section: p.section,
+      key: p.k, label: p.label, unit: p.unit,
+      min: p.lo, max: p.hi, step: p.step, val: p.v, gloss: p.gloss
+    }))
+  };
+});
 
 // ── Populate dropdown ──
 const sel = document.getElementById('instrumentSelect');

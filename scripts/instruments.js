@@ -91,16 +91,16 @@ function acquireNoiseSource(state) {
 // ===== Instrument synthesis functions =====
 
 /** Kick drum: sine oscillator with fast pitch sweep downward. */
-function playKick(state, now, vol) {
+function playKick(state, now, vol) {    const p = instrumentData.kick.params.reduce((a, {k, v}) => { a[k] = v; return a; }, {});
     const osc = acquireOsc(state);
     const gain = acquireGain(state);
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(135, now);
-    osc.frequency.exponentialRampToValueAtTime(38, now + 0.12);
+    osc.frequency.setValueAtTime(p.startFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(p.endFreq, now + p.sweepTime);
     gain.gain.setValueAtTime(vol, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + p.decay);
     osc.connect(gain); gain.connect(state.audioCtx.destination);
-    osc.start(now); osc.stop(now + 0.14);
+    osc.start(now); osc.stop(now + p.decay);
 }
 
 /** Snare: triangle oscillator body + highpass noise for snap. */
@@ -170,16 +170,16 @@ function playShaker(state, now, vol) {
 }
 
 /** Tom: sine oscillator with pitch sweep, frequency varies by channel (A vs B). */
-function playTom(state, now, vol, channelName) {
+function playTom(state, now, vol, channelName) {    const p = instrumentData.tom.params.reduce((a, {k, v}) => { a[k] = v; return a; }, {});
     const osc = acquireOsc(state);
     const gain = acquireGain(state);
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(channelName.startsWith('A') ? 210 : 160, now);
-    osc.frequency.exponentialRampToValueAtTime(channelName.startsWith('A') ? 110 : 80, now + 0.2);
-    gain.gain.setValueAtTime(vol * 0.8, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+    osc.frequency.setValueAtTime(channelName.startsWith('A') ? p.startFreq + 50 : p.startFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(channelName.startsWith('A') ? p.endFreq + 30 : p.endFreq, now + p.sweepTime);
+    gain.gain.setValueAtTime(vol, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + p.decay);
     osc.connect(gain); gain.connect(state.audioCtx.destination);
-    osc.start(now); osc.stop(now + 0.22);
+    osc.start(now); osc.stop(now + p.decay);
 }
 
 /** Handclap: multiple short noise bursts followed by a longer tail through a bandpass filter. */
@@ -618,46 +618,47 @@ function playClaves(state, now, vol) {
 
 /** Djembe: sine + triangle mix with deep downward pitch sweep, frequency varies by channel. */
 function playDjembe(state, now, vol, channelName) {
+    const p = instrumentData.djembe.params.reduce((a, {k, v}) => { a[k] = v; return a; }, {});
     const masterGain = acquireGain(state);
     masterGain.gain.setValueAtTime(vol, now);
     masterGain.connect(state.audioCtx.destination);
 
-    const bassFreq = channelName.startsWith('A') ? 65 : 55;
-    const bassDecay = 0.45;
+    const bassFreq = channelName.startsWith('A') ? p.bassFreq + 10 : p.bassFreq;
+    const bassDecay = p.bassDecay;
 
     // 1. Cavity fundamental (sine) — deep Helmholtz resonance
     const subOsc = acquireOsc(state);
     const subGain = acquireGain(state);
     subOsc.type = 'sine';
-    subOsc.frequency.setValueAtTime(bassFreq * 1.1, now);
+    subOsc.frequency.setValueAtTime(bassFreq * p.bassPitchBend, now);
     subOsc.frequency.exponentialRampToValueAtTime(bassFreq, now + 0.04);
-    subGain.gain.setValueAtTime(0.85, now);
-    subGain.gain.exponentialRampToValueAtTime(0.001, now + bassDecay);
+    subGain.gain.setValueAtTime(p.bassVol, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + p.bassDecay);
     subOsc.connect(subGain); subGain.connect(masterGain);
     subOsc.start(now); subOsc.stop(now + bassDecay);
 
     // 2. High skin resonance (triangle for stiffness)
     const skinOsc = acquireOsc(state);
     const skinGain = acquireGain(state);
-    const skinFreq = bassFreq * 5.5;
+    const skinFreq = bassFreq * p.skinRatio;
     skinOsc.type = 'triangle';
-    skinOsc.frequency.setValueAtTime(skinFreq * 1.15, now);
+    skinOsc.frequency.setValueAtTime(skinFreq * p.skinPitchBend, now);
     skinOsc.frequency.exponentialRampToValueAtTime(skinFreq, now + 0.03);
-    skinGain.gain.setValueAtTime(0.25, now);
-    skinGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    skinGain.gain.setValueAtTime(p.skinVol, now);
+    skinGain.gain.exponentialRampToValueAtTime(0.001, now + p.skinDecay);
     skinOsc.connect(skinGain); skinGain.connect(masterGain);
-    skinOsc.start(now); skinOsc.stop(now + 0.15);
+    skinOsc.start(now); skinOsc.stop(now + p.skinDecay);
 
     // 3. Slap transient (bright bandpass noise)
     const noise = acquireNoiseSource(state);
     if (noise) {
         const filter = state.audioCtx.createBiquadFilter();
         filter.type = 'bandpass';
-        filter.frequency.setValueAtTime(4500, now);
-        filter.Q.setValueAtTime(1.2, now);
+        filter.frequency.setValueAtTime(p.slapFreq, now);
+        filter.Q.setValueAtTime(p.slapQ, now);
         const noiseGain = acquireGain(state);
-        noiseGain.gain.setValueAtTime(0.5, now);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+        noiseGain.gain.setValueAtTime(p.slapVol, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + p.slapDecay);
         noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(masterGain);
         noise.start(now);
     }
@@ -777,7 +778,7 @@ function playSynthKick(state, now, vol) {
     noiseFilter.frequency.setValueAtTime(2000, now);
     const noiseGain = acquireGain(state);
     noiseGain.gain.setValueAtTime(vol * 0.7, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + p.slapDecay);
     noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
     noise.start(now);
 
