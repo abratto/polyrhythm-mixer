@@ -304,7 +304,6 @@ export function syncAudioStartTime(state) {
  * map to the same phrase/wheel step only fire once.
  */
 function scheduleStepAudio(state, lanes, channels, stepIndex, hitTime, globalVolume) {
-    _updateSoloFlag(channels);
     const lsa = state.lastScheduledActive;
     const stepWithinPhrase = ((stepIndex % state.masterPhraseSteps) + state.masterPhraseSteps) % state.masterPhraseSteps;
 

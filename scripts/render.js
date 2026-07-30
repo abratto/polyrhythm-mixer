@@ -10,6 +10,13 @@
  */
 import { getActivePhraseStep, getActiveWheelStep, getMeshedWheelAngle } from './math.js';
 
+/** Cache for pre-rendered gear body Path2D objects, keyed by tooth count + radii. */
+const _gearBodyCache = {};
+
+/** Pre-allocated scratch buffers for A/B dot masks, grown on demand. */
+let _scratchA = new Uint8Array(0);
+let _scratchB = new Uint8Array(0);
+
 /**
  * Updates flash counters and lastActive tracking for visual step highlighting.
  * Audio triggers are handled independently by the audio scheduler loop.
@@ -60,20 +67,24 @@ function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = isMobile ? 1.5 : 2.5;
 
-    // Draw gear body as alternating inner/outer polygon
-    ctx.beginPath();
-    const numPoints = teeth * 2;
-    for (let i = 0; i < numPoints; i++) {
-        const r = (i % 2 === 0) ? rOuter : rInner;
-        const theta = (i * Math.PI) / teeth - Math.PI / 2;
-        const x = r * Math.cos(theta);
-        const y = r * Math.sin(theta);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+    // Gear body — use pre-rendered Path2D (shape is static per tooth count + radii)
+    const bodyKey = `${teeth}_${rInner}_${rOuter}`;
+    if (!_gearBodyCache[bodyKey]) {
+        const path = new Path2D();
+        const numPoints = teeth * 2;
+        for (let i = 0; i < numPoints; i++) {
+            const r = (i % 2 === 0) ? rOuter : rInner;
+            const theta = (i * Math.PI) / teeth - Math.PI / 2;
+            const x = r * Math.cos(theta);
+            const y = r * Math.sin(theta);
+            if (i === 0) path.moveTo(x, y);
+            else path.lineTo(x, y);
+        }
+        path.closePath();
+        _gearBodyCache[bodyKey] = path;
     }
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+    ctx.fill(_gearBodyCache[bodyKey]);
+    ctx.stroke(_gearBodyCache[bodyKey]);
 
     // Center hole
     ctx.beginPath();
@@ -456,6 +467,13 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
     // Reused buffer for merging master voice selections.
     // Grow it on demand so higher meter pairs such as 17 against 18 still render correctly.
 
+    // Dynamically resize canvas height to fit all timeline rows (before drawing)
+    const totalVoices = lanes.master.voices.length + lanes.Aphrase.voices.length + lanes.Bphrase.voices.length;
+    const minCanvasHeight = 498 + totalVoices * 18 + 20;
+    if (canvas.height !== minCanvasHeight) {
+        canvas.height = minCanvasHeight;
+    }
+
     function animate(timestamp) {
         try {
         // On mobile, throttle rendering to ~30fps; audio is handled by scheduler
@@ -626,77 +644,67 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         drawGear(ctx, cx, cy, rMainInner, rMainOuter, state.mainTeeth, angles.main, '#7a8a9e', true, state.flash.driver, null, isMobile);
 
         // A-pulse and B-pulse dots on the master wheel, color-coded pink and cyan
-        const aDots = new Uint8Array(state.mainTeeth);
+        // Grow scratch buffers on demand (e.g. 17:18 → 306 teeth)
+        if (_scratchA.length < state.mainTeeth) {
+            _scratchA = new Uint8Array(state.mainTeeth);
+            _scratchB = new Uint8Array(state.mainTeeth);
+        }
+        _scratchA.fill(0);
+        _scratchB.fill(0);
         lanes.Awheel.selected.forEach((on, i) => {
-            if (!on) return;
-            const t = (i * state.teethA + state.phaseA) % state.mainTeeth;
-            aDots[t] = 1;
+            if (on) _scratchA[(i * state.teethA + state.phaseA) % state.mainTeeth] = 1;
         });
-        const bDots = new Uint8Array(state.mainTeeth);
         lanes.Bwheel.selected.forEach((on, i) => {
-            if (!on) return;
-            const t = (i * state.teethB + state.phaseB) % state.mainTeeth;
-            bDots[t] = 1;
+            if (on) _scratchB[(i * state.teethB + state.phaseB) % state.mainTeeth] = 1;
         });
+        const aDots = _scratchA;
+        const bDots = _scratchB;
         const markerRadius = rMainInner + ((rMainOuter - rMainInner) * 0.45);
         const dotRadius = Math.max(4, rMainOuter * 0.035);
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(angles.main);
-        // Colored spokes for A-pulse (pink) and B-pulse (cyan) subdivisions on the
-        // master wheel. When A and B coincide at the same tooth, a blended magenta
-        // spoke is used (pink + cyan = magenta in additive color mixing), preserving
-        // the exact geometric position while showing both divisions.
+        // Single pass per tooth: draw spokes and dots together
         for (let t = 0; t < state.mainTeeth; t++) {
             const aOn = aDots[t];
             const bOn = bDots[t];
             if (!aOn && !bOn) continue;
             const theta = (t / state.mainTeeth) * Math.PI * 2 - Math.PI / 2;
-            ctx.save();
+            const cosT = Math.cos(theta);
+            const sinT = Math.sin(theta);
+
+            // Spoke from centre
             ctx.lineWidth = 4;
             ctx.shadowBlur = 0;
-            if (aOn && bOn) {
-                ctx.strokeStyle = '#c07ae6';
-            } else if (aOn) {
-                ctx.strokeStyle = '#ff6b8f';
-            } else {
-                ctx.strokeStyle = '#6ef2ff';
-            }
+            if (aOn && bOn) ctx.strokeStyle = '#c07ae6';
+            else if (aOn) ctx.strokeStyle = '#ff6b8f';
+            else ctx.strokeStyle = '#6ef2ff';
             ctx.beginPath();
             ctx.moveTo(0, 0);
-            ctx.lineTo(rMainInner * Math.cos(theta), rMainInner * Math.sin(theta));
+            ctx.lineTo(rMainInner * cosT, rMainInner * sinT);
             ctx.stroke();
-            ctx.restore();
-        }
 
-        // Draw A-pulse (pink) and B-pulse (cyan) dots on each master tooth.
-        // When both land on the same tooth, offset them radially so both show.
-        for (let t = 0; t < state.mainTeeth; t++) {
-            const aOn = aDots[t];
-            const bOn = bDots[t];
-            if (!aOn && !bOn) continue;
-            const theta = (t / state.mainTeeth) * Math.PI * 2 - Math.PI / 2;
-            const defDraw = (color, rOff) => {
-                const r = markerRadius + rOff;
-                ctx.save();
-                ctx.fillStyle = color;
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = isMobile ? 1 : 2;
-                ctx.shadowBlur = isMobile ? 0 : 10;
-                ctx.shadowColor = color;
+            // Dot(s) at the tooth — offset when both land on same tooth
+            ctx.lineWidth = isMobile ? 1 : 2;
+            ctx.shadowBlur = isMobile ? 0 : 10;
+            ctx.strokeStyle = '#ffffff';
+            if (aOn) {
+                ctx.fillStyle = '#ff6b8f';
+                ctx.shadowColor = '#ff6b8f';
+                const rA = markerRadius + (aOn && bOn ? -5 : 0);
                 ctx.beginPath();
-                ctx.arc(r * Math.cos(theta), r * Math.sin(theta), dotRadius, 0, 2 * Math.PI);
+                ctx.arc(rA * cosT, rA * sinT, dotRadius, 0, 2 * Math.PI);
                 ctx.fill();
                 ctx.stroke();
-                ctx.restore();
-            };
-            if (aOn && bOn) {
-                defDraw('#ff6b8f', -5);   // pink inward
-                defDraw('#6ef2ff', 5);    // cyan outward
-            } else if (aOn) {
-                defDraw('#ff6b8f', 0);
-            } else {
-                defDraw('#6ef2ff', 0);
+            }
+            if (bOn) {
+                ctx.fillStyle = '#6ef2ff';
+                ctx.shadowColor = '#6ef2ff';
+                const rB = markerRadius + (aOn && bOn ? 5 : 0);
+                ctx.beginPath();
+                ctx.arc(rB * cosT, rB * sinT, dotRadius, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.stroke();
             }
         }
         ctx.restore();
@@ -726,13 +734,6 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
 
         drawMasterCycleTimeline(ctx, state, lanes, timelineX, 395, timelineWidth);
         drawFullPatternTimeline(ctx, state, lanes, timelineX, 450, timelineWidth);
-
-        // Dynamically resize canvas height to fit all timeline rows
-        const totalVoices = lanes.master.voices.length + lanes.Aphrase.voices.length + lanes.Bphrase.voices.length;
-        const minCanvasHeight = 498 + totalVoices * 18 + 20;
-        if (canvas.height !== minCanvasHeight) {
-            canvas.height = minCanvasHeight;
-        }
 
         requestAnimationFrame(animate);
         } catch (err) { console.error('Animation error:', err); requestAnimationFrame(animate); }
