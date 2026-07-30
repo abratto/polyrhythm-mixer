@@ -746,6 +746,8 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             ctx.fillStyle = '#ff9100';
             ctx.fillText(`C${currentCycle + 1} of ${state.masterPhraseCycles}`, cx, cy - rMainOuter - 50);
         }
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 13px sans-serif';
         ctx.fillText(`Meter A (${state.A} beats per cycle)`, cxA, cy + rAOuter + 48);
         ctx.font = '12px sans-serif';
         ctx.fillText(`${state.A} groups of ${state.teethA} beats`, cxA, cy + rAOuter + 66);
