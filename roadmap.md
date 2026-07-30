@@ -39,12 +39,16 @@ offscreen canvas and `drawImage()` instead.
 
 ## Code Quality
 
-### Split large files
-- **`audio.js`** (1,760+ lines) — separate into `channels.js`, `instruments.js`,
-  `scheduler.js`
-- **`lanes.js`** (1,400+ lines) — separate lane creation, step buttons, playhead,
-  edit controls
-- **`main.css`** (1,800+ lines) — split into layout, buttons, lane, modal sections
+### ~~Split large files~~ ✓ DONE
+- `audio.js` (1,746 lines) → `instruments.js` (1,248), `channels.js` (258),
+  `scheduler.js` (214), `audio.js` (55)
+- **`instruments.js`** — catalog, all `play*` functions, helpers, dispatch table
+- **`channels.js`** — channel creation, DOM wiring, mixer controls, solo detection
+- **`scheduler.js`** — timing loop, step scheduling, `playSingleChannel`
+- **`audio.js`** — thin facade: `toggleAudio` + re-exports
+
+### Split remaining files
+- `lanes.js` (1,413 lines) → `lane-ui.js` (1,413), `lanes.js` (25-line re-export facade)
 
 ### Normalize CSS indentation
 `main.css` has mixed 8-space, 4-space, and 0-space indentation.
