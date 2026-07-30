@@ -470,11 +470,13 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
 
     function animate(timestamp) {
         try {
-        // Dynamically resize canvas height as voices are added/removed
+        // Dynamically resize canvas height as voices are added/removed.
+        // The timeline Y pushes down when there are many master voices, so the
+        // full pattern timeline grows down from timelineY + 55 + its own rows.
         const totalVoices = lanes.master.voices.length + lanes.Aphrase.voices.length + lanes.Bphrase.voices.length;
-        const minCanvasHeight = 498 + totalVoices * 18 + 20;
-        if (canvas.height !== minCanvasHeight) {
-            canvas.height = minCanvasHeight;
+        const approxTimelineBottom = Math.max(395, 205 + 145 + 10 + (lanes.master.voices.length - 1) * 10) + 55 + 58 + totalVoices * 18;
+        if (canvas.height < approxTimelineBottom) {
+            canvas.height = approxTimelineBottom;
         }
 
         // On mobile, throttle rendering to ~30fps; audio is handled by scheduler
@@ -739,12 +741,16 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         ctx.fillText(`METER A ${state.A} (${state.teethA}:${state.mainTeeth})`, cxA, cy + rAOuter + 50);
         ctx.fillText(`METER B ${state.B} (${state.teethB}:${state.mainTeeth})`, cxB, cy + rBOuter + 50);
 
-        // Timelines
+        // Timelines — push down when many master voices to avoid overlapping the gear
         const timelineX = (canvas.width - 700) / 2;
         const timelineWidth = 700;
+        const masterVoiceCount = lanes.master.voices.length;
+        const gearBottom = cy + rMainOuter;
+        const minTimelineY = gearBottom + 10 + (masterVoiceCount - 1) * 10;
+        const timelineY = Math.max(395, minTimelineY);
 
-        drawMasterCycleTimeline(ctx, state, lanes, timelineX, 395, timelineWidth, cycleProgress, currentStep, stepSize);
-        drawFullPatternTimeline(ctx, state, lanes, timelineX, 450, timelineWidth);
+        drawMasterCycleTimeline(ctx, state, lanes, timelineX, timelineY, timelineWidth, cycleProgress, currentStep, stepSize);
+        drawFullPatternTimeline(ctx, state, lanes, timelineX, timelineY + 55, timelineWidth);
 
         requestAnimationFrame(animate);
         } catch (err) { console.error('Animation error:', err); requestAnimationFrame(animate); }
