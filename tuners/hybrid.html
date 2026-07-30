@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hybrid Family Tuner</title>
+<style>
+body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; background: #121214; color: #e0e0e6; padding: 0 16px; }
+h1 { font-size: 20px; text-align: center; margin-bottom: 4px; }
+p.subtitle { text-align: center; font-size: 13px; color: #888; margin-top: 0; margin-bottom: 24px; }
+select { width: 100%; padding: 8px; font-size: 14px; border-radius: 6px; background: #1a1a22; color: #eee; border: 1px solid #333; margin-bottom: 20px; }
+.section-title { font-size: 14px; font-weight: 700; color: #7cf; margin: 20px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #333; text-transform: uppercase; letter-spacing: 0.5px; }
+.param { margin: 10px 0; }
+.param label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 2px; }
+.param label span.name { font-weight: 700; }
+.param label span.val { font-family: monospace; color: #7cf; }
+input[type=range] { width: 100%; margin: 0; height: 4px; -webkit-appearance: none; appearance: none; background: #333; border-radius: 2px; outline: none; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #7cf; cursor: pointer; }
+.glossary { font-size: 11px; color: #888; margin-top: -2px; margin-bottom: 8px; padding: 4px 8px; background: #181820; border-radius: 4px; border-left: 2px solid #444; }
+button { padding: 12px 0; font-size: 16px; font-weight: 700; border: none; border-radius: 6px; cursor: pointer; width: 100%; margin-bottom: 10px; }
+#playBtn { background: #007bff; color: #fff; }
+#playBtn:hover { background: #0056b3; }
+#copyBtn { background: #2a2a36; color: #ccc; }
+#copyBtn:hover { background: #3a3a4c; color: #fff; }
+textarea { width: 100%; height: 200px; font-family: monospace; font-size: 11px; background: #0c0c10; color: #b4d; border: 1px solid #333; border-radius: 4px; padding: 8px; box-sizing: border-box; margin-top: 8px; display: none; }
+#status { text-align: center; font-size: 12px; color: #888; margin-top: 16px; }
+</style>
+</head>
+<body>
+<h1>Hybrid Family Tuner</h1>
+<p class="subtitle">Bongos, Congas, Snare, Cajon, Timbale, Synth Kick, Electronic Snare</p>
+
+<select id="instrumentSelect"></select>
+<div id="params"></div>
+
+<button id="playBtn">Play</button>
+<button id="copyBtn">Copy as Code</button>
+<textarea id="codeArea"></textarea>
+<p id="status">Select an instrument to begin</p>
+
+<script>
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+// ── Reusable helpers ──
+function acquireNoise(state) {
+  const buf = (() => {
+    const s = state.audioCtx.sampleRate;
+    const b = state.audioCtx.createBuffer(1, s, s);
+    const d = b.getChannelData(0);
+    for (let i = 0; i < s; i++) d[i] = Math.random() * 2 - 1;
+    return b;
+  })();
+  const src = state.audioCtx.createBufferSource();
+  src.buffer = buf;
+  return src;
+}
+
+// ── Instrument parameter database ──
+const instruments = {
+  bongo_low: {
+    label: 'Bongo (Low) — Hembra',
+    layers: ['body', 'overtone', 'impact'],
+    params: [
+      { section: 'body', key: 'baseFreq', label: 'Base Frequency', unit: 'Hz', min: 60, max: 300, step: 1, val: 145, gloss: 'Fundamental pitch (C3–Eb3). Warm body tone.' },
+      { section: 'body', key: 'pitchBend', label: 'Pitch Bend', unit: '', min: 1.0, max: 1.4, step: 0.01, val: 1.15, gloss: 'Impact tension bend multiplier. >1 gives a brief upward pitch hit.' },
+      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.70, gloss: 'Volume of the fundamental sine wave.' },
+      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.05, max: 0.8, step: 0.01, val: 0.35, gloss: 'How long the fundamental rings out.' },
+      { section: 'overtone', key: 'overRatio', label: 'Overtone Ratio', unit: '', min: 1.2, max: 3.0, step: 0.001, val: 1.593, gloss: 'Frequency ratio of the first membrane overtone (Bessel zero). 1.593 gives authentic inharmonic ring.' },
+      { section: 'overtone', key: 'overVol', label: 'Overtone Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.25, gloss: 'Volume of the overtone triangle wave.' },
+      { section: 'overtone', key: 'overDecay', label: 'Overtone Decay Factor', unit: '', min: 0.1, max: 1.0, step: 0.01, val: 0.45, gloss: 'Overtone decay = bodyDecay × this factor. Lower = faster damping.' },
+      { section: 'impact', key: 'noiseFreq', label: 'Noise Filter Freq', unit: 'Hz', min: 500, max: 8000, step: 10, val: 3000, gloss: 'Bandpass centre frequency for the hand-slap transient.' },
+      { section: 'impact', key: 'noiseQ', label: 'Noise Filter Q', unit: '', min: 0.5, max: 5.0, step: 0.1, val: 1.5, gloss: 'Filter resonance. Higher = more tonal ping.' },
+      { section: 'impact', key: 'noiseVol', label: 'Noise Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.40, gloss: 'Volume of the noise transient.' },
+      { section: 'impact', key: 'noiseDecay', label: 'Noise Decay', unit: 's', min: 0.003, max: 0.08, step: 0.001, val: 0.015, gloss: 'Duration of the slap transient. Very short for Bongo.' }
+    ]
+  },
+  bongo_high: {
+    label: 'Bongo (High) — Macho',
+    layers: ['body', 'overtone', 'impact'],
+    params: [
+      { section: 'body', key: 'baseFreq', label: 'Base Frequency', unit: 'Hz', min: 80, max: 400, step: 1, val: 215, gloss: 'Fundamental pitch (G3–Bb3). Brighter, tighter skin.' },
+      { section: 'body', key: 'pitchBend', label: 'Pitch Bend', unit: '', min: 1.0, max: 1.4, step: 0.01, val: 1.15, gloss: 'Impact tension bend.' },
+      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.70, gloss: 'Volume of the fundamental.' },
+      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.05, max: 0.6, step: 0.01, val: 0.22, gloss: 'Tighter skin = shorter sustain.' },
+      { section: 'overtone', key: 'overRatio', label: 'Overtone Ratio', unit: '', min: 1.2, max: 3.0, step: 0.001, val: 1.593, gloss: 'Membrane overtone ratio.' },
+      { section: 'overtone', key: 'overVol', label: 'Overtone Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.30, gloss: 'Slightly more prominent rim ring on the Macho.' },
+      { section: 'overtone', key: 'overDecay', label: 'Overtone Decay Factor', unit: '', min: 0.1, max: 1.0, step: 0.01, val: 0.40, gloss: 'Overtone decay factor.' },
+      { section: 'impact', key: 'noiseFreq', label: 'Noise Filter Freq', unit: 'Hz', min: 500, max: 8000, step: 10, val: 4000, gloss: 'Higher slap frequency for the tighter Macho skin.' },
+      { section: 'impact', key: 'noiseQ', label: 'Noise Filter Q', unit: '', min: 0.5, max: 5.0, step: 0.1, val: 1.8, gloss: 'Filter resonance.' },
+      { section: 'impact', key: 'noiseVol', label: 'Noise Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.45, gloss: 'Noise transient volume.' },
+      { section: 'impact', key: 'noiseDecay', label: 'Noise Decay', unit: 's', min: 0.003, max: 0.08, step: 0.001, val: 0.012, gloss: 'Very short slap transient.' }
+    ]
+  },
+  conga_low: {
+    label: 'Conga (Low)',
+    layers: ['body', 'overtone', 'impact'],
+    params: [
+      { section: 'body', key: 'baseFreq', label: 'Base Frequency', unit: 'Hz', min: 60, max: 250, step: 1, val: 130, gloss: 'Fundamental pitch (low conga body).' },
+      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.70, gloss: 'Fundamental sine volume.' },
+      { section: 'body', key: 'bodyPitchBend', label: 'Pitch Bend', unit: '', min: 1.0, max: 1.5, step: 0.01, val: 1.2, gloss: 'Impact pitch bend multiplier.' },
+      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.05, max: 0.8, step: 0.01, val: 0.2, gloss: 'Overall conga decay.' },
+      { section: 'overtone', key: 'overRatio1', label: 'Shell Ratio 1', unit: '', min: 1.2, max: 3.0, step: 0.01, val: 1.5, gloss: 'First shell overtone ratio (triangle wave).' },
+      { section: 'overtone', key: 'overVol1', label: 'Shell Vol 1', unit: '', min: 0, max: 1, step: 0.01, val: 0.25, gloss: 'Volume of first overtone.' },
+      { section: 'overtone', key: 'overRatio2', label: 'Shell Ratio 2', unit: '', min: 1.5, max: 4.0, step: 0.01, val: 2.2, gloss: 'Second shell overtone ratio.' },
+      { section: 'overtone', key: 'overVol2', label: 'Shell Vol 2', unit: '', min: 0, max: 1, step: 0.01, val: 0.12, gloss: 'Volume of second overtone.' },
+      { section: 'impact', key: 'slapFreq', label: 'Slap Filter Freq', unit: 'Hz', min: 500, max: 6000, step: 10, val: 2500, gloss: 'Bandpass centre for the conga slap noise.' },
+      { section: 'impact', key: 'slapVol', label: 'Slap Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.30, gloss: 'Slap noise volume.' },
+      { section: 'impact', key: 'slapDecay', label: 'Slap Decay', unit: 's', min: 0.003, max: 0.1, step: 0.001, val: 0.025, gloss: 'Slap transient duration.' }
+    ]
+  },
+  conga_middle: {
+    label: 'Conga (Middle)',
+    layers: ['body', 'overtone', 'impact'],
+    params: [
+      { section: 'body', key: 'baseFreq', label: 'Base Frequency', unit: 'Hz', min: 80, max: 300, step: 1, val: 160, gloss: 'Fundamental pitch (mid conga).' },
+      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.65, gloss: 'Fundamental sine volume.' },
+      { section: 'body', key: 'bodyPitchBend', label: 'Pitch Bend', unit: '', min: 1.0, max: 1.5, step: 0.01, val: 1.2, gloss: 'Impact pitch bend.' },
+      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.05, max: 0.6, step: 0.01, val: 0.18, gloss: 'Overall decay.' },
+      { section: 'overtone', key: 'overRatio1', label: 'Shell Ratio 1', unit: '', min: 1.2, max: 3.0, step: 0.01, val: 1.5, gloss: 'First shell overtone.' },
+      { section: 'overtone', key: 'overVol1', label: 'Shell Vol 1', unit: '', min: 0, max: 1, step: 0.01, val: 0.25, gloss: 'First overtone volume.' },
+      { section: 'overtone', key: 'overRatio2', label: 'Shell Ratio 2', unit: '', min: 1.5, max: 4.0, step: 0.01, val: 2.2, gloss: 'Second shell overtone.' },
+      { section: 'overtone', key: 'overVol2', label: 'Shell Vol 2', unit: '', min: 0, max: 1, step: 0.01, val: 0.12, gloss: 'Second overtone volume.' },
+      { section: 'impact', key: 'slapFreq', label: 'Slap Filter Freq', unit: 'Hz', min: 500, max: 6000, step: 10, val: 2800, gloss: 'Bandpass centre for slap.' },
+      { section: 'impact', key: 'slapVol', label: 'Slap Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.35, gloss: 'Slap noise volume.' },
+      { section: 'impact', key: 'slapDecay', label: 'Slap Decay', unit: 's', min: 0.003, max: 0.1, step: 0.001, val: 0.02, gloss: 'Slap transient.' }
+    ]
+  },
+  conga_high: {
+    label: 'Conga (High)',
+    layers: ['body', 'overtone', 'impact'],
+    params: [
+      { section: 'body', key: 'baseFreq', label: 'Base Frequency', unit: 'Hz', min: 100, max: 400, step: 1, val: 195, gloss: 'Fundamental pitch (high conga).' },
+      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.6, gloss: 'Fundamental volume.' },
+      { section: 'body', key: 'bodyPitchBend', label: 'Pitch Bend', unit: '', min: 1.0, max: 1.5, step: 0.01, val: 1.2, gloss: 'Pitch bend.' },
+      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.05, max: 0.5, step: 0.01, val: 0.15, gloss: 'Overall decay.' },
+      { section: 'overtone', key: 'overRatio1', label: 'Shell Ratio 1', unit: '', min: 1.2, max: 3.0, step: 0.01, val: 1.5, gloss: 'First shell overtone.' },
+      { section: 'overtone', key: 'overVol1', label: 'Shell Vol 1', unit: '', min: 0, max: 1, step: 0.01, val: 0.25, gloss: 'First overtone volume.' },
+      { section: 'overtone', key: 'overRatio2', label: 'Shell Ratio 2', unit: '', min: 1.5, max: 4.0, step: 0.01, val: 2.2, gloss: 'Second shell overtone.' },
+      { section: 'overtone', key: 'overVol2', label: 'Shell Vol 2', unit: '', min: 0, max: 1, step: 0.01, val: 0.12, gloss: 'Second overtone volume.' },
+      { section: 'impact', key: 'slapFreq', label: 'Slap Filter Freq', unit: 'Hz', min: 500, max: 6000, step: 10, val: 3200, gloss: 'Bandpass centre for slap.' },
+      { section: 'impact', key: 'slapVol', label: 'Slap Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.40, gloss: 'Slap volume.' },
+      { section: 'impact', key: 'slapDecay', label: 'Slap Decay', unit: 's', min: 0.003, max: 0.1, step: 0.001, val: 0.018, gloss: 'Slap transient.' }
+    ]
+  },
+  conga_slap: {
+    label: 'Conga Slap',
+    layers: ['body', 'overtone', 'impact'],
+    params: [
+      { section: 'body', key: 'baseFreq', label: 'Base Frequency', unit: 'Hz', min: 100, max: 450, step: 1, val: 240, gloss: 'Higher fundamental for the slap tone.' },
+      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.5, gloss: 'Body volume, quieter than open tone.' },
+      { section: 'body', key: 'bodyPitchBend', label: 'Pitch Bend', unit: '', min: 1.0, max: 1.5, step: 0.01, val: 1.15, gloss: 'Gentler pitch bend for slap.' },
+      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.02, max: 0.3, step: 0.005, val: 0.08, gloss: 'Short body decay for slap.' },
+      { section: 'overtone', key: 'overRatio1', label: 'Shell Ratio 1', unit: '', min: 1.2, max: 3.0, step: 0.01, val: 1.5, gloss: 'Shell overtone.' },
+      { section: 'overtone', key: 'overVol1', label: 'Shell Vol 1', unit: '', min: 0, max: 1, step: 0.01, val: 0.2, gloss: 'Overtone volume.' },
+      { section: 'impact', key: 'slapFreq', label: 'Slap Filter Freq', unit: 'Hz', min: 1000, max: 8000, step: 10, val: 4000, gloss: 'High slap filter (bright crack).' },
+      { section: 'impact', key: 'slapQ', label: 'Slap Filter Q', unit: '', min: 0.5, max: 5.0, step: 0.1, val: 2.0, gloss: 'Slap resonance.' },
+      { section: 'impact', key: 'slapVol', label: 'Slap Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.60, gloss: 'Dominant slap noise volume.' },
+      { section: 'impact', key: 'slapDecay', label: 'Slap Decay', unit: 's', min: 0.002, max: 0.06, step: 0.001, val: 0.015, gloss: 'Very short slap transient.' }
+    ]
+  },
+  snare: {
+    label: 'Snare Drum',
+    layers: ['body', 'noise'],
+    params: [
+      { section: 'body', key: 'bodyFreq', label: 'Body Frequency', unit: 'Hz', min: 80, max: 400, step: 1, val: 180, gloss: 'Snare drum body pitch (triangle wave).' },
+      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.35, gloss: 'Body oscillator volume.' },
+      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.01, max: 0.3, step: 0.005, val: 0.08, gloss: 'Body decay time.' },
+      { section: 'noise', key: 'noiseFreq', label: 'Noise HP Freq', unit: 'Hz', min: 200, max: 5000, step: 10, val: 1200, gloss: 'Highpass filter for snare-wire noise.' },
+      { section: 'noise', key: 'noiseVol', label: 'Noise Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.65, gloss: 'Snare noise volume.' },
+      { section: 'noise', key: 'noiseDecay', label: 'Noise Decay', unit: 's', min: 0.01, max: 0.3, step: 0.005, val: 0.12, gloss: 'Noise decay (snare wire rattle).' }
+    ]
+  },
+  electronic_snare: {
+    label: 'Electronic Snare',
+    layers: ['body', 'noise'],
+    params: [
+      { section: 'body', key: 'bodyFreq', label: 'Body Start Freq', unit: 'Hz', min: 60, max: 400, step: 1, val: 200, gloss: 'Sine oscillator start frequency (drops to end freq).' },
+      { section: 'body', key: 'bodyEndFreq', label: 'Body End Freq', unit: 'Hz', min: 30, max: 300, step: 1, val: 100, gloss: 'Resting frequency after pitch sweep.' },
+      { section: 'body', key: 'bodySweep', label: 'Body Sweep', unit: 's', min: 0.01, max: 0.3, step: 0.005, val: 0.1, gloss: 'Pitch sweep duration.' },
+      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.5, gloss: 'Body oscillator volume.' },
+      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.01, max: 0.3, step: 0.005, val: 0.1, gloss: 'Body decay.' },
+      { section: 'noise', key: 'noiseFreq', label: 'Noise BP Freq', unit: 'Hz', min: 500, max: 6000, step: 10, val: 2500, gloss: 'Bandpass centre for noise.' },
+      { section: 'noise', key: 'noiseQ', label: 'Noise Q', unit: '', min: 0.5, max: 8.0, step: 0.1, val: 3.0, gloss: 'Bandpass resonance.' },
+      { section: 'noise', key: 'noiseVol', label: 'Noise Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.6, gloss: 'Noise volume.' },
+      { section: 'noise', key: 'noiseDecay', label: 'Noise Decay', unit: 's', min: 0.01, max: 0.3, step: 0.005, val: 0.12, gloss: 'Noise decay.' }
+    ]
+  },
+  timbale: {
+    label: 'Timbale',
+    layers: ['body', 'noise'],
+    params: [
+      { section: 'body', key: 'bodyFreq', label: 'Body Start Freq', unit: 'Hz', min: 100, max: 800, step: 1, val: 500, gloss: 'High sine pitch, drops quickly.' },
+      { section: 'body', key: 'bodyEndFreq', label: 'Body End Freq', unit: 'Hz', min: 80, max: 600, step: 1, val: 350, gloss: 'Resting pitch.' },
+      { section: 'body', key: 'bodySweep', label: 'Body Sweep', unit: 's', min: 0.005, max: 0.2, step: 0.001, val: 0.06, gloss: 'Fast pitch drop.' },
+      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.6, gloss: 'Body volume (linear ramp up + exponential decay).' },
+      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.01, max: 0.25, step: 0.005, val: 0.08, gloss: 'Body decay.' },
+      { section: 'noise', key: 'noiseFreq', label: 'Noise HP Freq', unit: 'Hz', min: 200, max: 5000, step: 10, val: 3000, gloss: 'Highpass filter for metallic rim ring.' },
+      { section: 'noise', key: 'noiseVol', label: 'Noise Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.25, gloss: 'Noise volume.' },
+      { section: 'noise', key: 'noiseDecay', label: 'Noise Decay', unit: 's', min: 0.005, max: 0.15, step: 0.001, val: 0.03, gloss: 'Short noise decay (sharp metallic ring).' }
+    ]
+  },
+  cajon_bass: {
+    label: 'Cajón Bass',
+    layers: ['body', 'resonance'],
+    params: [
+      { section: 'body', key: 'bodyFreq', label: 'Body Start Freq', unit: 'Hz', min: 40, max: 200, step: 1, val: 90, gloss: 'Low sine sweep start.' },
+      { section: 'body', key: 'bodyEndFreq', label: 'Body End Freq', unit: 'Hz', min: 20, max: 150, step: 1, val: 45, gloss: 'Low resting pitch.' },
+      { section: 'body', key: 'bodySweep', label: 'Body Sweep', unit: 's', min: 0.01, max: 0.3, step: 0.005, val: 0.1, gloss: 'Pitch drop time.' },
+      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 1.0, gloss: 'Sub oscillator volume.' },
+      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.03, max: 0.4, step: 0.005, val: 0.15, gloss: 'Sub decay.' },
+      { section: 'resonance', key: 'resFreq', label: 'Resonance Start', unit: 'Hz', min: 60, max: 350, step: 1, val: 150, gloss: 'Box resonance triangle oscillator start.' },
+      { section: 'resonance', key: 'resEndFreq', label: 'Resonance End', unit: 'Hz', min: 30, max: 250, step: 1, val: 80, gloss: 'Resonance resting pitch.' },
+      { section: 'resonance', key: 'resSweep', label: 'Resonance Sweep', unit: 's', min: 0.01, max: 0.2, step: 0.001, val: 0.06, gloss: 'Resonance sweep time.' },
+      { section: 'resonance', key: 'resVol', label: 'Resonance Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.5, gloss: 'Resonance oscillator volume.' }
+    ]
+  },
+  cajon_slap: {
+    label: 'Cajón Slap',
+    layers: ['body', 'noise'],
+    params: [
+      { section: 'noise', key: 'noiseFreq', label: 'Noise HP Freq', unit: 'Hz', min: 500, max: 8000, step: 10, val: 3000, gloss: 'Highpass for wood crack.' },
+      { section: 'noise', key: 'noiseVol', label: 'Noise Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.5, gloss: 'Noise volume.' },
+      { section: 'noise', key: 'noiseDecay', label: 'Noise Decay', unit: 's', min: 0.005, max: 0.15, step: 0.001, val: 0.06, gloss: 'Short crack duration.' },
+      { section: 'body', key: 'bodyFreq', label: 'Slap Tone Freq', unit: 'Hz', min: 100, max: 600, step: 1, val: 350, gloss: 'Mid triangle slap tone frequency.' },
+      { section: 'body', key: 'bodySweep', label: 'Slap Tone Sweep', unit: 's', min: 0.005, max: 0.15, step: 0.001, val: 0.03, gloss: 'Slap tone pitch drop.' },
+      { section: 'body', key: 'bodyVol', label: 'Slap Tone Vol', unit: '', min: 0, max: 1, step: 0.01, val: 0.5, gloss: 'Slap tone volume.' },
+      { section: 'body', key: 'bodyDecay', label: 'Slap Tone Decay', unit: 's', min: 0.005, max: 0.15, step: 0.001, val: 0.04, gloss: 'Slap tone decay.' }
+    ]
+  },
+  slap: {
+    label: 'Hand Slap',
+    layers: ['noise', 'body'],
+    params: [
+      { section: 'noise', key: 'noiseFreq', label: 'Noise BP Freq', unit: 'Hz', min: 500, max: 5000, step: 10, val: 2000, gloss: 'Bandpass centre for the slap noise.' },
+      { section: 'noise', key: 'noiseVol', label: 'Noise Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.55, gloss: 'Noise volume.' },
+      { section: 'noise', key: 'noiseDecay', label: 'Noise Decay', unit: 's', min: 0.005, max: 0.15, step: 0.001, val: 0.05, gloss: 'Noise decay.' },
+      { section: 'body', key: 'bodyFreq', label: 'Body Start Freq', unit: 'Hz', min: 100, max: 1200, step: 1, val: 800, gloss: 'Slap sine tone start.' },
+      { section: 'body', key: 'bodyEndFreq', label: 'Body End Freq', unit: 'Hz', min: 50, max: 800, step: 1, val: 400, gloss: 'Slap tone end.' },
+      { section: 'body', key: 'bodySweep', label: 'Body Sweep', unit: 's', min: 0.005, max: 0.15, step: 0.001, val: 0.04, gloss: 'Pitch drop time.' },
+      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.55, gloss: 'Body oscillator volume.' },
+      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.005, max: 0.15, step: 0.001, val: 0.06, gloss: 'Body decay.' }
+    ]
+  },
+  synth_kick: {
+    label: 'EDM Synth Kick',
+    layers: ['body', 'noise'],
+    params: [
+      { section: 'body', key: 'bodyFreq', label: 'Sub Start Freq', unit: 'Hz', min: 30, max: 120, step: 1, val: 60, gloss: 'Low sub oscillator start.' },
+      { section: 'body', key: 'bodyEndFreq', label: 'Sub End Freq', unit: 'Hz', min: 15, max: 80, step: 1, val: 30, gloss: 'Sub resting pitch.' },
+      { section: 'body', key: 'bodySweep', label: 'Sub Sweep', unit: 's', min: 0.03, max: 0.4, step: 0.01, val: 0.2, gloss: 'Pitch drop duration (longer = deeper sub-bass sweep).' },
+      { section: 'body', key: 'bodyVol', label: 'Sub Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.9, gloss: 'Sub oscillator volume.' },
+      { section: 'body', key: 'bodyDecay', label: 'Sub Decay', unit: 's', min: 0.05, max: 0.5, step: 0.01, val: 0.25, gloss: 'Sub decay.' },
+      { section: 'noise', key: 'clickFreq', label: 'Click BP Freq', unit: 'Hz', min: 500, max: 8000, step: 10, val: 4000, gloss: 'Bandpass centre for the attack click.' },
+      { section: 'noise', key: 'clickQ', label: 'Click Q', unit: '', min: 0.5, max: 5.0, step: 0.1, val: 3.0, gloss: 'Click filter resonance.' },
+      { section: 'noise', key: 'clickVol', label: 'Click Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.3, gloss: 'Click noise volume.' },
+      { section: 'noise', key: 'clickDecay', label: 'Click Decay', unit: 's', min: 0.002, max: 0.06, step: 0.001, val: 0.01, gloss: 'Very short click transient.' }
+    ]
+  }
+};
+
+// ── Populate dropdown ──
+const sel = document.getElementById('instrumentSelect');
+Object.keys(instruments).forEach(key => {
+  const opt = document.createElement('option');
+  opt.value = key;
+  opt.textContent = instruments[key].label;
+  sel.appendChild(opt);
+});
+
+const paramsDiv = document.getElementById('params');
+const sliders = {};
+let currentInstrument = null;
+
+const SECTION_NAMES = { body: 'Body / Tone', overtone: 'Overtones', impact: 'Impact / Slap', noise: 'Noise / Snap', resonance: 'Resonance' };
+
+function loadInstrument(key) {
+  currentInstrument = key;
+  const data = instruments[key];
+  const usedSections = [...new Set(data.params.map(p => p.section))];
+  
+  paramsDiv.innerHTML = '';
+  
+  usedSections.forEach(section => {
+    const title = document.createElement('div');
+    title.className = 'section-title';
+    title.textContent = SECTION_NAMES[section] || section;
+    paramsDiv.appendChild(title);
+    
+    data.params.filter(p => p.section === section).forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'param';
+      
+      const label = document.createElement('label');
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'name';
+      nameSpan.textContent = p.label;
+      const valSpan = document.createElement('span');
+      valSpan.className = 'val';
+      valSpan.textContent = p.val + (p.unit ? ' ' + p.unit : '');
+      label.appendChild(nameSpan);
+      label.appendChild(valSpan);
+      
+      const input = document.createElement('input');
+      input.type = 'range';
+      input.min = p.min;
+      input.max = p.max;
+      input.step = p.step;
+      input.value = p.val;
+      
+      const gloss = document.createElement('div');
+      gloss.className = 'glossary';
+      gloss.textContent = p.gloss;
+      
+      sliders[p.key] = { input, valSpan, unit: p.unit };
+      
+      input.addEventListener('input', () => {
+        valSpan.textContent = parseFloat(input.value) + (p.unit ? ' ' + p.unit : '');
+        document.getElementById('status').textContent = 'Tweaking ' + data.label;
+      });
+      
+      div.appendChild(label);
+      div.appendChild(input);
+      div.appendChild(gloss);
+      paramsDiv.appendChild(div);
+    });
+  });
+  
+  document.getElementById('status').textContent = data.label + ' loaded. Adjust sliders, then press Play.';
+  document.getElementById('codeArea').style.display = 'none';
+}
+
+sel.addEventListener('change', () => loadInstrument(sel.value));
+loadInstrument(sel.value);
+
+// ── Play ──
+document.getElementById('playBtn').addEventListener('click', async () => {
+  if (!currentInstrument) return;
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
+  
+  const v = {};
+  Object.keys(sliders).forEach(key => { v[key] = parseFloat(sliders[key].input.value); });
+  const now = audioCtx.currentTime;
+  const vol = 1.0;
+  
+  if (currentInstrument === 'bongo_low' || currentInstrument === 'bongo_high') {
+    const master = audioCtx.createGain();
+    master.gain.setValueAtTime(vol, now);
+    master.connect(audioCtx.destination);
+    
+    // 1. Fundamental
+    const o1 = audioCtx.createOscillator();
+    const g1 = audioCtx.createGain();
+    o1.type = 'sine';
+    o1.frequency.setValueAtTime(v.baseFreq * v.pitchBend, now);
+    o1.frequency.exponentialRampToValueAtTime(v.baseFreq, now + 0.025);
+    g1.gain.setValueAtTime(v.bodyVol, now);
+    g1.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay);
+    o1.connect(g1); g1.connect(master);
+    o1.start(now); o1.stop(now + v.bodyDecay);
+    
+    // 2. Overtone
+    const o2 = audioCtx.createOscillator();
+    const g2 = audioCtx.createGain();
+    o2.type = 'triangle';
+    o2.frequency.setValueAtTime(v.baseFreq * v.overRatio * v.pitchBend, now);
+    o2.frequency.exponentialRampToValueAtTime(v.baseFreq * v.overRatio, now + 0.025);
+    g2.gain.setValueAtTime(v.overVol, now);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay * v.overDecay);
+    o2.connect(g2); g2.connect(master);
+    o2.start(now); o2.stop(now + v.bodyDecay * v.overDecay);
+    
+    // 3. Impact noise
+    const noise = acquireNoise(audioCtx);
+    if (noise) {
+      const nf = audioCtx.createBiquadFilter();
+      nf.type = 'bandpass';
+      nf.frequency.setValueAtTime(v.noiseFreq, now);
+      nf.Q.setValueAtTime(v.noiseQ, now);
+      const ng = audioCtx.createGain();
+      ng.gain.setValueAtTime(v.noiseVol, now);
+      ng.gain.exponentialRampToValueAtTime(0.001, now + v.noiseDecay);
+      noise.connect(nf); nf.connect(ng); ng.connect(master);
+      noise.start(now);
+    }
+    master.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay + 0.05);
+  }
+  
+  else if (currentInstrument === 'synth_kick') {
+    const sub = audioCtx.createOscillator();
+    const sg = audioCtx.createGain();
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(v.bodyFreq, now);
+    sub.frequency.exponentialRampToValueAtTime(v.bodyEndFreq, now + v.bodySweep);
+    sg.gain.setValueAtTime(vol * v.bodyVol, now);
+    sg.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay);
+    sub.connect(sg); sg.connect(audioCtx.destination);
+    sub.start(now); sub.stop(now + v.bodyDecay);
+    
+    const noise = acquireNoise(audioCtx);
+    if (noise) {
+      const nf = audioCtx.createBiquadFilter();
+      nf.type = 'bandpass';
+      nf.frequency.setValueAtTime(v.clickFreq, now);
+      nf.Q.setValueAtTime(v.clickQ, now);
+      const ng = audioCtx.createGain();
+      ng.gain.setValueAtTime(vol * v.clickVol, now);
+      ng.gain.exponentialRampToValueAtTime(0.001, now + v.clickDecay);
+      noise.connect(nf); nf.connect(ng); ng.connect(audioCtx.destination);
+      noise.start(now);
+    }
+  }
+  
+  else if (currentInstrument === 'snare' || currentInstrument === 'electronic_snare') {
+    // Body oscillator
+    const osc = audioCtx.createOscillator();
+    const og = audioCtx.createGain();
+    osc.type = currentInstrument === 'electronic_snare' ? 'sine' : 'triangle';
+    if (currentInstrument === 'electronic_snare') {
+      osc.frequency.setValueAtTime(v.bodyFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(v.bodyEndFreq, now + v.bodySweep);
+    } else {
+      osc.frequency.setValueAtTime(v.bodyFreq, now);
+    }
+    og.gain.setValueAtTime(vol * v.bodyVol, now);
+    og.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay);
+    osc.connect(og); og.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + v.bodyDecay);
+    
+    // Noise
+    const noise = acquireNoise(audioCtx);
+    if (noise) {
+      const nf = audioCtx.createBiquadFilter();
+      const isBP = currentInstrument === 'electronic_snare';
+      nf.type = isBP ? 'bandpass' : 'highpass';
+      nf.frequency.setValueAtTime(v.noiseFreq, now);
+      if (isBP) nf.Q.setValueAtTime(v.noiseQ, now);
+      const ng = audioCtx.createGain();
+      ng.gain.setValueAtTime(vol * v.noiseVol, now);
+      ng.gain.exponentialRampToValueAtTime(0.001, now + v.noiseDecay);
+      noise.connect(nf); nf.connect(ng); ng.connect(audioCtx.destination);
+      noise.start(now);
+    }
+  }
+  
+  else if (currentInstrument.startsWith('conga_')) {
+    const master = audioCtx.createGain();
+    master.gain.setValueAtTime(vol, now);
+    master.connect(audioCtx.destination);
+    
+    // Fundamental
+    const o1 = audioCtx.createOscillator();
+    const g1 = audioCtx.createGain();
+    o1.type = 'sine';
+    o1.frequency.setValueAtTime(v.baseFreq * (v.bodyPitchBend || 1.2), now);
+    o1.frequency.exponentialRampToValueAtTime(v.baseFreq, now + 0.03);
+    g1.gain.setValueAtTime(v.bodyVol, now);
+    g1.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay);
+    o1.connect(g1); g1.connect(master);
+    o1.start(now); o1.stop(now + v.bodyDecay);
+    
+    // Overtone 1
+    const o2 = audioCtx.createOscillator();
+    const g2 = audioCtx.createGain();
+    o2.type = 'triangle';
+    o2.frequency.setValueAtTime(v.baseFreq * v.overRatio1, now);
+    g2.gain.setValueAtTime(v.overVol1, now);
+    g2.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay * 0.8);
+    o2.connect(g2); g2.connect(master);
+    o2.start(now); o2.stop(now + v.bodyDecay * 0.8);
+    
+    if (v.overRatio2) {
+      const o3 = audioCtx.createOscillator();
+      const g3 = audioCtx.createGain();
+      o3.type = 'triangle';
+      o3.frequency.setValueAtTime(v.baseFreq * v.overRatio2, now);
+      g3.gain.setValueAtTime(v.overVol2, now);
+      g3.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay * 0.6);
+      o3.connect(g3); g3.connect(master);
+      o3.start(now); o3.stop(now + v.bodyDecay * 0.6);
+    }
+    
+    slap: if (v.slapFreq) {
+      const noise = acquireNoise(audioCtx);
+      if (!noise) break slap;
+      const nf = audioCtx.createBiquadFilter();
+      nf.type = 'bandpass';
+      nf.frequency.setValueAtTime(v.slapFreq, now);
+      if (v.slapQ) nf.Q.setValueAtTime(v.slapQ, now);
+      const ng = audioCtx.createGain();
+      ng.gain.setValueAtTime(vol * v.slapVol, now);
+      ng.gain.exponentialRampToValueAtTime(0.001, now + v.slapDecay);
+      noise.connect(nf); nf.connect(ng); ng.connect(master);
+      noise.start(now);
+    }
+    master.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay + 0.05);
+  }
+  
+  else if (currentInstrument === 'timbale') {
+    const osc = audioCtx.createOscillator();
+    const og = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(v.bodyFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(v.bodyEndFreq, now + v.bodySweep);
+    og.gain.setValueAtTime(0.001, now);
+    og.gain.linearRampToValueAtTime(vol * v.bodyVol, now + 0.003);
+    og.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay);
+    osc.connect(og); og.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + v.bodyDecay);
+    
+    const noise = acquireNoise(audioCtx);
+    if (noise) {
+      const nf = audioCtx.createBiquadFilter();
+      nf.type = 'highpass';
+      nf.frequency.setValueAtTime(v.noiseFreq, now);
+      const ng = audioCtx.createGain();
+      ng.gain.setValueAtTime(vol * v.noiseVol, now);
+      ng.gain.exponentialRampToValueAtTime(0.001, now + v.noiseDecay);
+      noise.connect(nf); nf.connect(ng); ng.connect(audioCtx.destination);
+      noise.start(now);
+    }
+  }
+  
+  else if (currentInstrument === 'cajon_bass') {
+    const osc = audioCtx.createOscillator();
+    const og = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(v.bodyFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(v.bodyEndFreq, now + v.bodySweep);
+    og.gain.setValueAtTime(vol * v.bodyVol, now);
+    og.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay);
+    osc.connect(og); og.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + v.bodyDecay);
+    
+    const res = audioCtx.createOscillator();
+    const rg = audioCtx.createGain();
+    res.type = 'triangle';
+    res.frequency.setValueAtTime(v.resFreq, now);
+    res.frequency.exponentialRampToValueAtTime(v.resEndFreq, now + v.resSweep);
+    rg.gain.setValueAtTime(vol * v.resVol, now);
+    rg.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay);
+    res.connect(rg); rg.connect(audioCtx.destination);
+    res.start(now); res.stop(now + v.bodyDecay);
+  }
+  
+  else if (currentInstrument === 'cajon_slap' || currentInstrument === 'slap') {
+    const noise = acquireNoise(audioCtx);
+    if (noise) {
+      const nf = audioCtx.createBiquadFilter();
+      nf.type = 'bandpass';
+      nf.frequency.setValueAtTime(v.noiseFreq, now);
+      const ng = audioCtx.createGain();
+      ng.gain.setValueAtTime(vol * v.noiseVol, now);
+      ng.gain.exponentialRampToValueAtTime(0.001, now + v.noiseDecay);
+      noise.connect(nf); nf.connect(ng); ng.connect(audioCtx.destination);
+      noise.start(now);
+    }
+    const osc = audioCtx.createOscillator();
+    const og = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(v.bodyFreq, now);
+    if (v.bodyEndFreq) osc.frequency.exponentialRampToValueAtTime(v.bodyEndFreq, now + v.bodySweep);
+    og.gain.setValueAtTime(vol * v.bodyVol, now);
+    og.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay);
+    osc.connect(og); og.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + v.bodyDecay);
+  }
+  
+  document.getElementById('status').textContent = 'Playing ' + instruments[currentInstrument].label;
+});
+
+// ── Copy as code ──
+document.getElementById('copyBtn').addEventListener('click', () => {
+  if (!currentInstrument) return;
+  const v = {};
+  Object.keys(sliders).forEach(key => { v[key] = JSON.parse(JSON.stringify(parseFloat(sliders[key].input.value))); });
+  
+  let code = `// ${instruments[currentInstrument].label} — tuned values\n`;
+  code += `function play${currentInstrument.replace(/_./g, m => m[1].toUpperCase()).replace(/^./, m => m.toUpperCase())}(state, now, vol` +
+    (currentInstrument === 'bongo_low' || currentInstrument === 'bongo_high' || currentInstrument.startsWith('conga_') || currentInstrument === 'timbale' || currentInstrument === 'cajon_bass' || currentInstrument === 'cajon_slap' ? ', channelName' : '') + `) {\n`;
+  
+  Object.keys(v).forEach(k => {
+    code += `  // ${k} = ${v[k]}\n`;
+  });
+  
+  code += `}\n`;
+  
+  document.getElementById('codeArea').value = code;
+  document.getElementById('codeArea').style.display = 'block';
+  document.getElementById('status').textContent = 'Placeholder generated. Copy and paste into instruments.js.';
+});
+</script>
+</body>
+</html>

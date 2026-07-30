@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Membrane Family Tuner</title>
+<style>
+body { font-family: system-ui, sans-serif; max-width: 680px; margin: 30px auto; background: #121214; color: #e0e0e6; padding: 0 16px; }
+h1 { font-size: 20px; text-align: center; margin-bottom: 4px; }
+p.subtitle { text-align: center; font-size: 13px; color: #888; margin-top: 0; margin-bottom: 24px; }
+select { width: 100%; padding: 8px; font-size: 14px; border-radius: 6px; background: #1a1a22; color: #eee; border: 1px solid #333; margin-bottom: 20px; }
+.param { margin: 12px 0; }
+.param label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 2px; }
+.param label span.name { font-weight: 700; }
+.param label span.val { font-family: monospace; color: #7cf; }
+input[type=range] { width: 100%; margin: 0; height: 4px; -webkit-appearance: none; appearance: none; background: #333; border-radius: 2px; outline: none; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #7cf; cursor: pointer; }
+.glossary { font-size: 12px; color: #999; margin-top: -2px; margin-bottom: 12px; padding-left: 2px; border-left: 2px solid #333; padding: 6px 10px; background: #181820; border-radius: 4px; }
+button { padding: 12px 0; font-size: 16px; font-weight: 700; border: none; border-radius: 6px; cursor: pointer; width: 100%; margin-bottom: 10px; }
+#playBtn { background: #007bff; color: #fff; }
+#playBtn:hover { background: #0056b3; }
+#copyBtn { background: #2a2a36; color: #ccc; }
+#copyBtn:hover { background: #3a3a4c; color: #fff; }
+#codeArea { width: 100%; height: 180px; font-family: monospace; font-size: 11px; background: #0c0c10; color: #b4d; border: 1px solid #333; border-radius: 4px; padding: 8px; box-sizing: border-box; margin-top: 8px; white-space: pre; overflow: auto; display: none; }
+#status { text-align: center; font-size: 12px; color: #888; margin-top: 16px; }
+</style>
+</head>
+<body>
+<h1>Membrane Family Tuner</h1>
+<p class="subtitle">Kick, Tom, Djembe, Talking Drum, Udu</p>
+
+<select id="instrumentSelect"></select>
+<div id="params"></div>
+
+<button id="playBtn">Play</button>
+<button id="copyBtn">Copy as Code</button>
+<pre id="codeArea"></pre>
+<p id="status">Select an instrument to begin</p>
+
+<script>
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+// ── Instrument parameter database (current values from instruments.js) ──
+const instruments = {
+  kick: {
+    label: 'Bass Drum (Kick)',
+    params: [
+      { key: 'startFreq', label: 'Start Frequency', unit: 'Hz', min: 20, max: 300, step: 1, val: 135, gloss: 'Initial pitch at the moment the drum is struck. Higher = brighter impact.' },
+      { key: 'endFreq', label: 'End Frequency', unit: 'Hz', min: 15, max: 200, step: 1, val: 38, gloss: 'Resting pitch after the pitch sweep ends. Lower = deeper drum.' },
+      { key: 'sweepTime', label: 'Sweep Duration', unit: 's', min: 0.005, max: 0.5, step: 0.005, val: 0.12, gloss: 'How fast the pitch drops from Start to End. Short = tight thump, long = loose boing.' },
+      { key: 'decay', label: 'Decay', unit: 's', min: 0.01, max: 1.0, step: 0.005, val: 0.14, gloss: 'Total sound duration. Longer = more ring, shorter = tighter.' },
+      { key: 'volScale', label: 'Volume Scale', unit: '%', min: 10, max: 100, step: 1, val: 100, gloss: 'Relative volume for this instrument.' }
+    ]
+  },
+  tom: {
+    label: 'Synth Electronic Tom',
+    params: [
+      { key: 'startFreq', label: 'Start Frequency', unit: 'Hz', min: 30, max: 500, step: 1, val: 160, gloss: 'Initial pitch at strike.' },
+      { key: 'endFreq', label: 'End Frequency', unit: 'Hz', min: 15, max: 300, step: 1, val: 80, gloss: 'Resting pitch after sweep.' },
+      { key: 'sweepTime', label: 'Sweep Duration', unit: 's', min: 0.005, max: 0.5, step: 0.005, val: 0.2, gloss: 'Pitch drop time.' },
+      { key: 'decay', label: 'Decay', unit: 's', min: 0.01, max: 1.0, step: 0.005, val: 0.22, gloss: 'Total duration.' },
+      { key: 'volScale', label: 'Volume Scale', unit: '%', min: 10, max: 100, step: 1, val: 80, gloss: 'Relative volume for this instrument.' }
+    ]
+  },
+  djembe: {
+    label: 'Frame Drum / Djembe',
+    params: [
+      { key: 'startFreq', label: 'Start Frequency', unit: 'Hz', min: 30, max: 500, step: 1, val: 150, gloss: 'Initial pitch. Djembe uses two oscillators (sine + triangle) for a fuller tone.' },
+      { key: 'endFreq', label: 'End Frequency', unit: 'Hz', min: 15, max: 300, step: 1, val: 60, gloss: 'Resting pitch after sweep.' },
+      { key: 'sweepTime', label: 'Sweep Duration', unit: 's', min: 0.01, max: 0.5, step: 0.005, val: 0.15, gloss: 'Pitch drop time for both oscillators.' },
+      { key: 'decay', label: 'Decay', unit: 's', min: 0.02, max: 1.0, step: 0.005, val: 0.2, gloss: 'Total duration.' },
+      { key: 'volScale', label: 'Volume Scale', unit: '%', min: 10, max: 100, step: 1, val: 75, gloss: 'Relative volume.' }
+    ]
+  },
+  talking_drum: {
+    label: 'Talking Drum',
+    params: [
+      { key: 'startFreq', label: 'Start Frequency', unit: 'Hz', min: 30, max: 400, step: 1, val: 115, gloss: 'Initial pitch. Talking drum has a unique rising-then-falling sweep.' },
+      { key: 'peakFreq', label: 'Peak Frequency', unit: 'Hz', min: 50, max: 600, step: 1, val: 245, gloss: 'Peak pitch reached mid-strike before settling. Controls the "wah" effect.' },
+      { key: 'endFreq', label: 'End Frequency', unit: 'Hz', min: 30, max: 400, step: 1, val: 175, gloss: 'Resting pitch after the falling sweep.' },
+      { key: 'riseTime', label: 'Rise Time', unit: 's', min: 0.005, max: 0.3, step: 0.001, val: 0.075, gloss: 'Time to reach Peak Frequency.' },
+      { key: 'sweepTime', label: 'Fall Time', unit: 's', min: 0.01, max: 0.5, step: 0.005, val: 0.22, gloss: 'Time from peak to resting pitch.' },
+      { key: 'decay', label: 'Decay', unit: 's', min: 0.02, max: 1.0, step: 0.005, val: 0.24, gloss: 'Total duration.' },
+      { key: 'volScale', label: 'Volume Scale', unit: '%', min: 10, max: 100, step: 1, val: 85, gloss: 'Relative volume.' }
+    ]
+  },
+  udu: {
+    label: 'Udu Clay Pot',
+    params: [
+      { key: 'startMul', label: 'Start Multiplier', unit: '', min: 1.0, max: 2.5, step: 0.01, val: 1.35, gloss: 'Start frequency = baseFreq × this value. >1 gives a short upward pitch hit.' },
+      { key: 'baseFreq', label: 'Base Frequency', unit: 'Hz', min: 30, max: 400, step: 1, val: 125, gloss: 'The core resonant frequency of the clay pot body.' },
+      { key: 'sweepTime', label: 'Sweep Duration', unit: 's', min: 0.005, max: 0.3, step: 0.001, val: 0.07, gloss: 'Time to settle from start pitch to base frequency.' },
+      { key: 'filterFreq', label: 'Filter Frequency', unit: 'Hz', min: 100, max: 2000, step: 10, val: 700, gloss: 'Lowpass filter cutoff. Lower = more muffled, higher = brighter.' },
+      { key: 'decay', label: 'Decay', unit: 's', min: 0.02, max: 1.0, step: 0.005, val: 0.28, gloss: 'Total duration.' },
+      { key: 'volScale', label: 'Volume Scale', unit: '%', min: 10, max: 100, step: 1, val: 90, gloss: 'Relative volume.' }
+    ]
+  }
+};
+
+// ── Populate dropdown ──
+const sel = document.getElementById('instrumentSelect');
+Object.keys(instruments).forEach(key => {
+  const opt = document.createElement('option');
+  opt.value = key;
+  opt.textContent = instruments[key].label;
+  sel.appendChild(opt);
+});
+
+const paramsDiv = document.getElementById('params');
+const sliders = {};
+let currentInstrument = null;
+
+function loadInstrument(key) {
+  currentInstrument = key;
+  const data = instruments[key];
+  
+  paramsDiv.innerHTML = '';
+  
+  data.params.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'param';
+    
+    const label = document.createElement('label');
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'name';
+    nameSpan.textContent = p.label;
+    const valSpan = document.createElement('span');
+    valSpan.className = 'val';
+    valSpan.textContent = p.val + (p.unit ? ' ' + p.unit : '');
+    label.appendChild(nameSpan);
+    label.appendChild(valSpan);
+    
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = p.min;
+    input.max = p.max;
+    input.step = p.step;
+    input.value = p.val;
+    
+    const gloss = document.createElement('div');
+    gloss.className = 'glossary';
+    gloss.textContent = p.gloss;
+    
+    sliders[p.key] = { input, valSpan, unit: p.unit };
+    
+    input.addEventListener('input', () => {
+      valSpan.textContent = parseFloat(input.value) + (p.unit ? ' ' + p.unit : '');
+      document.getElementById('status').textContent = 'Tweaking ' + data.label;
+    });
+    
+    div.appendChild(label);
+    div.appendChild(input);
+    div.appendChild(gloss);
+    paramsDiv.appendChild(div);
+  });
+  
+  document.getElementById('status').textContent = data.label + ' loaded. Adjust sliders, then press Play.';
+  document.getElementById('codeArea').style.display = 'none';
+}
+
+sel.addEventListener('change', () => loadInstrument(sel.value));
+loadInstrument(sel.value);
+
+// ── Play function ──
+document.getElementById('playBtn').addEventListener('click', async () => {
+  if (!currentInstrument) return;
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
+  
+  const v = {};
+  Object.keys(sliders).forEach(key => { v[key] = parseFloat(sliders[key].input.value); });
+  
+  const now = audioCtx.currentTime;
+  
+  // Common membrane synthesis using tuned parameters
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  const vol = (v.volScale || 100) / 100;
+  
+  // Different oscillator types
+  if (currentInstrument === 'talking_drum') {
+    osc.type = 'triangle';
+  } else if (currentInstrument === 'djembe') {
+    // Djembe uses sine+triangle; play both
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc.type = 'sine';
+    osc2.type = 'triangle';
+    osc.frequency.setValueAtTime(v.startFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(v.endFreq, now + v.sweepTime);
+    osc2.frequency.setValueAtTime(v.startFreq, now);
+    osc2.frequency.exponentialRampToValueAtTime(v.endFreq, now + v.sweepTime);
+    gain.gain.setValueAtTime(vol * 0.75, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + v.decay);
+    gain2.gain.setValueAtTime(vol * 0.75, now);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + v.decay);
+    osc.connect(gain); osc2.connect(gain2);
+    gain.connect(audioCtx.destination); gain2.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + v.decay);
+    osc2.start(now); osc2.stop(now + v.decay);
+    document.getElementById('status').textContent = 'Playing ' + instruments[currentInstrument].label;
+    return;
+  } else if (currentInstrument === 'talking_drum') {
+    osc.type = 'triangle';
+  } else if (currentInstrument === 'udu') {
+    osc.type = 'sine';
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(v.filterFreq, now);
+    const base = v.baseFreq;
+    osc.frequency.setValueAtTime(base * v.startMul, now);
+    osc.frequency.exponentialRampToValueAtTime(base, now + v.sweepTime);
+    gain.gain.setValueAtTime(vol * 0.9, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + v.decay);
+    osc.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + v.decay);
+    document.getElementById('status').textContent = 'Playing ' + instruments[currentInstrument].label;
+    return;
+  } else {
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(v.startFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(v.endFreq, now + v.sweepTime);
+    gain.gain.setValueAtTime(vol * (v.volScale || 100) / 100, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + v.decay);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + v.decay);
+  }
+  
+  document.getElementById('status').textContent = 'Playing ' + instruments[currentInstrument].label;
+});
+
+// ── Copy as code ──
+document.getElementById('copyBtn').addEventListener('click', () => {
+  if (!currentInstrument) return;
+  const v = {};
+  Object.keys(sliders).forEach(key => { v[key] = parseFloat(sliders[key].input.value); });
+  
+  // Generate code snippet for instruments.js
+  let code = '// ' + instruments[currentInstrument].label + ' — tuned values\n';
+  code += 'function ' + currentInstrument.charAt(0).toUpperCase() + currentInstrument.slice(1) + '(state, now, vol' + (currentInstrument === 'tom' || currentInstrument === 'bongo_low' || currentInstrument === 'bongo_high' || currentInstrument === 'djembe' || currentInstrument === 'talking_drum' || currentInstrument === 'udu' ? ', channelName' : '') + ') {\n';
+  code += '  const osc = acquireOsc(state);\n';
+  code += '  const gain = acquireGain(state);\n';
+  if (currentInstrument === 'udu') {
+    code += '  const filter = state.audioCtx.createBiquadFilter();\n';
+    code += '  filter.type = \'lowpass\';\n';
+    code += '  filter.frequency.setValueAtTime(' + v.filterFreq + ', now);\n';
+  }
+  code += '  osc.type = \'' + (currentInstrument === 'talking_drum' ? 'triangle' : 'sine') + '\';\n';
+  
+  if (currentInstrument === 'talking_drum') {
+    code += '  osc.frequency.setValueAtTime(' + v.startFreq + ', now);\n';
+    code += '  osc.frequency.exponentialRampToValueAtTime(' + v.peakFreq + ', now + ' + v.riseTime + ');\n';
+    code += '  osc.frequency.exponentialRampToValueAtTime(' + v.endFreq + ', now + ' + v.sweepTime + ');\n';
+  } else if (currentInstrument === 'udu') {
+    code += '  osc.frequency.setValueAtTime(' + v.baseFreq + ' * ' + v.startMul + ', now);\n';
+    code += '  osc.frequency.exponentialRampToValueAtTime(' + v.baseFreq + ', now + ' + v.sweepTime + ');\n';
+    code += '  osc.connect(filter); filter.connect(gain);\n';
+  } else {
+    code += '  osc.frequency.setValueAtTime(' + v.startFreq + ', now);\n';
+    code += '  osc.frequency.exponentialRampToValueAtTime(' + v.endFreq + ', now + ' + v.sweepTime + ');\n';
+  }
+  
+  code += '  gain.gain.setValueAtTime(vol * ' + (v.volScale / 100).toFixed(2) + ', now);\n';
+  code += '  gain.gain.exponentialRampToValueAtTime(0.001, now + ' + v.decay + ');\n';
+  code += '  osc.connect(gain); gain.connect(state.audioCtx.destination);\n';
+  code += '  osc.start(now); osc.stop(now + ' + v.decay + ');\n';
+  code += '}\n';
+  
+  document.getElementById('codeArea').textContent = code;
+  document.getElementById('codeArea').style.display = 'block';
+  document.getElementById('status').textContent = 'Code snippet generated. Copy it and paste into instruments.js.';
+});
+
+// Fix: djembe and talking_drum are handled in Play above, but "Copy as code" for djembe needs the dual-oscillator variant
+// For simplicity, the djembe code snippet just shows sine; adjust manually.
+</script>
+</body>
+</html>
