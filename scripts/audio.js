@@ -305,7 +305,7 @@ export function syncAudioStartTime(state) {
  */
 function scheduleStepAudio(state, lanes, channels, stepIndex, hitTime, globalVolume) {
     const lsa = state.lastScheduledActive;
-    const stepWithinPhrase = ((stepIndex % state.masterPhraseSteps) + state.masterPhraseSteps) % state.masterPhraseSteps;
+    const stepWithinPhrase = stepIndex % state.masterPhraseSteps;
 
     if (stepWithinPhrase !== lsa.master) {
         lanes.master.voices.forEach((voice, vi) => {
@@ -383,17 +383,33 @@ export function startAudioScheduler(state, lanes, channels, globalVolumeSource) 
     state.lastScheduledActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };
 
 
+    // Cache scheduler timing values; only recalc when tempo or teeth change
+    let _cachedTempo = 0;
+    let _cachedMainTeeth = 0;
+    let _cachedRps = 0;
+    let _cachedStepDuration = 0;
+    let _cachedQuarterDuration = 0;
+
+    function _refreshTiming() {
+        if (_cachedTempo !== state.tempo || _cachedMainTeeth !== state.mainTeeth) {
+            _cachedTempo = state.tempo;
+            _cachedMainTeeth = state.mainTeeth;
+            _cachedRps = state.tempo * Math.PI / 120;
+            _cachedStepDuration = (2 * Math.PI / state.mainTeeth) / _cachedRps;
+            _cachedQuarterDuration = 60 / state.tempo;
+        }
+    }
+
     function tick() {
         if (!state.audioClockActive || !state.audioCtx || !state.playing) {
             _schedulerTimer = null;
             return;
         }
         _updateSoloFlag(channels);
+        _refreshTiming();
 
-        const rps = state.tempo * Math.PI / 120;
-        const stepSize = 2 * Math.PI / state.mainTeeth;
-        const stepDuration = stepSize / rps;
-        const quarterDuration = 60 / state.tempo;
+        const stepDuration = _cachedStepDuration;
+        const quarterDuration = _cachedQuarterDuration;
 
         const now = state.audioCtx.currentTime;
         const elapsed = now - state.audioStartTime;
@@ -1606,6 +1622,21 @@ function createMetalBellStrike(state, frequency, startTime, volume, duration) {
         osc.start(startTime); osc.stop(startTime + duration);
     });
 }
+
+// ROADMAP — AudioWorklet synthesis:
+//   Every trigger creates new OscillatorNode / GainNode / BiquadFilter objects
+//   that are never disconnected or pooled. At high BPM with dense patterns and
+//   complex instruments (e.g. conga creates 11 nodes per hit), this generates
+//   significant GC pressure and leaked nodes in the audio graph.
+//
+//   An AudioWorkletProcessor (registered via blob URL so no build step is
+//   needed) would move all sample generation to the audio render thread behind
+//   a single persistent AudioWorkletNode. The main thread would post scheduling
+//   batches and the worklet would handle polyphonic voice management, envelope
+//   generation, and filtering internally. This eliminates per-trigger node
+//   allocation entirely and removes main-thread scheduling jitter.
+//   Estimated effort: 500–800 lines, rewriting instrument functions into
+//   worklet-processor voices.
 
 function acquireOsc(state) {
     return state.audioCtx.createOscillator();

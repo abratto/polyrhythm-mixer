@@ -198,7 +198,7 @@ function drawTimelineMarker(ctx, x, y, color, shape = 'dot', size = 4) {
  * rotation of the master wheel. Displays selected steps from all lanes
  * as colored markers, plus a playhead showing the current position.
  */
-function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width) {
+function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width, cycleProgress, currentStep, stepSize) {
     ctx.fillStyle = '#a1a1aa';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'left';
@@ -213,28 +213,25 @@ function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width) {
     ctx.stroke();
 
     // Tick marks
+    const pixelPerTooth = width / state.mainTeeth;
+    const majorTickInterval = Math.max(1, Math.floor(state.mainTeeth / 4));
     for (let i = 0; i <= state.mainTeeth; i++) {
-        const x = startX + (i / state.mainTeeth) * width;
-        ctx.strokeStyle = i % Math.max(1, Math.floor(state.mainTeeth / 4)) === 0
-            ? 'rgba(255,255,255,0.20)'
-            : 'rgba(255,255,255,0.08)';
-        ctx.lineWidth = i % Math.max(1, Math.floor(state.mainTeeth / 4)) === 0 ? 2 : 1;
+        const x = startX + i * pixelPerTooth;
+        const isMajor = i % majorTickInterval === 0;
+        ctx.strokeStyle = isMajor ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.08)';
+        ctx.lineWidth = isMajor ? 2 : 1;
         ctx.beginPath();
         ctx.moveTo(x, y - 18);
         ctx.lineTo(x, y + 18);
         ctx.stroke();
     }
 
-    // Playhead position based on current master wheel angle
-    const cycleProgress = (state.mainAngle % (2 * Math.PI)) / (2 * Math.PI);
+    // Playhead line
     const playheadX = startX + cycleProgress * width;
 
     // Master wheel selected steps (orange dots, one row per voice)
-    // When masterPhraseCycles > 1, only show the current cycle's selections
-    const masterStepSize = 2 * Math.PI / state.mainTeeth;
-    const masterCurrentStep = Math.floor(state.mainAngle / masterStepSize);
     const masterCurrentCycle = state.masterPhraseCycles > 1
-        ? Math.floor(masterCurrentStep / state.mainTeeth) % state.masterPhraseCycles
+        ? Math.floor(currentStep / state.mainTeeth) % state.masterPhraseCycles
         : 0;
     const cycleSlotStart = masterCurrentCycle * state.mainTeeth;
     const cycleSlotEnd = cycleSlotStart + state.mainTeeth;
@@ -242,7 +239,7 @@ function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width) {
         const yOffset = vi * 10;
         for (let i = cycleSlotStart; i < cycleSlotEnd && i < voice.selected.length; i++) {
             if (!voice.selected[i]) continue;
-            const x = startX + ((i - cycleSlotStart) / state.mainTeeth) * width;
+            const x = startX + (i - cycleSlotStart) * pixelPerTooth;
             drawTimelineMarker(ctx, x, y - yOffset, '#ff9100', 'dot', 4);
         }
     });
@@ -251,15 +248,13 @@ function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width) {
     lanes.Awheel.selected.forEach((on, i) => {
         if (!on) return;
         const step = (i * state.teethA + state.phaseA) % state.mainTeeth;
-        const x = startX + (step / state.mainTeeth) * width;
-        drawTimelineMarker(ctx, x, y - 14, '#ff6b8f', 'diamond', 4);
+        drawTimelineMarker(ctx, startX + step * pixelPerTooth, y - 14, '#ff6b8f', 'diamond', 4);
     });
 
     lanes.Bwheel.selected.forEach((on, i) => {
         if (!on) return;
         const step = (i * state.teethB + state.phaseB) % state.mainTeeth;
-        const x = startX + (step / state.mainTeeth) * width;
-        drawTimelineMarker(ctx, x, y + 14, '#6ef2ff', 'diamond', 4);
+        drawTimelineMarker(ctx, startX + step * pixelPerTooth, y + 14, '#6ef2ff', 'diamond', 4);
     });
 
     // Phrase lane steps (triangles, further offset, one row per voice)
@@ -268,8 +263,7 @@ function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width) {
         voice.selected.forEach((on, i) => {
             if (!on) return;
             const step = (i * state.teethA + state.phaseA) % state.mainTeeth;
-            const x = startX + (step / state.mainTeeth) * width;
-            drawTimelineMarker(ctx, x, y - yOffset, '#ff3366', 'up', 4);
+            drawTimelineMarker(ctx, startX + step * pixelPerTooth, y - yOffset, '#ff3366', 'up', 4);
         });
     });
 
@@ -278,8 +272,7 @@ function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width) {
         voice.selected.forEach((on, i) => {
             if (!on) return;
             const step = (i * state.teethB + state.phaseB) % state.mainTeeth;
-            const x = startX + (step / state.mainTeeth) * width;
-            drawTimelineMarker(ctx, x, y + yOffset, '#00e5ff', 'down', 4);
+            drawTimelineMarker(ctx, startX + step * pixelPerTooth, y + yOffset, '#00e5ff', 'down', 4);
         });
     });
 
@@ -300,6 +293,7 @@ function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width) {
 function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width) {
     const totalCycles = state.fullPatternCycles;
     const totalSteps = totalCycles * state.mainTeeth;
+    const pixelPerStep = width / totalSteps;
 
     ctx.fillStyle = '#a1a1aa';
     ctx.font = '11px sans-serif';
@@ -378,7 +372,7 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width) {
 
     // Cycle dividers and labels
     for (let c = 0; c <= totalCycles; c++) {
-        const x = startX + (c / totalCycles) * width;
+        const x = startX + c * pixelPerStep * state.mainTeeth;
 
         ctx.strokeStyle = 'rgba(255,255,255,0.12)';
         ctx.lineWidth = 1.5;
@@ -403,7 +397,7 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width) {
         voice.selected.forEach((on, i) => {
             if (!on) return;
             for (let pos = i; pos < totalSteps; pos += masterRepeatSteps) {
-                const x = startX + (pos / totalSteps) * width;
+                const x = startX + pos * pixelPerStep;
                 drawTimelineMarker(ctx, x, rowY, '#ff9100', 'dot', 4);
             }
         });
@@ -417,7 +411,7 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width) {
             if (!on) return;
             for (let pos = i * state.teethA + state.phaseA; pos < totalSteps + state.phaseA; pos += aRepeatSteps) {
                 const normalized = ((pos % totalSteps) + totalSteps) % totalSteps;
-                const x = startX + (normalized / totalSteps) * width;
+                const x = startX + normalized * pixelPerStep;
                 drawTimelineMarker(ctx, x, rowY, '#ff3366', 'dot', 4);
             }
         });
@@ -431,7 +425,7 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width) {
             if (!on) return;
             for (let pos = i * state.teethB + state.phaseB; pos < totalSteps + state.phaseB; pos += bRepeatSteps) {
                 const normalized = ((pos % totalSteps) + totalSteps) % totalSteps;
-                const x = startX + (normalized / totalSteps) * width;
+                const x = startX + normalized * pixelPerStep;
                 drawTimelineMarker(ctx, x, rowY, '#00e5ff', 'dot', 4);
             }
         });
@@ -540,8 +534,8 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         }
 
         // Compact playhead in the sticky transport bar tracks master-cycle progress.
+        const cycleProgress = (state.mainAngle % (2 * Math.PI)) / (2 * Math.PI);
         if (ui && ui.miniPlayhead) {
-            const cycleProgress = (state.mainAngle % (2 * Math.PI)) / (2 * Math.PI);
             ui.miniPlayhead.style.left = `${cycleProgress * 100}%`;
         }
 
@@ -633,8 +627,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             }
 
             if (state.phraseCyclesA > 1 && state.followPlayhead.Aphrase) {
-                const aStep = getActivePhraseStep(currentStep, state.phaseA, state.teethA, state.phraseStepsA);
-                const aCycle = Math.floor(aStep / state.A);
+                const aCycle = Math.floor(lastActive.Aphrase / state.A);
                 if (aCycle !== state.visibleCycle.Aphrase) {
                     state.visibleCycle.Aphrase = aCycle;
                     _requestDeferredRebuild(lanes.Aphrase);
@@ -642,8 +635,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             }
 
             if (state.phraseCyclesB > 1 && state.followPlayhead.Bphrase) {
-                const bStep = getActivePhraseStep(currentStep, state.phaseB, state.teethB, state.phraseStepsB);
-                const bCycle = Math.floor(bStep / state.B);
+                const bCycle = Math.floor(lastActive.Bphrase / state.B);
                 if (bCycle !== state.visibleCycle.Bphrase) {
                     state.visibleCycle.Bphrase = bCycle;
                     _requestDeferredRebuild(lanes.Bphrase);
@@ -751,7 +743,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         const timelineX = (canvas.width - 700) / 2;
         const timelineWidth = 700;
 
-        drawMasterCycleTimeline(ctx, state, lanes, timelineX, 395, timelineWidth);
+        drawMasterCycleTimeline(ctx, state, lanes, timelineX, 395, timelineWidth, cycleProgress, currentStep, stepSize);
         drawFullPatternTimeline(ctx, state, lanes, timelineX, 450, timelineWidth);
 
         requestAnimationFrame(animate);
