@@ -541,6 +541,14 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             ui.miniPlayhead.style.left = `${cycleProgress * 100}%`;
         }
 
+        // Header: current polyrhythm displayed above the gears
+        ctx.save();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${state.A} against ${state.B} Polyrhythm`, canvas.width / 2, 30);
+        ctx.restore();
+
           // Calculate gear geometry
           // All gears share the same module (tooth size) so teeth mesh properly.
           // The master gear has a fixed size, and smaller gears are scaled proportionally
