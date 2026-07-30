@@ -486,15 +486,50 @@ function playBongoLow(state, now, vol, channelName) {
 
 /** Bongo high: higher-pitched short sine sweep, frequency varies by channel. */
 function playBongoHigh(state, now, vol, channelName) {
-    const osc = acquireOsc(state);
-    const gain = acquireGain(state);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(channelName.startsWith('A') ? 550 : 500, now);
-    osc.frequency.exponentialRampToValueAtTime(250, now + 0.07);
-    gain.gain.setValueAtTime(vol * 0.65, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-    osc.connect(gain); gain.connect(state.audioCtx.destination);
-    osc.start(now); osc.stop(now + 0.08);
+    const masterGain = acquireGain(state);
+    masterGain.gain.setValueAtTime(vol, now);
+    masterGain.connect(state.audioCtx.destination);
+
+    const baseFreq = channelName.startsWith('A') ? 300 : 271;
+    const decay = 0.18;
+
+    // 1. Fundamental (sine)
+    const osc1 = acquireOsc(state);
+    const gain1 = acquireGain(state);
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(baseFreq * 1.15, now);
+    osc1.frequency.exponentialRampToValueAtTime(baseFreq, now + 0.02);
+    gain1.gain.setValueAtTime(0.7, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + decay);
+    osc1.connect(gain1); gain1.connect(masterGain);
+    osc1.start(now); osc1.stop(now + decay);
+
+    // 2. First Overtone (triangle, inharmonic ratio 1.593)
+    const osc2 = acquireOsc(state);
+    const gain2 = acquireGain(state);
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(baseFreq * 1.593 * 1.15, now);
+    osc2.frequency.exponentialRampToValueAtTime(baseFreq * 1.593, now + 0.02);
+    gain2.gain.setValueAtTime(0.3, now);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + (decay * 0.4));
+    osc2.connect(gain2); gain2.connect(masterGain);
+    osc2.start(now); osc2.stop(now + (decay * 0.4));
+
+    // 3. Hand impact transient (bandpass noise)
+    const noise = acquireNoiseSource(state);
+    if (noise) {
+        const noiseFilter = state.audioCtx.createBiquadFilter();
+        noiseFilter.type = 'bandpass';
+        noiseFilter.frequency.setValueAtTime(4000, now);
+        noiseFilter.Q.setValueAtTime(1.8, now);
+        const noiseGain = acquireGain(state);
+        noiseGain.gain.setValueAtTime(0.45, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.012);
+        noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(masterGain);
+        noise.start(now);
+    }
+
+    masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay + 0.05);
 }
 
 /** Maraca: bandpass noise with amplitude modulation to simulate shaking. */
