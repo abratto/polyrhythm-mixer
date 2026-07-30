@@ -1623,21 +1623,6 @@ function createMetalBellStrike(state, frequency, startTime, volume, duration) {
     });
 }
 
-// ROADMAP — AudioWorklet synthesis:
-//   Every trigger creates new OscillatorNode / GainNode / BiquadFilter objects
-//   that are never disconnected or pooled. At high BPM with dense patterns and
-//   complex instruments (e.g. conga creates 11 nodes per hit), this generates
-//   significant GC pressure and leaked nodes in the audio graph.
-//
-//   An AudioWorkletProcessor (registered via blob URL so no build step is
-//   needed) would move all sample generation to the audio render thread behind
-//   a single persistent AudioWorkletNode. The main thread would post scheduling
-//   batches and the worklet would handle polyphonic voice management, envelope
-//   generation, and filtering internally. This eliminates per-trigger node
-//   allocation entirely and removes main-thread scheduling jitter.
-//   Estimated effort: 500–800 lines, rewriting instrument functions into
-//   worklet-processor voices.
-
 function acquireOsc(state) {
     return state.audioCtx.createOscillator();
 }
