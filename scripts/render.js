@@ -546,7 +546,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 16px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`${state.A} against ${state.B} Polyrhythm`, canvas.width / 2, 30);
+        ctx.fillText(`${state.A} against ${state.B} Polyrhythm`, canvas.width / 2, 20);
         ctx.restore();
 
           // Calculate gear geometry
