@@ -28,7 +28,7 @@ textarea { width: 100%; height: 200px; font-family: monospace; font-size: 11px; 
 </head>
 <body>
 <h1>Hybrid Family Tuner</h1>
-<p class="subtitle">Bongos, Congas, Snare, Cajon, Timbale, Synth Kick, Electronic Snare</p>
+<p class="subtitle">Bongos, Congas, Snare, Cajon, Timbale, Synth Kick, Electronic Snare, Djembe, Frame Drum</p>
 
 <select id="instrumentSelect"></select>
 <div id="params"></div>
@@ -239,6 +239,42 @@ const instruments = {
       { section: 'body', key: 'bodySweep', label: 'Body Sweep', unit: 's', min: 0.005, max: 0.15, step: 0.001, val: 0.04, gloss: 'Pitch drop time.' },
       { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.55, gloss: 'Body oscillator volume.' },
       { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.005, max: 0.15, step: 0.001, val: 0.06, gloss: 'Body decay.' }
+    ]
+  },
+  djembe: {
+    label: 'Djembe',
+    layers: ['body', 'body', 'impact'],
+    params: [
+      { section: 'body', key: 'bassFreq', label: 'Bass Frequency', unit: 'Hz', min: 30, max: 120, step: 1, val: 55, gloss: 'Helmholtz cavity resonance (deep sub-bass).' },
+      { section: 'body', key: 'bassPitchBend', label: 'Bass Pitch Bend', unit: '', min: 1.0, max: 1.4, step: 0.01, val: 1.1, gloss: 'Cavity pitch bend on impact.' },
+      { section: 'body', key: 'bassVol', label: 'Bass Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.85, gloss: 'Sub-bass volume.' },
+      { section: 'body', key: 'bassDecay', label: 'Bass Decay', unit: 's', min: 0.05, max: 0.8, step: 0.01, val: 0.45, gloss: 'Long decay for the booming open tone.' },
+      { section: 'body', key: 'skinRatio', label: 'Skin Ratio', unit: '', min: 2.0, max: 8.0, step: 0.1, val: 5.5, gloss: 'Skin overtone = bassFreq × this value. Tight djembe skin is ~5-6×.' },
+      { section: 'body', key: 'skinPitchBend', label: 'Skin Pitch Bend', unit: '', min: 1.0, max: 1.4, step: 0.01, val: 1.15, gloss: 'Skin pitch bend' },
+      { section: 'body', key: 'skinVol', label: 'Skin Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.25, gloss: 'Skin triangle-wave volume.' },
+      { section: 'body', key: 'skinDecay', label: 'Skin Decay', unit: 's', min: 0.03, max: 0.4, step: 0.01, val: 0.15, gloss: 'Faster skin decay.' },
+      { section: 'impact', key: 'slapFreq', label: 'Slap Filter Freq', unit: 'Hz', min: 1000, max: 8000, step: 10, val: 4500, gloss: 'Bright slap transient frequency.' },
+      { section: 'impact', key: 'slapQ', label: 'Slap Q', unit: '', min: 0.5, max: 3.0, step: 0.1, val: 1.2, gloss: 'Slap filter resonance.' },
+      { section: 'impact', key: 'slapVol', label: 'Slap Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.5, gloss: 'Slap noise volume.' },
+      { section: 'impact', key: 'slapDecay', label: 'Slap Decay', unit: 's', min: 0.005, max: 0.1, step: 0.001, val: 0.04, gloss: 'Slap transient duration.' }
+    ]
+  },
+  frame_drum: {
+    label: 'Frame Drum (Tar)',
+    layers: ['body', 'overtone', 'impact'],
+    params: [
+      { section: 'body', key: 'baseFreq', label: 'Base Frequency', unit: 'Hz', min: 50, max: 200, step: 1, val: 95, gloss: 'Membrane fundamental. Frame drum lacks deep cavity — pure skin tone.' },
+      { section: 'body', key: 'pitchBend', label: 'Pitch Bend', unit: '', min: 1.0, max: 1.8, step: 0.01, val: 1.4, gloss: 'Aggressive 40% pitch drop for that "thud/boing" stretch.' },
+      { section: 'body', key: 'bodyVol', label: 'Body Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.8, gloss: 'Fundamental volume.' },
+      { section: 'body', key: 'bodyDecay', label: 'Body Decay', unit: 's', min: 0.05, max: 0.5, step: 0.01, val: 0.22, gloss: 'Shorter sustain than djembe (shallow shell).' },
+      { section: 'overtone', key: 'overRatio', label: 'Overtone Ratio', unit: '', min: 1.2, max: 2.5, step: 0.001, val: 1.593, gloss: 'Inharmonic Bessel ratio for the edge tone (triangle).' },
+      { section: 'overtone', key: 'overPitchBend', label: 'Over. Pitch Bend', unit: '', min: 1.0, max: 1.6, step: 0.01, val: 1.3, gloss: 'Overtone pitch bend on impact.' },
+      { section: 'overtone', key: 'overVol', label: 'Overtone Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.2, gloss: 'Overtone volume.' },
+      { section: 'overtone', key: 'overDecayFactor', label: 'Over. Decay Factor', unit: '', min: 0.2, max: 1.0, step: 0.01, val: 0.6, gloss: 'Overtone = bodyDecay × this factor.' },
+      { section: 'impact', key: 'noiseFreq', label: 'Transient Freq', unit: 'Hz', min: 500, max: 4000, step: 10, val: 1500, gloss: 'Softer mid-range flesh transient.' },
+      { section: 'impact', key: 'noiseQ', label: 'Transient Q', unit: '', min: 0.5, max: 3.0, step: 0.1, val: 1.0, gloss: 'Transient filter Q.' },
+      { section: 'impact', key: 'noiseVol', label: 'Transient Volume', unit: '', min: 0, max: 1, step: 0.01, val: 0.4, gloss: 'Flesh impact volume.' },
+      { section: 'impact', key: 'noiseDecay', label: 'Transient Decay', unit: 's', min: 0.005, max: 0.08, step: 0.001, val: 0.02, gloss: 'Short finger/thumb transient.' }
     ]
   },
   synth_kick: {

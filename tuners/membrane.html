@@ -27,7 +27,7 @@ button { padding: 12px 0; font-size: 16px; font-weight: 700; border: none; borde
 </head>
 <body>
 <h1>Membrane Family Tuner</h1>
-<p class="subtitle">Kick, Tom, Djembe, Talking Drum, Udu</p>
+<p class="subtitle">Kick, Tom, Talking Drum, Udu</p>
 
 <select id="instrumentSelect"></select>
 <div id="params"></div>
@@ -60,16 +60,6 @@ const instruments = {
       { key: 'sweepTime', label: 'Sweep Duration', unit: 's', min: 0.005, max: 0.5, step: 0.005, val: 0.2, gloss: 'Pitch drop time.' },
       { key: 'decay', label: 'Decay', unit: 's', min: 0.01, max: 1.0, step: 0.005, val: 0.22, gloss: 'Total duration.' },
       { key: 'volScale', label: 'Volume Scale', unit: '%', min: 10, max: 100, step: 1, val: 80, gloss: 'Relative volume for this instrument.' }
-    ]
-  },
-  djembe: {
-    label: 'Frame Drum / Djembe',
-    params: [
-      { key: 'startFreq', label: 'Start Frequency', unit: 'Hz', min: 30, max: 500, step: 1, val: 150, gloss: 'Initial pitch. Djembe uses two oscillators (sine + triangle) for a fuller tone.' },
-      { key: 'endFreq', label: 'End Frequency', unit: 'Hz', min: 15, max: 300, step: 1, val: 60, gloss: 'Resting pitch after sweep.' },
-      { key: 'sweepTime', label: 'Sweep Duration', unit: 's', min: 0.01, max: 0.5, step: 0.005, val: 0.15, gloss: 'Pitch drop time for both oscillators.' },
-      { key: 'decay', label: 'Decay', unit: 's', min: 0.02, max: 1.0, step: 0.005, val: 0.2, gloss: 'Total duration.' },
-      { key: 'volScale', label: 'Volume Scale', unit: '%', min: 10, max: 100, step: 1, val: 75, gloss: 'Relative volume.' }
     ]
   },
   talking_drum: {
