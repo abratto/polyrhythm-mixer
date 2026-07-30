@@ -43,7 +43,8 @@ export const instrumentCatalog = [
     { value: 'synth_kick', label: 'EDM Synth Kick' },
     { value: 'electronic_snare', label: 'Electronic Snare' },
     { value: 'foot_tap', label: 'Foot Tap' },
-    { value: 'djembe', label: 'Frame Drum / Djembe' },
+    { value: 'djembe', label: 'Djembe' },
+    { value: 'frame_drum', label: 'Frame Drum (Tar)' },
     { value: 'gankogui', label: 'Gankogui Double Bell' },
     { value: 'guiro', label: 'Guiro Scraper' },
     { value: 'slap', label: 'Hand Slap' },
@@ -615,19 +616,95 @@ function playClaves(state, now, vol) {
 
 /** Djembe: sine + triangle mix with deep downward pitch sweep, frequency varies by channel. */
 function playDjembe(state, now, vol, channelName) {
+    const masterGain = acquireGain(state);
+    masterGain.gain.setValueAtTime(vol, now);
+    masterGain.connect(state.audioCtx.destination);
+
+    const bassFreq = channelName.startsWith('A') ? 65 : 55;
+    const bassDecay = 0.45;
+
+    // 1. Cavity fundamental (sine) — deep Helmholtz resonance
+    const subOsc = acquireOsc(state);
+    const subGain = acquireGain(state);
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(bassFreq * 1.1, now);
+    subOsc.frequency.exponentialRampToValueAtTime(bassFreq, now + 0.04);
+    subGain.gain.setValueAtTime(0.85, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + bassDecay);
+    subOsc.connect(subGain); subGain.connect(masterGain);
+    subOsc.start(now); subOsc.stop(now + bassDecay);
+
+    // 2. High skin resonance (triangle for stiffness)
+    const skinOsc = acquireOsc(state);
+    const skinGain = acquireGain(state);
+    const skinFreq = bassFreq * 5.5;
+    skinOsc.type = 'triangle';
+    skinOsc.frequency.setValueAtTime(skinFreq * 1.15, now);
+    skinOsc.frequency.exponentialRampToValueAtTime(skinFreq, now + 0.03);
+    skinGain.gain.setValueAtTime(0.25, now);
+    skinGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    skinOsc.connect(skinGain); skinGain.connect(masterGain);
+    skinOsc.start(now); skinOsc.stop(now + 0.15);
+
+    // 3. Slap transient (bright bandpass noise)
+    const noise = acquireNoiseSource(state);
+    if (noise) {
+        const filter = state.audioCtx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(4500, now);
+        filter.Q.setValueAtTime(1.2, now);
+        const noiseGain = acquireGain(state);
+        noiseGain.gain.setValueAtTime(0.5, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+        noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(masterGain);
+        noise.start(now);
+    }
+}
+
+/** Frame Drum (Tar): Shallow pure-membrane thud with pitch-bend and soft transient. */
+function playFrameDrum(state, now, vol, channelName) {
+    const masterGain = acquireGain(state);
+    masterGain.gain.setValueAtTime(vol, now);
+    masterGain.connect(state.audioCtx.destination);
+
+    const baseFreq = channelName.startsWith('A') ? 110 : 95;
+    const decay = 0.22;
+
+    // 1. Membrane fundamental (sine) with aggressive pitch bend (40%)
     const osc1 = acquireOsc(state);
-    const osc2 = acquireOsc(state);
-    const gain = acquireGain(state);
+    const gain1 = acquireGain(state);
     osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(baseFreq * 1.4, now);
+    osc1.frequency.exponentialRampToValueAtTime(baseFreq, now + 0.035);
+    gain1.gain.setValueAtTime(0.8, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + decay);
+    osc1.connect(gain1); gain1.connect(masterGain);
+    osc1.start(now); osc1.stop(now + decay);
+
+    // 2. Inharmonic edge overtone (Bessel ratio 1.593)
+    const osc2 = acquireOsc(state);
+    const gain2 = acquireGain(state);
     osc2.type = 'triangle';
-    osc1.frequency.setValueAtTime(channelName.startsWith('A') ? 180 : 150, now);
-    osc2.frequency.setValueAtTime(channelName.startsWith('A') ? 180 : 150, now);
-    osc1.frequency.exponentialRampToValueAtTime(60, now + 0.15);
-    osc2.frequency.exponentialRampToValueAtTime(60, now + 0.15);
-    gain.gain.setValueAtTime(vol * 0.75, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-    osc1.connect(gain); osc2.connect(gain); gain.connect(state.audioCtx.destination);
-    osc1.start(now); osc2.start(now); osc1.stop(now + 0.2); osc2.stop(now + 0.2);
+    osc2.frequency.setValueAtTime(baseFreq * 1.593 * 1.3, now);
+    osc2.frequency.exponentialRampToValueAtTime(baseFreq * 1.593, now + 0.03);
+    gain2.gain.setValueAtTime(0.2, now);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + (decay * 0.6));
+    osc2.connect(gain2); gain2.connect(masterGain);
+    osc2.start(now); osc2.stop(now + (decay * 0.6));
+
+    // 3. Flesh transient (mid-range papery thud)
+    const noise = acquireNoiseSource(state);
+    if (noise) {
+        const filter = state.audioCtx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(1500, now);
+        filter.Q.setValueAtTime(1.0, now);
+        const noiseGain = acquireGain(state);
+        noiseGain.gain.setValueAtTime(0.4, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+        noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(masterGain);
+        noise.start(now);
+    }
 }
 
 /** Timbale: sine with fast pitch envelope + noise transient attack, frequency varies by channel. */
@@ -1289,6 +1366,7 @@ export const instruments = {
     claves: playClaves,
     cabasa_shekere: playCabasaShekere,
     djembe: playDjembe,
+    frame_drum: playFrameDrum,
     timbale: playTimbale,
     castanets: playCastanets,
     synth_kick: playSynthKick,
