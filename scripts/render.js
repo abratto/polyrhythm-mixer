@@ -468,15 +468,15 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
     // Reused buffer for merging master voice selections.
     // Grow it on demand so higher meter pairs such as 17 against 18 still render correctly.
 
-    // Dynamically resize canvas height to fit all timeline rows (before drawing)
-    const totalVoices = lanes.master.voices.length + lanes.Aphrase.voices.length + lanes.Bphrase.voices.length;
-    const minCanvasHeight = 498 + totalVoices * 18 + 20;
-    if (canvas.height !== minCanvasHeight) {
-        canvas.height = minCanvasHeight;
-    }
-
     function animate(timestamp) {
         try {
+        // Dynamically resize canvas height as voices are added/removed
+        const totalVoices = lanes.master.voices.length + lanes.Aphrase.voices.length + lanes.Bphrase.voices.length;
+        const minCanvasHeight = 498 + totalVoices * 18 + 20;
+        if (canvas.height !== minCanvasHeight) {
+            canvas.height = minCanvasHeight;
+        }
+
         // On mobile, throttle rendering to ~30fps; audio is handled by scheduler
         if (isMobile && timestamp - lastDrawTime < MIN_FRAME_MS) {
             requestAnimationFrame(animate);
