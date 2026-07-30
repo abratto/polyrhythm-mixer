@@ -486,55 +486,51 @@ function playBongoLow(state, now, vol, channelName) {
 
     masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay + 0.05);
 }
-
-/** Bongo high: higher-pitched short sine sweep, frequency varies by channel. */
+/** Bongo high (Macho): Tighter, higher-pitched variant with faster decay and brighter slap. */
 function playBongoHigh(state, now, vol, channelName) {
+    const p = instrumentData.bongo_high.params.reduce((a, {k, v}) => { a[k] = v; return a; }, {});
     const masterGain = acquireGain(state);
     masterGain.gain.setValueAtTime(vol, now);
     masterGain.connect(state.audioCtx.destination);
 
-    const baseFreq = channelName.startsWith('A') ? 300 : 271;
-    const decay = 0.18;
+    const baseFreq = channelName.startsWith('A') ? p.baseFreq + 29 : p.baseFreq;
+    const decay = p.bodyDecay;
 
-    // 1. Fundamental (sine)
     const osc1 = acquireOsc(state);
     const gain1 = acquireGain(state);
     osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(baseFreq * 1.15, now);
+    osc1.frequency.setValueAtTime(baseFreq * p.pitchBend, now);
     osc1.frequency.exponentialRampToValueAtTime(baseFreq, now + 0.02);
     gain1.gain.setValueAtTime(p.bodyVol, now);
     gain1.gain.exponentialRampToValueAtTime(0.001, now + decay);
     osc1.connect(gain1); gain1.connect(masterGain);
     osc1.start(now); osc1.stop(now + decay);
 
-    // 2. First Overtone (triangle, inharmonic ratio 1.593)
     const osc2 = acquireOsc(state);
     const gain2 = acquireGain(state);
     osc2.type = 'triangle';
-    osc2.frequency.setValueAtTime(baseFreq * 1.593 * 1.15, now);
-    osc2.frequency.exponentialRampToValueAtTime(baseFreq * 1.593, now + 0.02);
-    gain2.gain.setValueAtTime(0.3, now);
-    gain2.gain.exponentialRampToValueAtTime(0.001, now + (decay * 0.4));
+    osc2.frequency.setValueAtTime(baseFreq * p.overRatio * p.pitchBend, now);
+    osc2.frequency.exponentialRampToValueAtTime(baseFreq * p.overRatio, now + 0.02);
+    gain2.gain.setValueAtTime(p.overVol, now);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + (decay * p.overDecay));
     osc2.connect(gain2); gain2.connect(masterGain);
-    osc2.start(now); osc2.stop(now + (decay * 0.4));
+    osc2.start(now); osc2.stop(now + (decay * p.overDecay));
 
-    // 3. Hand impact transient (bandpass noise)
     const noise = acquireNoiseSource(state);
     if (noise) {
         const noiseFilter = state.audioCtx.createBiquadFilter();
         noiseFilter.type = 'bandpass';
-        noiseFilter.frequency.setValueAtTime(4000, now);
-        noiseFilter.Q.setValueAtTime(1.8, now);
+        noiseFilter.frequency.setValueAtTime(p.noiseFreq, now);
+        noiseFilter.Q.setValueAtTime(p.noiseQ, now);
         const noiseGain = acquireGain(state);
-        noiseGain.gain.setValueAtTime(0.45, now);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.012);
+        noiseGain.gain.setValueAtTime(p.noiseVol, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + p.noiseDecay);
         noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(masterGain);
         noise.start(now);
     }
 
     masterGain.gain.exponentialRampToValueAtTime(0.001, now + decay + 0.05);
 }
-
 /** Maraca: bandpass noise with amplitude modulation to simulate shaking. */
 function playMaraca(state, now, vol) {
     const noise = acquireNoiseSource(state);
@@ -666,6 +662,7 @@ function playDjembe(state, now, vol, channelName) {
 
 /** Frame Drum (Tar): Shallow pure-membrane thud with pitch-bend and soft transient. */
 function playFrameDrum(state, now, vol, channelName) {
+    const p = instrumentData.frame_drum.params.reduce((a, {k, v}) => { a[k] = v; return a; }, {});
     const masterGain = acquireGain(state);
     masterGain.gain.setValueAtTime(vol, now);
     masterGain.connect(state.audioCtx.destination);
@@ -761,6 +758,7 @@ function playCastanets(state, now, vol) {
 
 /** EDM synth kick: sub-bass sine + noise transient + mid-range click. */
 function playSynthKick(state, now, vol) {
+    const p = instrumentData.synth_kick.params.reduce((a, {k, v}) => { a[k] = v; return a; }, {});
     const subOsc = acquireOsc(state);
     const subGain = acquireGain(state);
     subOsc.type = 'sine';
