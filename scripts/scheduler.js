@@ -220,5 +220,6 @@ export function playSingleChannel(state, channel, globalVolume, hitTime) {
     const now = hitTime
         ? Math.max(hitTime, state.audioCtx.currentTime + 0.025)
         : state.audioCtx.currentTime;
-    fn(state, now, vol, channel.prefix || '');
+    try { fn(state, now, vol, channel.prefix || ''); }
+    catch (err) { console.error('Instrument error:', err, 'for sound', channel.sound); }
 }
