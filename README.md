@@ -6,7 +6,7 @@ A web-based tool for visualizing, sequencing, and mixing polyrhythms. Two interl
 
 ## Origin
 
-This project grew out of work at [CNMAT](https://cnmat.berkeley.edu/) (Center for New Music and Audio Technologies) at UC Berkeley, by **Alan Potosnak**, where the author built a MAX/MSP tool for creating polyrhythms for live performance. The web version preserves the same musical concepts — meter relationships, phrase structures, and phase offsets — in a portable, shareable format.
+This project was inspired by earlier work at UC Berkeley's [Center for New Music and Audio Technologies (CNMAT)](https://cnmat.berkeley.edu/) by author **Alan Potosnak** and collaborators **Garo Hussenjian** and **Kit Anderson**, who built a MAX/MSP tool for creating polyrhythms for live performance. The web version preserves the same musical concepts — meter relationships, phrase structures, and phase offsets — in a portable, shareable format.
 
 ## Architecture
 
