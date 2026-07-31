@@ -6,5 +6,5 @@ export {
     createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane,
     wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons,
     addVoice, removeVoice, updateVoiceInstrumentLabels,
-    applyMixVisuals, addLaneEditControls, setMixChannels, wireLaneMixButtons
+    applyMixVisuals, addLaneEditControls, setMixChannels, wireLaneMixButtons, updateVoiceStepsForCycle
 } from './lane-ui.js';

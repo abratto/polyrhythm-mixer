@@ -9,6 +9,7 @@
  * so the visual speed is: radiansPerSecond = BPM × π/2 / 60.
  */
 import { getActivePhraseStep, getActiveWheelStep, getMeshedWheelAngle } from './math.js';
+import { updateVoiceStepsForCycle } from './lanes.js';
 
 /** Cache for pre-rendered gear body Path2D objects, keyed by tooth count + radii. */
 const _gearBodyCache = {};
@@ -489,7 +490,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         // Flush deferred lane rebuilds before drawing (avoids DOM churn during rAF)
         while (_laneRebuildQueue.length > 0) {
             const lane = _laneRebuildQueue.shift();
-            buildLane(lane, state);
+            updateVoiceStepsForCycle(lane, state);
         }
 
         if (lastTime === null) {

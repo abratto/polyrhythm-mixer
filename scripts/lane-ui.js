@@ -741,6 +741,88 @@ function cycleNavKey(lane) {
     return 'master';
 }
 
+/**
+ * Updates only the step-button grid when the visible cycle changes,
+ * without rebuilding the controls. Keeps any open dropdown intact.
+ */
+export function updateVoiceStepsForCycle(lane, state) {
+    if (!lane.isMultiVoice || !state) return;
+    const stepsPerCycle = lane.stepsPerCycle?.() ?? lane.count();
+    const totalCycles = lane.totalCycles?.() ?? 1;
+    if (totalCycles < 2) return;
+
+    const laneKey = lane.stepId.includes('meterA') ? 'Aphrase'
+        : lane.stepId.includes('meterB') ? 'Bphrase' : 'master';
+    lane._visibleCycle = state?.visibleCycle?.[laneKey] ?? 0;
+    const cycleStart = lane._visibleCycle * stepsPerCycle;
+
+    lane.voices.forEach((voice, idx) => {
+        const row = lane.container.querySelector(`.voice-row[data-voice-index="${idx}"]`);
+        if (!row) return;
+        voice.buttons = [];
+        const container = row.querySelector('.voice-steps');
+        if (!container) return;
+
+        const buttons = container.querySelectorAll('.step-btn');
+        buttons.forEach((btn, i) => {
+            const actualIndex = totalCycles > 1 ? cycleStart + i : i;
+            const active = !!voice.selected[actualIndex];
+            btn.classList.toggle('active', active);
+            btn.setAttribute('aria-pressed', String(active));
+            // Re-attach handler with correct actualIndex
+            btn.onpointerdown = null;
+            const cloneBtn = btn;
+            voice.buttons.push(cloneBtn);
+        });
+    });
+
+    // Update the cycle-nav label text
+    const cycleNav = lane.container?.closest('.matrix-row')?.querySelector('.cycle-nav-label');
+    if (cycleNav) {
+        const following = state?.followPlayhead?.[laneKey] !== false;
+        const current = lane._visibleCycle;
+        cycleNav.textContent = following
+            ? `AUTO ${current + 1}/${totalCycles}`
+            : `PIN ${current + 1}/${totalCycles}`;
+        cycleNav.classList.toggle('pinned', !following);
+    }
+
+    // Also update the "playhead is in another cycle" cue
+    updateCycleCue(lane, state);
+}
+
+function updateCycleCue(lane, state) {
+    const cue = lane._cue;
+    if (!cue) return;
+    const totalCycles = lane.totalCycles?.() ?? 1;
+    if (totalCycles < 2) { cue.hidden = true; return; }
+    const stepsPerCycle = lane.stepsPerCycle?.() ?? lane.count();
+    const laneKey = lane.stepId.includes('meterA') ? 'Aphrase'
+        : lane.stepId.includes('meterB') ? 'Bphrase' : 'master';
+    const following = state?.followPlayhead?.[laneKey] !== false;
+    if (following) { cue.hidden = true; return; }
+    const activeSteps = lane.voices.map(v => v._currentIndex ?? 0);
+    const visibleCycle = lane._visibleCycle ?? 0;
+    const anyElsewhere = activeSteps.some(idx => Math.floor(idx / stepsPerCycle) !== visibleCycle);
+    if (anyElsewhere) {
+        cue.textContent = `▶ playhead in cycle ${Math.floor(activeSteps[0] / stepsPerCycle) + 1}`;
+        cue.hidden = false;
+    } else {
+        cue.hidden = true;
+    }
+}
+
+/** Updates the visible cycle without rebuilding the lane — keeps selects open. */
+function navigateCycle(lane, state, direction) {
+    const laneKey = lane.stepId.includes('meterA') ? 'Aphrase'
+        : lane.stepId.includes('meterB') ? 'Bphrase' : 'master';
+    state.followPlayhead[laneKey] = false;
+    const totalCycles = lane.totalCycles?.() ?? 1;
+    const current = state.visibleCycle[laneKey] || 0;
+    state.visibleCycle[laneKey] = ((current + direction) % totalCycles + totalCycles) % totalCycles;
+    updateVoiceStepsForCycle(lane, state);
+}
+
 function addCycleNavigation(lane, state) {
     const totalCycles = lane.totalCycles();
     const key = cycleNavKey(lane);
@@ -765,11 +847,7 @@ function addCycleNavigation(lane, state) {
     prevBtn.className = 'cycle-nav-btn';
     prevBtn.textContent = '\u25c0';
     prevBtn.title = 'Previous cycle';
-    prevBtn.addEventListener('click', () => {
-        state.followPlayhead[key] = false;
-        state.visibleCycle[key] = ((state.visibleCycle[key] || 0) - 1 + totalCycles) % totalCycles;
-        buildMultiVoiceLane(lane, state);
-    });
+    prevBtn.addEventListener('click', () => navigateCycle(lane, state, -1));
 
     const label = document.createElement('button');
     label.type = 'button';
@@ -781,7 +859,7 @@ function addCycleNavigation(lane, state) {
     label.title = following ? 'Following playhead — click to pin' : 'Pinned — click to follow playhead';
     label.addEventListener('click', () => {
         state.followPlayhead[key] = !state.followPlayhead[key];
-        buildMultiVoiceLane(lane, state);
+        updateVoiceStepsForCycle(lane, state);
     });
 
     const nextBtn = document.createElement('button');
@@ -789,11 +867,7 @@ function addCycleNavigation(lane, state) {
     nextBtn.className = 'cycle-nav-btn';
     nextBtn.textContent = '\u25b6';
     nextBtn.title = 'Next cycle';
-    nextBtn.addEventListener('click', () => {
-        state.followPlayhead[key] = false;
-        state.visibleCycle[key] = ((state.visibleCycle[key] || 0) + 1) % totalCycles;
-        buildMultiVoiceLane(lane, state);
-    });
+    nextBtn.addEventListener('click', () => navigateCycle(lane, state, 1));
 
     nav.append(title, prevBtn, label, nextBtn);
     viewActions.appendChild(nav);
