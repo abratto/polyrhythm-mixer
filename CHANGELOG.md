@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.1 — 2026-07-31
+
+### Fixed
+- Saved rhythms from older versions (v2/v3) now correctly restore wheel lane patterns by converting group-level indices to tooth-level onset positions
+- Inline safety net detects and converts old wheel lane data even if version migration doesn't run
+
 ## v1.0.0 — 2026-07-31
 
 ### Features
