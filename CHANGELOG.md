@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.3.0 — 2026-07-31
+
+### Features
+- Solo / Mute buttons now show a clear "on" state: bright gradient fill, inner ring, outer glow, and a leading status dot — visible at a glance even when the mouse is not hovering
+- Selected-state hover/focus preserves the engaged look (higher specificity prevents the shared lane-accent hover glow from overriding it)
+
 ## v1.2.0 — 2026-07-31
 
 ### Features
