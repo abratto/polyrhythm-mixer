@@ -37,10 +37,7 @@ function processTriggers(state, lanes, active, channels) {
         state.lastActive.Aphrase = active.Aphrase;
     }
 
-    if (active.Awheel !== state.lastActive.Awheel) {
-        if (lanes.Awheel.selected[active.Awheel] && !lanes.Awheel.channel?.silenced) state.flash.A = 12;
-        state.lastActive.Awheel = active.Awheel;
-    }
+    if (lanes.Awheel.selected[((active.master % state.mainTeeth) + state.mainTeeth) % state.mainTeeth] && !lanes.Awheel.channel?.silenced) state.flash.A = 12;
 
     if (active.Bphrase !== state.lastActive.Bphrase) {
         lanes.Bphrase.voices.forEach((voice) => {
@@ -49,10 +46,7 @@ function processTriggers(state, lanes, active, channels) {
         state.lastActive.Bphrase = active.Bphrase;
     }
 
-    if (active.Bwheel !== state.lastActive.Bwheel) {
-        if (lanes.Bwheel.selected[active.Bwheel] && !lanes.Bwheel.channel?.silenced) state.flash.B = 12;
-        state.lastActive.Bwheel = active.Bwheel;
-    }
+    if (lanes.Bwheel.selected[((active.master % state.mainTeeth) + state.mainTeeth) % state.mainTeeth] && !lanes.Bwheel.channel?.silenced) state.flash.B = 12;
 }
 
 /**
@@ -248,13 +242,13 @@ function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width, cycleProgr
     // Wheel lane steps (diamonds, offset above/below axis)
     lanes.Awheel.selected.forEach((on, i) => {
         if (!on) return;
-        const step = (i * state.teethA + state.phaseA) % state.mainTeeth;
+        const step = (i + state.phaseA) % state.mainTeeth;
         drawTimelineMarker(ctx, startX + step * pixelPerTooth, y - 14, '#ff6b8f', 'diamond', 4);
     });
 
     lanes.Bwheel.selected.forEach((on, i) => {
         if (!on) return;
-        const step = (i * state.teethB + state.phaseB) % state.mainTeeth;
+        const step = (i + state.phaseB) % state.mainTeeth;
         drawTimelineMarker(ctx, startX + step * pixelPerTooth, y + 14, '#6ef2ff', 'diamond', 4);
     });
 
@@ -674,10 +668,10 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         _scratchA.fill(0);
         _scratchB.fill(0);
         lanes.Awheel.selected.forEach((on, i) => {
-            if (on) _scratchA[(i * state.teethA + state.phaseA) % state.mainTeeth] = 1;
+            if (on) _scratchA[(i + state.phaseA) % state.mainTeeth] = 1;
         });
         lanes.Bwheel.selected.forEach((on, i) => {
-            if (on) _scratchB[(i * state.teethB + state.phaseB) % state.mainTeeth] = 1;
+            if (on) _scratchB[(i + state.phaseB) % state.mainTeeth] = 1;
         });
         const aDots = _scratchA;
         const bDots = _scratchB;

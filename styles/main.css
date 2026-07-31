@@ -343,14 +343,17 @@
             background-color: #272735;
             border: 1px solid #3f3f4e;
             font-weight: 700;
-            font-size: 10px;
+            font-size: 11px;
             line-height: 1;
-            min-height: 24px;
+            height: 26px;
             min-width: 58px;
-            padding: 4px 10px;
+            padding: 0 10px;
             text-transform: uppercase;
             color: #d1d1d6;
             white-space: nowrap;
+            box-sizing: border-box;
+            cursor: pointer;
+            border-radius: 4px;
         }
         .clear-btn:hover {
             background-color: #3a3a4c;
@@ -883,12 +886,17 @@
             background-color: #272735;
             border: none;
             font-weight: 700;
-            font-size: 10px;
-            padding: 6px 8px;
+            font-size: 11px;
+            height: 26px;
+            padding: 0 8px;
+            line-height: 1;
             text-transform: uppercase;
             width: 58px;
             border: 1px solid #333344;
             flex-shrink: 0;
+            box-sizing: border-box;
+            border-radius: 4px;
+            cursor: pointer;
         }
         .mute-btn.muted {
             background-color: #ff1744;
@@ -900,13 +908,18 @@
             background-color: #272735;
             border: none;
             font-weight: 700;
-            font-size: 10px;
-            padding: 6px 8px;
+            font-size: 11px;
+            height: 26px;
+            padding: 0 8px;
+            line-height: 1;
             text-transform: uppercase;
             width: 52px;
             border: 1px solid #333344;
             flex-shrink: 0;
             margin-right: 4px;
+            box-sizing: border-box;
+            border-radius: 4px;
+            cursor: pointer;
         }
         .solo-btn.soloed {
             background-color: #ffb300;
@@ -1305,14 +1318,17 @@
             background-color: #272735;
             border: 1px solid #3f3f4e;
             font-weight: 700;
-            font-size: 10px;
+            font-size: 11px;
             line-height: 1;
-            min-height: 24px;
-            min-width: 66px;
-            padding: 4px 10px;
+            height: 26px;
+            min-width: 78px;
+            padding: 0 10px;
             text-transform: uppercase;
             color: #d1d1d6;
             white-space: nowrap;
+            box-sizing: border-box;
+            cursor: pointer;
+            border-radius: 4px;
         }
         .add-voice-btn:hover {
             background-color: #3a3a4c;
@@ -1378,12 +1394,12 @@
             border-radius: 4px;
             color: #e4e4e7;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 900;
-            height: 22px;
+            height: 26px;
             line-height: 1;
             padding: 0;
-            width: 22px;
+            width: 26px;
         }
         .voice-nudge-reset-btn {
             background-color: #20202a;
@@ -1393,10 +1409,10 @@
             cursor: pointer;
             font-size: 11px;
             font-weight: 900;
-            height: 22px;
+            height: 26px;
             line-height: 1;
             padding: 0;
-            width: 24px;
+            width: 26px;
         }
         .voice-nudge-btn:hover {
             background-color: #3a3a4c;
@@ -1745,12 +1761,14 @@
             border-radius: 4px;
             color: #cfcfd8;
             cursor: pointer;
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 700;
             line-height: 1;
-            padding: 4px 8px;
+            height: 26px;
+            padding: 0 10px;
             text-transform: uppercase;
             white-space: nowrap;
+            box-sizing: border-box;
         }
         .edit-btn:hover {
             background-color: #3a3a4c;
@@ -1762,8 +1780,8 @@
             margin-left: 4px;
         }
         .edit-btn-sm {
-            padding: 2px 6px;
-            font-size: 9px;
+            padding: 0 6px;
+            font-size: 10px;
         }
 
         /* Uniform button sizing inside voice rows -- all buttons in the lane-label-area
