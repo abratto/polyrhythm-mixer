@@ -18,6 +18,7 @@ export const instrumentData = {
   kick: {
     label: 'Bass Drum (Kick)',
     params: [
+      { k: 'volScale', v: 100, label: 'Volume', unit: '%', lo: 10, hi: 100, step: 1, gloss: 'Relative volume for this instrument.' },
       { k: 'startFreq', v: 135, label: 'Start Frequency', unit: 'Hz', lo: 20, hi: 300, step: 1, gloss: 'Initial pitch at strike.' },
       { k: 'endFreq',   v: 38,  label: 'End Frequency',   unit: 'Hz', lo: 15, hi: 200, step: 1, gloss: 'Resting pitch after sweep.' },
       { k: 'sweepTime', v: 0.12,label: 'Sweep Duration',  unit: 's',  lo: 0.005, hi: 0.5, step: 0.005, gloss: 'How fast the pitch drops.' },
@@ -28,6 +29,7 @@ export const instrumentData = {
   tom: {
     label: 'Synth Electronic Tom',
     params: [
+      { k: 'volScale', v: 80, label: 'Volume', unit: '%', lo: 10, hi: 100, step: 1, gloss: 'Relative volume.' },
       { k: 'startFreq', v: 160, label: 'Start Frequency', unit: 'Hz', lo: 30, hi: 500, step: 1, gloss: 'Initial pitch.' },
       { k: 'endFreq',   v: 80,  label: 'End Frequency',   unit: 'Hz', lo: 15, hi: 300, step: 1, gloss: 'Resting pitch.' },
       { k: 'sweepTime', v: 0.2, label: 'Sweep Duration',  unit: 's',  lo: 0.005, hi: 0.5, step: 0.005, gloss: 'Pitch drop time.' },
