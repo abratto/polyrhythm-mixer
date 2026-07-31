@@ -28,7 +28,7 @@ textarea { width: 100%; height: 200px; font-family: monospace; font-size: 11px; 
 </head>
 <body>
 <h1>Hybrid Family Tuner</h1>
-<p class="subtitle">Bongos, Congas, Snare, Cajon, Timbale, Synth Kick, Electronic Snare, Djembe, Frame Drum</p>
+<p class="subtitle">Bongos, Congas, Snare, Timbale, Synth Kick, Electronic Snare, Djembe, Frame Drum, Traditional Cajon, Snare Cajon</p>
 
 <select id="instrumentSelect"></select>
 <div id="params"></div>
@@ -334,29 +334,57 @@ document.getElementById('playBtn').addEventListener('click', async () => {
     }
   }
   
-  else if (currentInstrument === 'cajon_bass') {
-    const osc = audioCtx.createOscillator();
-    const og = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(v.bodyFreq, now);
-    osc.frequency.exponentialRampToValueAtTime(v.bodyEndFreq, now + v.bodySweep);
-    og.gain.setValueAtTime(vol * v.bodyVol, now);
-    og.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay);
-    osc.connect(og); og.connect(audioCtx.destination);
-    osc.start(now); osc.stop(now + v.bodyDecay);
+  else if (currentInstrument === 'cajon_trad_bass' || currentInstrument === 'cajon_snare_bass') {
+    const mg = audioCtx.createGain();
+    mg.gain.setValueAtTime(vol, now);
+    mg.connect(audioCtx.destination);
     
-    const res = audioCtx.createOscillator();
-    const rg = audioCtx.createGain();
-    res.type = 'triangle';
-    res.frequency.setValueAtTime(v.resFreq, now);
-    res.frequency.exponentialRampToValueAtTime(v.resEndFreq, now + v.resSweep);
-    rg.gain.setValueAtTime(vol * v.resVol, now);
-    rg.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay);
-    res.connect(rg); rg.connect(audioCtx.destination);
-    res.start(now); res.stop(now + v.bodyDecay);
+    const cav = audioCtx.createOscillator();
+    const cg = audioCtx.createGain();
+    cav.type = 'sine';
+    cav.frequency.setValueAtTime(v.cavityFreq, now);
+    cg.gain.setValueAtTime(v.cavityVol, now);
+    cg.gain.exponentialRampToValueAtTime(0.001, now + v.cavityDecay);
+    cav.connect(cg); cg.connect(mg);
+    cav.start(now); cav.stop(now + v.cavityDecay);
+    
+    const wood = audioCtx.createOscillator();
+    const wg = audioCtx.createGain();
+    wood.type = 'triangle';
+    wood.frequency.setValueAtTime(v.woodFreq, now);
+    wg.gain.setValueAtTime(v.woodVol, now);
+    wg.gain.exponentialRampToValueAtTime(0.001, now + v.woodDecay);
+    wood.connect(wg); wg.connect(mg);
+    wood.start(now); wood.stop(now + v.woodDecay);
+    
+    const pn = acquireNoise(audioCtx);
+    if (pn) {
+      const pf = audioCtx.createBiquadFilter();
+      pf.type = 'lowpass';
+      pf.frequency.setValueAtTime(v.palmFreq, now);
+      const pg = audioCtx.createGain();
+      pg.gain.setValueAtTime(v.palmVol, now);
+      pg.gain.exponentialRampToValueAtTime(0.001, now + v.palmDecay);
+      pn.connect(pf); pf.connect(pg); pg.connect(mg);
+      pn.start(now);
+    }
+    
+    if (currentInstrument === 'cajon_snare_bass' && v.snareFreq) {
+      const sn = acquireNoise(audioCtx);
+      if (sn) {
+        const sf = audioCtx.createBiquadFilter();
+        sf.type = 'highpass';
+        sf.frequency.setValueAtTime(v.snareFreq, now);
+        const sg = audioCtx.createGain();
+        sg.gain.setValueAtTime(v.snareVol, now);
+        sg.gain.exponentialRampToValueAtTime(0.001, now + v.snareDecay);
+        sn.connect(sf); sf.connect(sg); sg.connect(mg);
+        sn.start(now);
+      }
+    }
   }
   
-  else if (currentInstrument === 'cajon_slap' || currentInstrument === 'slap') {
+  else if (currentInstrument === 'cajon_trad_slap' || currentInstrument === 'cajon_snare_slap' || currentInstrument === 'slap') {
     const noise = acquireNoise(audioCtx);
     if (noise) {
       const nf = audioCtx.createBiquadFilter();
@@ -390,7 +418,7 @@ document.getElementById('copyBtn').addEventListener('click', () => {
   
   let code = `// ${instruments[currentInstrument].label} — tuned values\n`;
   code += `function play${currentInstrument.replace(/_./g, m => m[1].toUpperCase()).replace(/^./, m => m.toUpperCase())}(state, now, vol` +
-    (currentInstrument === 'bongo_low' || currentInstrument === 'bongo_high' || currentInstrument.startsWith('conga_') || currentInstrument === 'timbale' || currentInstrument === 'cajon_bass' || currentInstrument === 'cajon_slap' ? ', channelName' : '') + `) {\n`;
+    (currentInstrument === 'bongo_low' || currentInstrument === 'bongo_high' || currentInstrument.startsWith('conga_') || currentInstrument === 'timbale' || currentInstrument.startsWith('cajon_') ? ', channelName' : '') + `) {\n`;
   
   Object.keys(v).forEach(k => {
     code += `  // ${k} = ${v[k]}\n`;
