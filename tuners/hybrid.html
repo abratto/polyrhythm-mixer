@@ -92,6 +92,7 @@ function loadInstrument(key) {
   const data = instruments[key];
   const usedSections = [...new Set(data.params.map(p => p.section))];
   
+  Object.keys(sliders).forEach(k => delete sliders[k]);
   paramsDiv.innerHTML = '';
   
   usedSections.forEach(section => {
@@ -413,19 +414,22 @@ document.getElementById('playBtn').addEventListener('click', async () => {
 // ── Copy as code ──
 document.getElementById('copyBtn').addEventListener('click', () => {
   if (!currentInstrument) return;
+  const data = instruments[currentInstrument];
   const v = {};
-  Object.keys(sliders).forEach(key => { v[key] = JSON.parse(JSON.stringify(parseFloat(sliders[key].input.value))); });
-  
-  let code = `// ${instruments[currentInstrument].label} — tuned values\n`;
+  data.params.forEach(p => {
+    v[p.key] = parseFloat(sliders[p.key].input.value);
+  });
+
+  let code = `// ${data.label} — tuned values\n`;
   code += `function play${currentInstrument.replace(/_./g, m => m[1].toUpperCase()).replace(/^./, m => m.toUpperCase())}(state, now, vol` +
     (currentInstrument === 'bongo_low' || currentInstrument === 'bongo_high' || currentInstrument.startsWith('conga_') || currentInstrument === 'timbale' || currentInstrument.startsWith('cajon_') ? ', channelName' : '') + `) {\n`;
-  
-  Object.keys(v).forEach(k => {
-    code += `  // ${k} = ${v[k]}\n`;
+
+  data.params.forEach(p => {
+    code += `  // ${p.key} = ${v[p.key]}\n`;
   });
-  
+
   code += `}\n`;
-  
+
   document.getElementById('codeArea').value = code;
   document.getElementById('codeArea').style.display = 'block';
   document.getElementById('status').textContent = 'Placeholder generated. Copy and paste into instruments.js.';

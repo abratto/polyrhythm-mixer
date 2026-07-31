@@ -74,7 +74,7 @@ function loadInstrument(key) {
   currentInstrument = key;
   const data = instruments[key];
   
-  sliders = {};
+  Object.keys(sliders).forEach(k => delete sliders[k]);
   paramsDiv.innerHTML = '';
   
   data.params.forEach(p => {
