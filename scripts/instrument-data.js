@@ -16,6 +16,7 @@ export const instrumentData = {
   // ── Membrane Family ────────────────────────────────────────────────────
 
   kick: {
+    family: 'membrane',
     label: 'Bass Drum (Kick)',
     params: [
       { k: 'volScale', v: 100, label: 'Volume', unit: '%', lo: 10, hi: 100, step: 1, gloss: 'Relative volume for this instrument.' },
@@ -27,6 +28,7 @@ export const instrumentData = {
   },
 
   tom: {
+    family: 'membrane',
     label: 'Synth Electronic Tom',
     params: [
       { k: 'volScale', v: 80, label: 'Volume', unit: '%', lo: 10, hi: 100, step: 1, gloss: 'Relative volume.' },
@@ -38,6 +40,7 @@ export const instrumentData = {
   },
 
   talking_drum: {
+    family: 'membrane',
     label: 'Talking Drum',
     params: [
       { k: 'startFreq', v: 115,  label: 'Start Frequency', unit: 'Hz', lo: 30, hi: 400, step: 1, gloss: 'Initial pitch before the rise.' },
@@ -50,6 +53,7 @@ export const instrumentData = {
   },
 
   udu: {
+    family: 'membrane',
     label: 'Udu Clay Pot',
     params: [
       { k: 'startMul',  v: 1.35, label: 'Start Multiplier',unit: '',   lo: 1.0, hi: 2.5, step: 0.01, gloss: 'Start = base × this.' },
@@ -63,6 +67,7 @@ export const instrumentData = {
   // ── Hybrid Family ──────────────────────────────────────────────────────
 
   bongo_low: {
+    family: 'hybrid',
     label: 'Bongo (Low) — Hembra',
     params: [
       { k: 'baseFreq',  v: 145,  label: 'Base Frequency',   unit: 'Hz', lo: 60, hi: 300, step: 1, gloss: 'Fundamental pitch.' },
@@ -80,6 +85,7 @@ export const instrumentData = {
   },
 
   bongo_high: {
+    family: 'hybrid',
     label: 'Bongo (High) — Macho',
     params: [
       { k: 'baseFreq',  v: 271,  label: 'Base Frequency',   unit: 'Hz', lo: 80, hi: 400, step: 1, gloss: 'Fundamental pitch.' },
@@ -97,6 +103,7 @@ export const instrumentData = {
   },
 
   conga_low: {
+    family: 'hybrid',
     label: 'Conga (Low)',
     params: [
       { k: 'baseFreq',  v: 130,  label: 'Base Frequency',   unit: 'Hz', lo: 60, hi: 250, step: 1, gloss: 'Fundamental.' },
@@ -113,6 +120,7 @@ export const instrumentData = {
   },
 
   conga_middle: {
+    family: 'hybrid',
     label: 'Conga (Middle)',
     params: [
       { k: 'baseFreq',  v: 160,  label: 'Base Frequency',   unit: 'Hz', lo: 80, hi: 300, step: 1, gloss: 'Fundamental.' },
@@ -129,6 +137,7 @@ export const instrumentData = {
   },
 
   conga_high: {
+    family: 'hybrid',
     label: 'Conga (High)',
     params: [
       { k: 'baseFreq',  v: 195,  label: 'Base Frequency',   unit: 'Hz', lo: 100, hi: 400, step: 1, gloss: 'Fundamental.' },
@@ -145,6 +154,7 @@ export const instrumentData = {
   },
 
   conga_slap: {
+    family: 'hybrid',
     label: 'Conga Slap',
     params: [
       { k: 'baseFreq',  v: 240,  label: 'Base Frequency',   unit: 'Hz', lo: 100, hi: 450, step: 1, gloss: 'Higher fundamental.' },
@@ -160,6 +170,7 @@ export const instrumentData = {
   },
 
   snare: {
+    family: 'hybrid',
     label: 'Snare Drum',
     params: [
       { k: 'bodyFreq',  v: 180,  label: 'Body Frequency',   unit: 'Hz', lo: 80, hi: 400, step: 1, gloss: 'Triangle body pitch.' },
@@ -172,6 +183,7 @@ export const instrumentData = {
   },
 
   electronic_snare: {
+    family: 'hybrid',
     label: 'Electronic Snare',
     params: [
       { k: 'bodyFreq',  v: 200,  label: 'Body Start Freq',  unit: 'Hz', lo: 60, hi: 400, step: 1, gloss: 'Sine start.' },
@@ -187,6 +199,7 @@ export const instrumentData = {
   },
 
   timbale: {
+    family: 'hybrid',
     label: 'Timbale',
     params: [
       { k: 'bodyFreq',  v: 500,  label: 'Body Start Freq',  unit: 'Hz', lo: 100, hi: 800, step: 1, gloss: 'High sine start.' },
@@ -203,6 +216,7 @@ export const instrumentData = {
 
 
   slap: {
+    family: 'hybrid',
     label: 'Hand Slap',
     params: [
       { k: 'noiseFreq', v: 2000, label: 'Noise BP Freq',    unit: 'Hz', lo: 500, hi: 5000, step: 10, gloss: 'Bandpass for slap.' },
@@ -217,6 +231,7 @@ export const instrumentData = {
   },
 
   synth_kick: {
+    family: 'hybrid',
     label: 'EDM Synth Kick',
     params: [
       { k: 'bodyFreq',  v: 60,   label: 'Sub Start Freq',   unit: 'Hz', lo: 30, hi: 120, step: 1, gloss: 'Sub sine start.' },
@@ -234,6 +249,7 @@ export const instrumentData = {
   // ── New: multi-layer Djembe ────────────────────────────────────────────
 
   djembe: {
+    family: 'hybrid',
     label: 'Djembe',
     params: [
       { k: 'bassFreq',    v: 55,   label: 'Bass Frequency',    unit: 'Hz', lo: 30, hi: 120, step: 1, gloss: 'Helmholtz cavity resonance.' },
@@ -252,6 +268,7 @@ export const instrumentData = {
   },
 
   frame_drum: {
+    family: 'hybrid',
     label: 'Frame Drum (Tar)',
     params: [
       { k: 'baseFreq',       v: 95,   label: 'Base Frequency',       unit: 'Hz', lo: 50, hi: 200, step: 1, gloss: 'Membrane fundamental.' },

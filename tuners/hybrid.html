@@ -59,7 +59,7 @@ function acquireNoise(ctx) {
 
 // ── Instruments loaded from instrument-data.js ──
 const instruments = {};
-Object.keys(instrumentData).forEach(k => {
+Object.keys(instrumentData).filter(k => instrumentData[k].family === 'hybrid' || instrumentData[k].family === 'cajon').forEach(k => {
   const src = instrumentData[k];
   instruments[k] = {
     label: src.label,
