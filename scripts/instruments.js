@@ -37,8 +37,10 @@ export const instrumentCatalog = [
     { value: 'conga_low', label: 'Conga (Low)' },
     { value: 'conga_middle', label: 'Conga (Middle)' },
     { value: 'conga_slap', label: 'Conga Slap' },
-    { value: 'cajon_bass', label: 'Cajón Bass' },
-    { value: 'cajon_slap', label: 'Cajón Slap' },
+    { value: 'cajon_trad_bass', label: 'Traditional Cajón Bass' },
+    { value: 'cajon_trad_slap', label: 'Traditional Cajón Slap' },
+    { value: 'cajon_snare_bass', label: 'Snare Cajón Bass' },
+    { value: 'cajon_snare_slap', label: 'Snare Cajón Slap' },
     { value: 'crash', label: 'Crash Cymbal' },
     { value: 'ping', label: 'Crystal High Ping' },
     { value: 'synth_kick', label: 'EDM Synth Kick' },
@@ -1140,53 +1142,131 @@ function createBataSlap(state, volume, targetNode, startTime, duration, filterFr
 }
 
 /** Cajón bass: low-frequency thump from center slap, short decay. */
-function playCajonBass(state, now, vol) {
-    const osc = acquireOsc(state);
-    const gain = acquireGain(state);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(90, now);
-    osc.frequency.exponentialRampToValueAtTime(45, now + 0.1);
-    gain.gain.setValueAtTime(vol, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-    osc.connect(gain); gain.connect(state.audioCtx.destination);
-    osc.start(now); osc.stop(now + 0.15);
+/** Traditional Cajón Bass: Pure wood and air cavity resonance. */
+function playCajonBassTraditional(state, now, vol) {
+    const masterGain = acquireGain(state);
+    masterGain.gain.setValueAtTime(vol, now);
+    masterGain.connect(state.audioCtx.destination);
 
-    // Box body resonance
-    const osc2 = acquireOsc(state);
-    const osc2Gain = acquireGain(state);
-    osc2.type = 'triangle';
-    osc2.frequency.setValueAtTime(150, now);
-    osc2.frequency.exponentialRampToValueAtTime(80, now + 0.06);
-    osc2Gain.gain.setValueAtTime(vol * 0.25, now);
-    osc2Gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-    osc2.connect(osc2Gain); osc2Gain.connect(state.audioCtx.destination);
-    osc2.start(now); osc2.stop(now + 0.08);
+    const cavityOsc = acquireOsc(state);
+    const cavityGain = acquireGain(state);
+    cavityOsc.type = 'sine';
+    cavityOsc.frequency.setValueAtTime(70, now);
+    cavityGain.gain.setValueAtTime(0.9, now);
+    cavityGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    cavityOsc.connect(cavityGain); cavityGain.connect(masterGain);
+    cavityOsc.start(now); cavityOsc.stop(now + 0.35);
+
+    const woodOsc = acquireOsc(state);
+    const woodGain = acquireGain(state);
+    woodOsc.type = 'triangle';
+    woodOsc.frequency.setValueAtTime(120, now);
+    woodGain.gain.setValueAtTime(0.4, now);
+    woodGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    woodOsc.connect(woodGain); woodGain.connect(masterGain);
+    woodOsc.start(now); woodOsc.stop(now + 0.12);
+
+    const noise = acquireNoiseSource(state);
+    if (noise) {
+        const filter = state.audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(250, now);
+        const noiseGain = acquireGain(state);
+        noiseGain.gain.setValueAtTime(0.3, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+        noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(masterGain);
+        noise.start(now);
+    }
 }
 
-/** Cajón slap: sharp edge strike with snare-like crack and high-frequency content. */
-function playCajonSlap(state, now, vol) {
-    // High-frequency wood crack
-    const noise = acquireNoiseSource(state);
-    if (!noise) return;
-    const filter = state.audioCtx.createBiquadFilter();
-    filter.type = 'highpass';
-    filter.frequency.setValueAtTime(3000, now);
-    const noiseGain = acquireGain(state);
-    noiseGain.gain.setValueAtTime(vol * 0.5, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-    noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(state.audioCtx.destination);
-    noise.start(now);
+/** Traditional Cajón Slap: Pure high-frequency wood crack and corner resonance. */
+function playCajonSlapTraditional(state, now, vol) {
+    const masterGain = acquireGain(state);
+    masterGain.gain.setValueAtTime(vol, now);
+    masterGain.connect(state.audioCtx.destination);
 
-    // Mid-frequency slap tone
-    const osc = acquireOsc(state);
-    const oscGain = acquireGain(state);
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(500, now);
-    osc.frequency.exponentialRampToValueAtTime(250, now + 0.03);
-    oscGain.gain.setValueAtTime(vol * 0.4, now);
-    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
-    osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
-    osc.start(now); osc.stop(now + 0.05);
+    const edgeOsc = acquireOsc(state);
+    const edgeGain = acquireGain(state);
+    edgeOsc.type = 'triangle';
+    edgeOsc.frequency.setValueAtTime(380, now);
+    edgeGain.gain.setValueAtTime(0.3, now);
+    edgeGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    edgeOsc.connect(edgeGain); edgeGain.connect(masterGain);
+    edgeOsc.start(now); edgeOsc.stop(now + 0.08);
+
+    const crackNoise = acquireNoiseSource(state);
+    if (crackNoise) {
+        const crackFilter = state.audioCtx.createBiquadFilter();
+        crackFilter.type = 'bandpass';
+        crackFilter.frequency.setValueAtTime(2500, now);
+        crackFilter.Q.setValueAtTime(1.5, now);
+        const crackGain = acquireGain(state);
+        crackGain.gain.setValueAtTime(0.6, now);
+        crackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+        crackNoise.connect(crackFilter); crackFilter.connect(crackGain); crackGain.connect(masterGain);
+        crackNoise.start(now);
+    }
+}
+
+/** Snare Cajón Bass: Wood, air cavity, and a subtle sympathetic snare flutter. */
+function playCajonBassSnare(state, now, vol) {
+    playCajonBassTraditional(state, now, vol);
+
+    const snareNoise = acquireNoiseSource(state);
+    if (snareNoise) {
+        const masterGain = acquireGain(state);
+        masterGain.gain.setValueAtTime(vol, now);
+        masterGain.connect(state.audioCtx.destination);
+        const snareFilter = state.audioCtx.createBiquadFilter();
+        snareFilter.type = 'highpass';
+        snareFilter.frequency.setValueAtTime(3000, now);
+        const snareGain = acquireGain(state);
+        snareGain.gain.setValueAtTime(0.15, now);
+        snareGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+        snareNoise.connect(snareFilter); snareFilter.connect(snareGain); snareGain.connect(masterGain);
+        snareNoise.start(now);
+    }
+}
+
+/** Snare Cajón Slap: Wood crack layered with a prominent, sustained snare wire buzz. */
+function playCajonSlapSnare(state, now, vol) {
+    const masterGain = acquireGain(state);
+    masterGain.gain.setValueAtTime(vol, now);
+    masterGain.connect(state.audioCtx.destination);
+
+    const edgeOsc = acquireOsc(state);
+    const edgeGain = acquireGain(state);
+    edgeOsc.type = 'triangle';
+    edgeOsc.frequency.setValueAtTime(380, now);
+    edgeGain.gain.setValueAtTime(0.3, now);
+    edgeGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    edgeOsc.connect(edgeGain); edgeGain.connect(masterGain);
+    edgeOsc.start(now); edgeOsc.stop(now + 0.08);
+
+    const crackNoise = acquireNoiseSource(state);
+    if (crackNoise) {
+        const crackFilter = state.audioCtx.createBiquadFilter();
+        crackFilter.type = 'bandpass';
+        crackFilter.frequency.setValueAtTime(2500, now);
+        crackFilter.Q.setValueAtTime(1.5, now);
+        const crackGain = acquireGain(state);
+        crackGain.gain.setValueAtTime(0.5, now);
+        crackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+        crackNoise.connect(crackFilter); crackFilter.connect(crackGain); crackGain.connect(masterGain);
+        crackNoise.start(now);
+    }
+
+    const snareNoise = acquireNoiseSource(state);
+    if (snareNoise) {
+        const snareFilter = state.audioCtx.createBiquadFilter();
+        snareFilter.type = 'highpass';
+        snareFilter.frequency.setValueAtTime(3500, now);
+        const snareGain = acquireGain(state);
+        snareGain.gain.setValueAtTime(0.6, now);
+        snareGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        snareNoise.connect(snareFilter); snareFilter.connect(snareGain); snareGain.connect(masterGain);
+        snareNoise.start(now);
+    }
 }
 
 /** Cabasa / Shekere: clustered bead rattle with a hollow body resonance. */
@@ -1390,6 +1470,8 @@ export const instruments = {
     bata_high_slap: playBataHighSlap,
     bata_low_slap: playBataLowSlap,
     bata_middle_slap: playBataMiddleSlap,
-    cajon_bass: playCajonBass,
-    cajon_slap: playCajonSlap
+    cajon_trad_bass: playCajonBassTraditional,
+    cajon_trad_slap: playCajonSlapTraditional,
+    cajon_snare_bass: playCajonBassSnare,
+    cajon_snare_slap: playCajonSlapSnare
 };

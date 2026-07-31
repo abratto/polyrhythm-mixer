@@ -46,7 +46,7 @@ const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 // ── Instruments loaded from instrument-data.js ──
 const instruments = {};
-Object.keys(instrumentData).forEach(k => {
+Object.keys(instrumentData).filter(k => instrumentData[k].family === 'membrane').forEach(k => {
   const src = instrumentData[k];
   instruments[k] = {
     label: src.label,
@@ -74,6 +74,7 @@ function loadInstrument(key) {
   currentInstrument = key;
   const data = instruments[key];
   
+  Object.keys(sliders).forEach(k => delete sliders[k]);
   paramsDiv.innerHTML = '';
   
   data.params.forEach(p => {
