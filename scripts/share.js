@@ -447,14 +447,14 @@ function restoreFromPayload(payload, deps) {
         // indices rather than tooth-level positions. Convert on the fly as safety net.
         if (payload.p.aw) {
             const aws = payload.p.aw.s;
-            if (Array.isArray(aws) && aws.length > 0 && (payload.v < 4 || aws.every(i => i < state.A))) {
+            if (Array.isArray(aws) && aws.length > 0 && payload.v < 4) {
                 payload.p.aw.s = aws.map(g => (g * state.teethA + state.phaseA) % state.mainTeeth);
             }
             applySelectedIndexes(lanes.Awheel.selected, payload.p.aw.s);
         }
         if (payload.p.bw) {
             const bws = payload.p.bw.s;
-            if (Array.isArray(bws) && bws.length > 0 && (payload.v < 4 || bws.every(i => i < state.B))) {
+            if (Array.isArray(bws) && bws.length > 0 && payload.v < 4) {
                 payload.p.bw.s = bws.map(g => (g * state.teethB + state.phaseB) % state.mainTeeth);
             }
             applySelectedIndexes(lanes.Bwheel.selected, payload.p.bw.s);
