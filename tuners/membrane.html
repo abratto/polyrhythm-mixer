@@ -74,6 +74,7 @@ function loadInstrument(key) {
   currentInstrument = key;
   const data = instruments[key];
   
+  sliders = {};
   paramsDiv.innerHTML = '';
   
   data.params.forEach(p => {
