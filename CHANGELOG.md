@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.3.1 — 2026-07-31
+
+### Fixed
+- Mute button selected state is now a vivid, bright red — matching the solo button's "lit-up" visual energy — with stronger inner ring and outer glow
+- Solo button now auto-expands to fit "Soloed" + status dot without text clipping
+
 ## v1.3.0 — 2026-07-31
 
 ### Features
