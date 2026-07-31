@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.1.1 — 2026-07-31
+
+### Fixed
+- Per-voice lane controls (volume, solo, mute, clear) now appear after loading a shared link or saved rhythm — the lane DOM was being built before voice channels were linked, leaving the per-voice controls missing until a rebuild triggered by another action
+
 ## v1.1.0 — 2026-07-31
 
 ### Features
