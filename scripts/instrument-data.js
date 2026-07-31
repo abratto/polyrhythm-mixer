@@ -198,33 +198,7 @@ export const instrumentData = {
     ]
   },
 
-  cajon_bass: {
-    label: 'Cajón Bass',
-    params: [
-      { k: 'bodyFreq',  v: 90,   label: 'Body Start Freq',  unit: 'Hz', lo: 40, hi: 200, step: 1, gloss: 'Low sine start.' },
-      { k: 'bodyEndFreq',v: 45,   label: 'Body End Freq',   unit: 'Hz', lo: 20, hi: 150, step: 1, gloss: 'Resting pitch.' },
-      { k: 'bodySweep', v: 0.1,  label: 'Body Sweep',       unit: 's',  lo: 0.01, hi: 0.3, step: 0.005, gloss: 'Drop time.' },
-      { k: 'bodyVol',   v: 1.0,  label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Sub volume.' },
-      { k: 'bodyDecay', v: 0.15, label: 'Body Decay',       unit: 's',  lo: 0.03, hi: 0.4, step: 0.005, gloss: 'Sub decay.' },
-      { k: 'resFreq',   v: 150,  label: 'Resonance Start',   unit: 'Hz', lo: 60, hi: 350, step: 1, gloss: 'Box triangle start.' },
-      { k: 'resEndFreq',v: 80,   label: 'Resonance End',    unit: 'Hz', lo: 30, hi: 250, step: 1, gloss: 'Box resting pitch.' },
-      { k: 'resSweep',  v: 0.06, label: 'Resonance Sweep',  unit: 's',  lo: 0.01, hi: 0.2, step: 0.001, gloss: 'Box sweep.' },
-      { k: 'resVol',    v: 0.5,  label: 'Resonance Volume',  unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Box volume.' }
-    ]
-  },
 
-  cajon_slap: {
-    label: 'Cajón Slap',
-    params: [
-      { k: 'noiseFreq', v: 3000, label: 'Noise HP Freq',    unit: 'Hz', lo: 500, hi: 8000, step: 10, gloss: 'Highpass wood crack.' },
-      { k: 'noiseVol',  v: 0.5,  label: 'Noise Volume',     unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Crack volume.' },
-      { k: 'noiseDecay',v: 0.06, label: 'Noise Decay',      unit: 's',  lo: 0.005, hi: 0.15, step: 0.001, gloss: 'Crack duration.' },
-      { k: 'bodyFreq',  v: 350,  label: 'Slap Tone Freq',   unit: 'Hz', lo: 100, hi: 600, step: 1, gloss: 'Triangle tone pitch.' },
-      { k: 'bodySweep', v: 0.03, label: 'Slap Tone Sweep',  unit: 's',  lo: 0.005, hi: 0.15, step: 0.001, gloss: 'Tone pitch drop.' },
-      { k: 'bodyVol',   v: 0.5,  label: 'Slap Tone Vol',    unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Tone volume.' },
-      { k: 'bodyDecay', v: 0.04, label: 'Slap Tone Decay',  unit: 's',  lo: 0.005, hi: 0.15, step: 0.001, gloss: 'Tone decay.' }
-    ]
-  },
 
   slap: {
     label: 'Hand Slap',
@@ -291,5 +265,5 @@ export const instrumentData = {
       { k: 'noiseVol',       v: 0.4,  label: 'Transient Volume',     unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Flesh impact volume.' },
       { k: 'noiseDecay',     v: 0.02, label: 'Transient Decay',      unit: 's',  lo: 0.005, hi: 0.08, step: 0.001, gloss: 'Finger/thumb transient.' }
     ]
-  }
+  },
 };
