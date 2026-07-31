@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.2 — 2026-07-31
+
+### Fixed
+- Saving and restoring rhythms now correctly persists wheel lane beat schemes — removed a false-positive heuristic that incorrectly converted v4 tooth-level positions back to group-level indices
+
 ## v1.0.1 — 2026-07-31
 
 ### Fixed
