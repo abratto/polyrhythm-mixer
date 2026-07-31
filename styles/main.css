@@ -1329,6 +1329,10 @@
             box-sizing: border-box;
             cursor: pointer;
             border-radius: 4px;
+            /* Pinned to the bottom of the lane (below the voice rows) so it reads
+               as a left-aligned footer action with breathing room. */
+            align-self: flex-start;
+            margin-top: 6px;
         }
         .add-voice-btn:hover {
             background-color: #3a3a4c;
