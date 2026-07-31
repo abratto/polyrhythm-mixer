@@ -140,16 +140,16 @@ export const instrumentData = {
     family: 'hybrid',
     label: 'Conga (High)',
     params: [
-      { k: 'baseFreq',  v: 195,  label: 'Base Frequency',   unit: 'Hz', lo: 100, hi: 400, step: 1, gloss: 'Fundamental.' },
-      { k: 'bodyVol',   v: 0.6,  label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Volume.' },
-      { k: 'bodyDecay', v: 0.15, label: 'Body Decay',       unit: 's',  lo: 0.05, hi: 0.5, step: 0.01, gloss: 'Decay.' },
-      { k: 'overRatio1',v: 1.5,  label: 'Shell Ratio 1',    unit: '',   lo: 1.2, hi: 3.0, step: 0.01, gloss: 'First overtone.' },
-      { k: 'overVol1',  v: 0.25, label: 'Shell Vol 1',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Volume.' },
-      { k: 'overRatio2',v: 2.2,  label: 'Shell Ratio 2',    unit: '',   lo: 1.5, hi: 4.0, step: 0.01, gloss: 'Second overtone.' },
-      { k: 'overVol2',  v: 0.12, label: 'Shell Vol 2',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Volume.' },
-      { k: 'slapFreq',  v: 3200, label: 'Slap Filter Freq', unit: 'Hz', lo: 500, hi: 6000, step: 10, gloss: 'Bandpass centre.' },
-      { k: 'slapVol',   v: 0.4,  label: 'Slap Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Slap volume.' },
-      { k: 'slapDecay', v: 0.018,label: 'Slap Decay',       unit: 's',  lo: 0.003, hi: 0.1, step: 0.001, gloss: 'Slap duration.' }
+      { k: 'baseFreq',  v: 313,  label: 'Base Frequency',   unit: 'Hz', lo: 100, hi: 500, step: 1, gloss: 'Fundamental pitch.' },
+      { k: 'bodyVol',   v: 0.35, label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Volume of the fundamental sine wave.' },
+      { k: 'bodyDecay', v: 0.33, label: 'Body Decay',       unit: 's',  lo: 0.05, hi: 0.6, step: 0.01, gloss: 'How long the body rings out.' },
+      { k: 'overRatio1',v: 1.5,  label: 'Shell Ratio 1',    unit: '',   lo: 1.2, hi: 3.0, step: 0.01, gloss: 'First triangle overtone ratio.' },
+      { k: 'overVol1',  v: 0.25, label: 'Shell Vol 1',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Volume of first overtone.' },
+      { k: 'overRatio2',v: 2.2,  label: 'Shell Ratio 2',    unit: '',   lo: 1.5, hi: 4.0, step: 0.01, gloss: 'Second triangle overtone ratio.' },
+      { k: 'overVol2',  v: 0.12, label: 'Shell Vol 2',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Volume of second overtone.' },
+      { k: 'slapFreq',  v: 3200, label: 'Slap Filter Freq', unit: 'Hz', lo: 500, hi: 6000, step: 10, gloss: 'Bandpass centre for the conga slap noise.' },
+      { k: 'slapVol',   v: 0.59, label: 'Slap Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Slap noise volume.' },
+      { k: 'slapDecay', v: 0.018,label: 'Slap Decay',       unit: 's',  lo: 0.003, hi: 0.1, step: 0.001, gloss: 'Slap transient duration.' }
     ]
   },
 
