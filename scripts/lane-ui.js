@@ -801,6 +801,8 @@ function addCycleNavigation(lane, state) {
 
 /** Builds all voice rows for a multi-voice lane. */
 function buildMultiVoiceLane(lane, state) {
+    const activeSelect = document.activeElement;
+    const activeSelectId = (activeSelect && activeSelect.tagName === 'SELECT' && lane.container.contains(activeSelect)) ? activeSelect.id : null;
     lane.container.innerHTML = '';
     lane.container.style.position = 'relative';
     lane._playheads = [];
@@ -847,6 +849,13 @@ function buildMultiVoiceLane(lane, state) {
     lane._cue = cue;
 
     applyLaneMixState(lane);
+
+    if (activeSelectId) {
+        requestAnimationFrame(() => {
+            const sel = document.getElementById(activeSelectId);
+            if (sel && sel.showPicker) sel.showPicker();
+        });
+    }
 }
 
 /**
