@@ -70,17 +70,17 @@ export const instrumentData = {
     family: 'hybrid',
     label: 'Bongo (Low) — Hembra',
     params: [
-      { k: 'baseFreq',  v: 145,  label: 'Base Frequency',   unit: 'Hz', lo: 60, hi: 300, step: 1, gloss: 'Fundamental pitch.' },
-      { k: 'pitchBend', v: 1.19, label: 'Pitch Bend',       unit: '',   lo: 1.0, hi: 1.4, step: 0.01, gloss: 'Impact bend multiplier.' },
-      { k: 'bodyVol',   v: 0.7,  label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Fundamental volume.' },
-      { k: 'bodyDecay', v: 0.35, label: 'Body Decay',       unit: 's',  lo: 0.05, hi: 0.8, step: 0.01, gloss: 'How long the body rings.' },
-      { k: 'overRatio', v: 1.593,label: 'Overtone Ratio',    unit: '',   lo: 1.2, hi: 3.0, step: 0.001, gloss: 'Bessel zero (1.593).' },
-      { k: 'overVol',   v: 0.25, label: 'Overtone Volume',  unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Overtone triangle volume.' },
-      { k: 'overDecay', v: 0.45, label: 'Over. Decay Fact.',unit: '',   lo: 0.1, hi: 1.0, step: 0.01, gloss: 'Overtone = bodyDecay × this.' },
-      { k: 'noiseFreq', v: 3070, label: 'Noise Filter Freq',unit: 'Hz', lo: 500, hi: 8000, step: 10, gloss: 'Bandpass centre.' },
-      { k: 'noiseQ',    v: 1.5,  label: 'Noise Q',          unit: '',   lo: 0.5, hi: 5.0, step: 0.1, gloss: 'Filter resonance.' },
-      { k: 'noiseVol',  v: 0.4,  label: 'Noise Volume',     unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Slap transient volume.' },
-      { k: 'noiseDecay',v: 0.015,label: 'Noise Decay',      unit: 's',  lo: 0.003, hi: 0.08, step: 0.001, gloss: 'Slap duration.' }
+      { k: 'baseFreq',  v: 145,  label: 'Base Frequency',   unit: 'Hz', lo: 60, hi: 300, step: 1, gloss: 'Fundamental pitch (C3/D3 — right for Hembra).' },
+      { k: 'pitchBend', v: 1.10, label: 'Pitch Bend',       unit: '',   lo: 1.0, hi: 1.4, step: 0.01, gloss: 'Thin goat skin bends less than conga on impact.' },
+      { k: 'bodyVol',   v: 0.72, label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Fundamental dominates; balanced against quiet overtone.' },
+      { k: 'bodyDecay', v: 0.28, label: 'Body Decay',       unit: 's',  lo: 0.05, hi: 0.8, step: 0.01, gloss: 'Bongos ring shorter than congas — tighter, thinner skin.' },
+      { k: 'overRatio', v: 1.593,label: 'Overtone Ratio',    unit: '',   lo: 1.2, hi: 3.0, step: 0.001, gloss: 'Bessel zero for a circular membrane.' },
+      { k: 'overVol',   v: 0.16, label: 'Overtone Volume',  unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Subtle — bongo overtone should be felt, not heard.' },
+      { k: 'overDecay', v: 0.30, label: 'Over. Decay Fact.',unit: '',   lo: 0.1, hi: 1.0, step: 0.01, gloss: 'Overtone damps even faster than body on a bongo.' },
+      { k: 'noiseFreq', v: 4000, label: 'Noise Filter Freq',unit: 'Hz', lo: 500, hi: 8000, step: 10, gloss: 'Brighter slap than conga — thinner bongo skin.' },
+      { k: 'noiseQ',    v: 2.0,  label: 'Noise Q',          unit: '',   lo: 0.5, hi: 5.0, step: 0.1, gloss: 'Tighter resonance gives a chirp-like “tick” attack.' },
+      { k: 'noiseVol',  v: 0.38, label: 'Noise Volume',     unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Quieter slap — the body tone is the star.' },
+      { k: 'noiseDecay',v: 0.010,label: 'Noise Decay',      unit: 's',  lo: 0.003, hi: 0.08, step: 0.001, gloss: 'Barely-there tick — bongo slap is extremely short.' }
     ]
   },
 
@@ -88,17 +88,17 @@ export const instrumentData = {
     family: 'hybrid',
     label: 'Bongo (High) — Macho',
     params: [
-      { k: 'baseFreq',  v: 271,  label: 'Base Frequency',   unit: 'Hz', lo: 80, hi: 400, step: 1, gloss: 'Fundamental pitch.' },
-      { k: 'pitchBend', v: 1.15, label: 'Pitch Bend',       unit: '',   lo: 1.0, hi: 1.4, step: 0.01, gloss: 'Impact bend.' },
-      { k: 'bodyVol',   v: 0.7,  label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Fundamental volume.' },
-      { k: 'bodyDecay', v: 0.18, label: 'Body Decay',       unit: 's',  lo: 0.05, hi: 0.6, step: 0.01, gloss: 'Shorter Macho sustain.' },
-      { k: 'overRatio', v: 1.593,label: 'Overtone Ratio',    unit: '',   lo: 1.2, hi: 3.0, step: 0.001, gloss: 'Bessel ratio.' },
-      { k: 'overVol',   v: 0.3,  label: 'Overtone Volume',  unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'More prominent rim ring.' },
-      { k: 'overDecay', v: 0.4,  label: 'Over. Decay Fact.',unit: '',   lo: 0.1, hi: 1.0, step: 0.01, gloss: 'Overtone decay factor.' },
-      { k: 'noiseFreq', v: 4000, label: 'Noise Filter Freq',unit: 'Hz', lo: 500, hi: 8000, step: 10, gloss: 'Higher Macho slap.' },
-      { k: 'noiseQ',    v: 1.8,  label: 'Noise Q',          unit: '',   lo: 0.5, hi: 5.0, step: 0.1, gloss: 'Filter Q.' },
-      { k: 'noiseVol',  v: 0.45, label: 'Noise Volume',     unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Slap volume.' },
-      { k: 'noiseDecay',v: 0.012,label: 'Noise Decay',      unit: 's',  lo: 0.003, hi: 0.08, step: 0.001, gloss: 'Slap duration.' }
+      { k: 'baseFreq',  v: 250,  label: 'Base Frequency',   unit: 'Hz', lo: 80, hi: 400, step: 1, gloss: 'Fundamental pitch (G3/Bb3 — sweet spot for Macho).' },
+      { k: 'pitchBend', v: 1.08, label: 'Pitch Bend',       unit: '',   lo: 1.0, hi: 1.4, step: 0.01, gloss: 'Tightest skin — very shallow, quick pitch bend on impact.' },
+      { k: 'bodyVol',   v: 0.68, label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Slightly lower than Hembra — smaller head, less air displacement.' },
+      { k: 'bodyDecay', v: 0.16, label: 'Body Decay',       unit: 's',  lo: 0.05, hi: 0.6, step: 0.01, gloss: 'Smallest head, fastest damping of all bongos.' },
+      { k: 'overRatio', v: 1.593,label: 'Overtone Ratio',    unit: '',   lo: 1.2, hi: 3.0, step: 0.001, gloss: 'Bessel zero for a circular membrane.' },
+      { k: 'overVol',   v: 0.18, label: 'Overtone Volume',  unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Present but restrained — Macho is not a ringing drum.' },
+      { k: 'overDecay', v: 0.25, label: 'Over. Decay Fact.',unit: '',   lo: 0.1, hi: 1.0, step: 0.01, gloss: 'Even faster overtone damping than Hembra.' },
+      { k: 'noiseFreq', v: 5200, label: 'Noise Filter Freq',unit: 'Hz', lo: 500, hi: 8000, step: 10, gloss: 'Smallest diameter = sharpest, brightest slap.' },
+      { k: 'noiseQ',    v: 2.3,  label: 'Noise Q',          unit: '',   lo: 0.5, hi: 5.0, step: 0.1, gloss: 'Strongest resonance — this is the iconic “macho pop.”' },
+      { k: 'noiseVol',  v: 0.48, label: 'Noise Volume',     unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Louder transient — the Macho is known for its sharp attack.' },
+      { k: 'noiseDecay',v: 0.008,label: 'Noise Decay',      unit: 's',  lo: 0.003, hi: 0.08, step: 0.001, gloss: 'Practically instantaneous — a true “crack,” not a ring.' }
     ]
   },
 
@@ -106,15 +106,15 @@ export const instrumentData = {
     family: 'hybrid',
     label: 'Conga (Low)',
     params: [
-      { k: 'baseFreq',  v: 130,  label: 'Base Frequency',   unit: 'Hz', lo: 60, hi: 250, step: 1, gloss: 'Fundamental.' },
-      { k: 'bodyVol',   v: 0.7,  label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Sine volume.' },
-      { k: 'bodyDecay', v: 0.2,  label: 'Body Decay',       unit: 's',  lo: 0.05, hi: 0.8, step: 0.01, gloss: 'Overall decay.' },
+      { k: 'baseFreq',  v: 145,  label: 'Base Frequency',   unit: 'Hz', lo: 60, hi: 250, step: 1, gloss: 'Tumba D3 — deep, heavy body. A touch brighter for small speakers.' },
+      { k: 'bodyVol',   v: 0.75, label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Deep tumba body should be felt — this is the dominant layer.' },
+      { k: 'bodyDecay', v: 0.35, label: 'Body Decay',       unit: 's',  lo: 0.05, hi: 0.8, step: 0.01, gloss: 'Large cavity = long, booming sustain.' },
       { k: 'overRatio1',v: 1.5,  label: 'Shell Ratio 1',    unit: '',   lo: 1.2, hi: 3.0, step: 0.01, gloss: 'First triangle overtone.' },
-      { k: 'overVol1',  v: 0.25, label: 'Shell Vol 1',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Volume of first overtone.' },
+      { k: 'overVol1',  v: 0.22, label: 'Shell Vol 1',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Tumba overtones are quieter — fundamental carries the weight.' },
       { k: 'overRatio2',v: 2.2,  label: 'Shell Ratio 2',    unit: '',   lo: 1.5, hi: 4.0, step: 0.01, gloss: 'Second triangle overtone.' },
       { k: 'overVol2',  v: 0.12, label: 'Shell Vol 2',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Volume of second overtone.' },
-      { k: 'slapFreq',  v: 2500, label: 'Slap Filter Freq', unit: 'Hz', lo: 500, hi: 6000, step: 10, gloss: 'Bandpass centre.' },
-      { k: 'slapVol',   v: 0.30, label: 'Slap Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Slap noise volume.' },
+      { k: 'slapFreq',  v: 2800, label: 'Slap Filter Freq', unit: 'Hz', lo: 500, hi: 6000, step: 10, gloss: 'Big head = slightly wider/brightew slap.' },
+      { k: 'slapVol',   v: 0.35, label: 'Slap Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Balanced — prominent body, present slap.' },
       { k: 'slapDecay', v: 0.025,label: 'Slap Decay',       unit: 's',  lo: 0.003, hi: 0.1, step: 0.001, gloss: 'Slap duration.' }
     ]
   },
@@ -123,15 +123,15 @@ export const instrumentData = {
     family: 'hybrid',
     label: 'Conga (Middle)',
     params: [
-      { k: 'baseFreq',  v: 160,  label: 'Base Frequency',   unit: 'Hz', lo: 80, hi: 300, step: 1, gloss: 'Fundamental.' },
-      { k: 'bodyVol',   v: 0.65, label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Sine volume.' },
-      { k: 'bodyDecay', v: 0.18, label: 'Body Decay',       unit: 's',  lo: 0.05, hi: 0.6, step: 0.01, gloss: 'Decay.' },
+      { k: 'baseFreq',  v: 175,  label: 'Base Frequency',   unit: 'Hz', lo: 80, hi: 300, step: 1, gloss: 'Mid-conga sweet spot — sits between the big Tumba and tight Quinto.' },
+      { k: 'bodyVol',   v: 0.62, label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Slightly more balanced against overtones.' },
+      { k: 'bodyDecay', v: 0.28, label: 'Body Decay',       unit: 's',  lo: 0.05, hi: 0.6, step: 0.01, gloss: 'Medium sustain — between Tumba boom and Quinto snap.' },
       { k: 'overRatio1',v: 1.5,  label: 'Shell Ratio 1',    unit: '',   lo: 1.2, hi: 3.0, step: 0.01, gloss: 'First overtone.' },
       { k: 'overVol1',  v: 0.25, label: 'Shell Vol 1',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Volume.' },
-      { k: 'overRatio2',v: 2.2,  label: 'Shell Ratio 2',    unit: '',   lo: 1.5, hi: 4.0, step: 0.01, gloss: 'Second overtone.' },
-      { k: 'overVol2',  v: 0.12, label: 'Shell Vol 2',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Volume.' },
-      { k: 'slapFreq',  v: 2800, label: 'Slap Filter Freq', unit: 'Hz', lo: 500, hi: 6000, step: 10, gloss: 'Bandpass centre.' },
-      { k: 'slapVol',   v: 0.35, label: 'Slap Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Slap volume.' },
+      { k: 'overRatio2',v: 2.5,  label: 'Shell Ratio 2',    unit: '',   lo: 1.5, hi: 4.0, step: 0.01, gloss: 'Slightly higher second partial from the larger shell.' },
+      { k: 'overVol2',  v: 0.10, label: 'Shell Vol 2',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Second overtone even quieter on big drum.' },
+      { k: 'slapFreq',  v: 3200, label: 'Slap Filter Freq', unit: 'Hz', lo: 500, hi: 6000, step: 10, gloss: 'Clean, defined mid-conga crack.' },
+      { k: 'slapVol',   v: 0.40, label: 'Slap Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'More prominent than low conga — a featured transient.' },
       { k: 'slapDecay', v: 0.02, label: 'Slap Decay',       unit: 's',  lo: 0.003, hi: 0.1, step: 0.001, gloss: 'Slap duration.' }
     ]
   },
@@ -144,7 +144,7 @@ export const instrumentData = {
       { k: 'bodyVol',   v: 0.35, label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Volume of the fundamental sine wave.' },
       { k: 'bodyDecay', v: 0.33, label: 'Body Decay',       unit: 's',  lo: 0.05, hi: 0.6, step: 0.01, gloss: 'How long the body rings out.' },
       { k: 'overRatio1',v: 1.5,  label: 'Shell Ratio 1',    unit: '',   lo: 1.2, hi: 3.0, step: 0.01, gloss: 'First triangle overtone ratio.' },
-      { k: 'overVol1',  v: 0.25, label: 'Shell Vol 1',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Volume of first overtone.' },
+      { k: 'overVol1',  v: 0.22, label: 'Shell Vol 1',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Tumba overtones are quieter — fundamental carries the weight.' },
       { k: 'overRatio2',v: 2.2,  label: 'Shell Ratio 2',    unit: '',   lo: 1.5, hi: 4.0, step: 0.01, gloss: 'Second triangle overtone ratio.' },
       { k: 'overVol2',  v: 0.12, label: 'Shell Vol 2',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Volume of second overtone.' },
       { k: 'slapFreq',  v: 3200, label: 'Slap Filter Freq', unit: 'Hz', lo: 500, hi: 6000, step: 10, gloss: 'Bandpass centre for the conga slap noise.' },
@@ -157,14 +157,14 @@ export const instrumentData = {
     family: 'hybrid',
     label: 'Conga Slap',
     params: [
-      { k: 'baseFreq',  v: 240,  label: 'Base Frequency',   unit: 'Hz', lo: 100, hi: 450, step: 1, gloss: 'Higher fundamental.' },
-      { k: 'bodyVol',   v: 0.5,  label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Quieter than open tone.' },
-      { k: 'bodyDecay', v: 0.08, label: 'Body Decay',       unit: 's',  lo: 0.02, hi: 0.3, step: 0.005, gloss: 'Short slap decay.' },
+      { k: 'baseFreq',  v: 260,  label: 'Base Frequency',   unit: 'Hz', lo: 100, hi: 450, step: 1, gloss: 'Slightly higher for a more distinct slap pitch.' },
+      { k: 'bodyVol',   v: 0.25, label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Almost silent body — the slap IS the sound.' },
+      { k: 'bodyDecay', v: 0.06, label: 'Body Decay',       unit: 's',  lo: 0.02, hi: 0.3, step: 0.005, gloss: 'Instant body cut — the tone is just a hint.' },
       { k: 'overRatio1',v: 1.5,  label: 'Shell Ratio 1',    unit: '',   lo: 1.2, hi: 3.0, step: 0.01, gloss: 'Overtone.' },
-      { k: 'overVol1',  v: 0.2,  label: 'Shell Vol 1',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Overtone volume.' },
-      { k: 'slapFreq',  v: 4000, label: 'Slap Filter Freq', unit: 'Hz', lo: 1000, hi: 8000, step: 10, gloss: 'High slap crack.' },
-      { k: 'slapQ',     v: 2.0,  label: 'Slap Q',           unit: '',   lo: 0.5, hi: 5.0, step: 0.1, gloss: 'Slap resonance.' },
-      { k: 'slapVol',   v: 0.6,  label: 'Slap Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Dominant slap noise.' },
+      { k: 'overVol1',  v: 0.12, label: 'Shell Vol 1',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Quieter overtone — the slap crack dominates completely.' },
+      { k: 'slapFreq',  v: 4500, label: 'Slap Filter Freq', unit: 'Hz', lo: 1000, hi: 8000, step: 10, gloss: 'Sharpest crack of all congas — brightest possible snap.' },
+      { k: 'slapQ',     v: 2.5,  label: 'Slap Q',           unit: '',   lo: 0.5, hi: 5.0, step: 0.1, gloss: 'Strong resonance — the defining conga slap pop.' },
+      { k: 'slapVol',   v: 0.70, label: 'Slap Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'The crack IS the sound — loud, sharp, immediate.' },
       { k: 'slapDecay', v: 0.015,label: 'Slap Decay',       unit: 's',  lo: 0.002, hi: 0.06, step: 0.001, gloss: 'Very short transient.' }
     ]
   },
@@ -285,4 +285,67 @@ export const instrumentData = {
       { k: 'noiseDecay',     v: 0.02, label: 'Transient Decay',      unit: 's',  lo: 0.005, hi: 0.08, step: 0.001, gloss: 'Finger/thumb transient.' }
     ]
   },
+  cajon_trad_bass: {
+    family: 'cajon',
+    label: 'Traditional Cajon Bass',
+    params: [
+      { k: 'cavityFreq', v: 70, label: 'Cavity Frequency', unit: 'Hz', lo: 40, hi: 150, step: 1, gloss: 'Helmholtz air cavity resonance.' },
+      { k: 'cavityVol', v: 0.9, label: 'Cavity Volume', unit: '', lo: 0, hi: 1, step: 0.01, gloss: 'Cavity boom volume.' },
+      { k: 'cavityDecay', v: 0.35, label: 'Cavity Decay', unit: 's', lo: 0.05, hi: 0.8, step: 0.01, gloss: 'Cavity resonance decay.' },
+      { k: 'woodFreq', v: 120, label: 'Wood Frequency', unit: 'Hz', lo: 60, hi: 250, step: 1, gloss: 'Wooden tapa (front plate) resonance.' },
+      { k: 'woodVol', v: 0.4, label: 'Wood Volume', unit: '', lo: 0, hi: 1, step: 0.01, gloss: 'Wood tone volume.' },
+      { k: 'woodDecay', v: 0.12, label: 'Wood Decay', unit: 's', lo: 0.02, hi: 0.3, step: 0.005, gloss: 'Wood resonance decay.' },
+      { k: 'palmFreq', v: 250, label: 'Palm LP Freq', unit: 'Hz', lo: 50, hi: 500, step: 10, gloss: 'Lowpass for palm impact noise.' },
+      { k: 'palmVol', v: 0.3, label: 'Palm Volume', unit: '', lo: 0, hi: 1, step: 0.01, gloss: 'Palm impact noise volume.' },
+      { k: 'palmDecay', v: 0.03, label: 'Palm Decay', unit: 's', lo: 0.005, hi: 0.1, step: 0.001, gloss: 'Palm impact decay.' }
+    ]
+  },
+  cajon_trad_slap: {
+    family: 'cajon',
+    label: 'Traditional Cajon Slap',
+    params: [
+      { k: 'edgeFreq', v: 380, label: 'Edge Frequency', unit: 'Hz', lo: 150, hi: 600, step: 1, gloss: 'Corner edge resonance (triangle wave).' },
+      { k: 'edgeVol', v: 0.3, label: 'Edge Volume', unit: '', lo: 0, hi: 1, step: 0.01, gloss: 'Edge resonance volume.' },
+      { k: 'edgeDecay', v: 0.08, label: 'Edge Decay', unit: 's', lo: 0.01, hi: 0.2, step: 0.005, gloss: 'Edge ring decay.' },
+      { k: 'crackFreq', v: 2500, label: 'Crack BP Freq', unit: 'Hz', lo: 500, hi: 5000, step: 10, gloss: 'Wood crack bandpass centre.' },
+      { k: 'crackQ', v: 1.5, label: 'Crack Q', unit: '', lo: 0.5, hi: 4.0, step: 0.1, gloss: 'Crack filter Q.' },
+      { k: 'crackVol', v: 0.6, label: 'Crack Volume', unit: '', lo: 0, hi: 1, step: 0.01, gloss: 'Crack noise volume.' },
+      { k: 'crackDecay', v: 0.04, label: 'Crack Decay', unit: 's', lo: 0.005, hi: 0.15, step: 0.001, gloss: 'Crack transient decay.' }
+    ]
+  },
+  cajon_snare_bass: {
+    family: 'cajon',
+    label: 'Snare Cajon Bass',
+    params: [
+      { k: 'cavityFreq', v: 70, label: 'Cavity Frequency', unit: 'Hz', lo: 40, hi: 150, step: 1, gloss: 'Helmholtz air cavity resonance (shared body).' },
+      { k: 'cavityVol', v: 0.9, label: 'Cavity Volume', unit: '', lo: 0, hi: 1, step: 0.01, gloss: 'Cavity boom volume.' },
+      { k: 'cavityDecay', v: 0.35, label: 'Cavity Decay', unit: 's', lo: 0.05, hi: 0.8, step: 0.01, gloss: 'Cavity resonance decay.' },
+      { k: 'woodFreq', v: 120, label: 'Wood Frequency', unit: 'Hz', lo: 60, hi: 250, step: 1, gloss: 'Wooden tapa resonance.' },
+      { k: 'woodVol', v: 0.4, label: 'Wood Volume', unit: '', lo: 0, hi: 1, step: 0.01, gloss: 'Wood tone volume.' },
+      { k: 'woodDecay', v: 0.12, label: 'Wood Decay', unit: 's', lo: 0.02, hi: 0.3, step: 0.005, gloss: 'Wood resonance decay.' },
+      { k: 'palmFreq', v: 250, label: 'Palm LP Freq', unit: 'Hz', lo: 50, hi: 500, step: 10, gloss: 'Lowpass for palm impact noise.' },
+      { k: 'palmVol', v: 0.3, label: 'Palm Volume', unit: '', lo: 0, hi: 1, step: 0.01, gloss: 'Palm impact noise volume.' },
+      { k: 'palmDecay', v: 0.03, label: 'Palm Decay', unit: 's', lo: 0.005, hi: 0.1, step: 0.001, gloss: 'Palm impact decay.' },
+      { k: 'snareFreq', v: 3000, label: 'Snare HP Freq', unit: 'Hz', lo: 500, hi: 6000, step: 10, gloss: 'Highpass for sympathetic snare rattle.' },
+      { k: 'snareVol', v: 0.15, label: 'Snare Volume', unit: '', lo: 0, hi: 1, step: 0.01, gloss: 'Very quiet sympathetic rattle volume.' },
+      { k: 'snareDecay', v: 0.06, label: 'Snare Decay', unit: 's', lo: 0.01, hi: 0.2, step: 0.001, gloss: 'Short sympathetic rattle decay.' }
+    ]
+  },
+  cajon_snare_slap: {
+    family: 'cajon',
+    label: 'Snare Cajon Slap',
+    params: [
+      { k: 'edgeFreq', v: 380, label: 'Edge Frequency', unit: 'Hz', lo: 150, hi: 600, step: 1, gloss: 'Corner edge resonance.' },
+      { k: 'edgeVol', v: 0.3, label: 'Edge Volume', unit: '', lo: 0, hi: 1, step: 0.01, gloss: 'Edge volume.' },
+      { k: 'edgeDecay', v: 0.08, label: 'Edge Decay', unit: 's', lo: 0.01, hi: 0.2, step: 0.005, gloss: 'Edge decay.' },
+      { k: 'crackFreq', v: 2500, label: 'Crack BP Freq', unit: 'Hz', lo: 500, hi: 5000, step: 10, gloss: 'Wood crack bandpass.' },
+      { k: 'crackQ', v: 1.5, label: 'Crack Q', unit: '', lo: 0.5, hi: 4.0, step: 0.1, gloss: 'Crack Q.' },
+      { k: 'crackVol', v: 0.5, label: 'Crack Volume', unit: '', lo: 0, hi: 1, step: 0.01, gloss: 'Crack volume (slightly quieter, snare dominates).' },
+      { k: 'crackDecay', v: 0.04, label: 'Crack Decay', unit: 's', lo: 0.005, hi: 0.15, step: 0.001, gloss: 'Crack decay.' },
+      { k: 'buzzFreq', v: 3500, label: 'Buzz HP Freq', unit: 'Hz', lo: 1000, hi: 7000, step: 10, gloss: 'Highpass for snare wire buzz.' },
+      { k: 'buzzVol', v: 0.6, label: 'Buzz Volume', unit: '', lo: 0, hi: 1, step: 0.01, gloss: 'Prominent snare buzz volume.' },
+      { k: 'buzzDecay', v: 0.18, label: 'Buzz Decay', unit: 's', lo: 0.02, hi: 0.4, step: 0.01, gloss: 'Sustained snare wire buzz decay.' }
+    ]
+  },
+
 };
