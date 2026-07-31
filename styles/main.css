@@ -1382,10 +1382,10 @@
             padding: 2px 4px;
         }
         .voice-nudge-label {
-            color: #a1a1aa;
-            font-size: 9px;
+            color: #ececf5;
+            font-size: 11px;
             font-weight: 800;
-            letter-spacing: 0.8px;
+            letter-spacing: 0.6px;
             text-transform: uppercase;
         }
         .voice-nudge-btn {
@@ -1394,7 +1394,7 @@
             border-radius: 4px;
             color: #e4e4e7;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 11px;
             font-weight: 900;
             height: 26px;
             line-height: 1;
@@ -1812,4 +1812,66 @@
             .lane-playhead {
                 display: none;
             }
+        }
+
+        /* ----- Lane control buttons: raised, family-accented chips -----
+           The step grid reads as flat "data"; these action controls read as
+           physical "hardware" so they no longer blend into the grid or the dark
+           card. Each lane sets --lane-accent on its .matrix-row (index.html);
+           the inset stripe colors the button by family without shifting layout,
+           and hover/focus paints an accent glow. */
+        .clear-btn,
+        .add-voice-btn,
+        .edit-btn,
+        .lane-info-btn,
+        .voice-nudge-btn,
+        .voice-nudge-reset-btn,
+        .solo-btn,
+        .mute-btn {
+            background: linear-gradient(180deg, #3a3a46 0%, #2c2c38 100%);
+            border: 1px solid #4a4a57;
+            color: #ececf5;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            line-height: 1;
+            box-sizing: border-box;
+            cursor: pointer;
+            border-radius: 5px;
+            box-shadow: inset 3px 0 0 0 var(--lane-accent, #ff9100),
+                        0 1px 0 rgba(255, 255, 255, 0.05) inset,
+                        0 1px 2px rgba(0, 0, 0, 0.45);
+            transition: background 0.15s ease, border-color 0.15s ease,
+                        color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+        }
+        .clear-btn:hover,
+        .add-voice-btn:hover,
+        .edit-btn:hover,
+        .lane-info-btn:hover,
+        .lane-info-btn[aria-expanded="true"],
+        .voice-nudge-btn:hover,
+        .voice-nudge-reset-btn:hover,
+        .solo-btn:hover,
+        .mute-btn:hover {
+            color: #ffffff;
+            border-color: var(--lane-accent, #ff9100);
+            box-shadow: inset 3px 0 0 0 var(--lane-accent, #ff9100),
+                        0 0 0 1px var(--lane-accent, #ff9100),
+                        0 2px 10px -1px var(--lane-accent, #ff9100);
+        }
+        .clear-btn:active,
+        .add-voice-btn:active,
+        .edit-btn:active,
+        .lane-info-btn:active,
+        .voice-nudge-btn:active,
+        .voice-nudge-reset-btn:active,
+        .solo-btn:active,
+        .mute-btn:active {
+            transform: translateY(1px);
+            box-shadow: inset 3px 0 0 0 var(--lane-accent, #ff9100),
+                        0 1px 1px rgba(0, 0, 0, 0.5);
+        }
+        /* Keep the info "?" button circular despite the shared border-radius. */
+        .lane-info-btn {
+            border-radius: 50%;
         }
