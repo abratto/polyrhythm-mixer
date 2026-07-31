@@ -897,12 +897,27 @@
             box-sizing: border-box;
             border-radius: 4px;
             cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
         .mute-btn.muted {
-            background-color: #ff1744;
-            color: #fff;
-            border-color: #ff5252;
-            box-shadow: 0 0 6px rgba(255,23,68,0.4);
+            background: linear-gradient(180deg, #ff3b5c 0%, #e01030 100%);
+            color: #ffffff;
+            border-color: #ff8a9e;
+            font-weight: 900;
+            box-shadow: inset 0 0 0 2px rgba(255,255,255,0.22),
+                        0 0 10px rgba(255,23,68,0.6);
+        }
+        .mute-btn.muted::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            flex-shrink: 0;
+            margin-right: 5px;
+            border-radius: 50%;
+            background: #ffffff;
+            box-shadow: 0 0 4px rgba(255,255,255,0.85);
         }
         .solo-btn {
             background-color: #272735;
@@ -920,12 +935,44 @@
             box-sizing: border-box;
             border-radius: 4px;
             cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
         .solo-btn.soloed {
-            background-color: #ffb300;
-            color: #000;
-            border-color: #ffd54f;
-            box-shadow: 0 0 8px rgba(255,179,0,0.5);
+            background: linear-gradient(180deg, #ffc23a 0%, #f0a500 100%);
+            color: #1a1a1a;
+            border-color: #ffd97a;
+            font-weight: 900;
+            box-shadow: inset 0 0 0 2px rgba(0,0,0,0.18),
+                        0 0 10px rgba(255,179,0,0.6);
+        }
+        .solo-btn.soloed::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            flex-shrink: 0;
+            margin-right: 5px;
+            border-radius: 50%;
+            background: #1a1a1a;
+            box-shadow: 0 0 4px rgba(0,0,0,0.4);
+        }
+        /* Keep the engaged look on hover/focus so the "on" state never flickers
+           back to the shared lane-accent glow (the .solo-btn:hover / .mute-btn:hover
+           rule has lower specificity and would otherwise override it). */
+        .mute-btn.muted:hover,
+        .mute-btn.muted:focus {
+            color: #ffffff;
+            border-color: #ff8a9e;
+            box-shadow: inset 0 0 0 2px rgba(255,255,255,0.32),
+                        0 0 12px rgba(255,23,68,0.75);
+        }
+        .solo-btn.soloed:hover,
+        .solo-btn.soloed:focus {
+            color: #1a1a1a;
+            border-color: #ffd97a;
+            box-shadow: inset 0 0 0 2px rgba(0,0,0,0.28),
+                        0 0 12px rgba(255,179,0,0.75);
         }
         .v-divider {
             width: 1px;
