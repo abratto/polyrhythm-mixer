@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.2.0 — 2026-07-31
+
+### Features
+- **+ Voice buttons relocated** to the bottom of each multi-voice lane, so adding voices never requires scrolling back up — each new voice row pushes the + Voice control further down
+
 ## v1.1.1 — 2026-07-31
 
 ### Fixed
