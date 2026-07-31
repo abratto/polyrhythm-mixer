@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.0 — 2026-07-31
+
+### Features
+- Lane control buttons (Clear, + Voice, Random/Reverse, Copy/Paste, Nudge, ?, Solo, Mute) restyled as raised, family-accented chips so they read as controls distinct from the flat step grid
+- Per-lane accent stripe and hover glow keyed to each lane's color (Meter A/B pulse, Master, A/B phrase)
+- Neutral-grey raised surface with brighter text for clearer visual hierarchy
+- Nudge label text ("Nudge" / "Nudge Group") matched to the control-button text styling
+
 ## v1.0.2 — 2026-07-31
 
 ### Fixed
