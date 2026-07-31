@@ -463,7 +463,13 @@ wireControls({
     onOpenSaveRhythm: () => openSaveRhythmModal(ui, shareDeps),
     onConfirmSaveRhythm: () => saveCurrentRhythm(shareDeps),
     onCloseSaveRhythm: () => closeSaveRhythmModal(ui),
-    onOpenSavedRhythms: () => openSavedRhythmsModal(ui, shareDeps, rebuildAllVoiceMixerStrips),
+    onOpenSavedRhythms: () => openSavedRhythmsModal(ui, shareDeps, () => {
+        rebuildAllVoiceMixerStrips();
+        // rebuild the lane DOM now that voice.channel is linked
+        buildAllLanes(lanes, state);
+        wireLaneMixButtons(lanes, channels);
+        applyMixVisuals(lanes, channels);
+    }),
     onCloseSavedRhythms: () => closeSavedRhythmsModal(ui)
 });
 
@@ -492,6 +498,11 @@ refreshSilenced(channels);
     if (loadedFromUrl) {
         rebuildAllVoiceMixerStrips();
         refreshSilenced(channels);
+        // rebuild the lane DOM now that voice.channel is linked so per-voice
+        // volume / solo / mute / clear controls are rendered
+        buildAllLanes(lanes, state);
+        wireLaneMixButtons(lanes, channels);
+        applyMixVisuals(lanes, channels);
     }
 
     // Phase 8: Show help modal for first-time visitors
