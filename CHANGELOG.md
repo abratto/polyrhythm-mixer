@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.2 — 2026-07-31
+
+### Fixed
+- Restoring a cleared (fully empty) wheel lane pattern no longer falls back to the default onset pattern — a saved empty `aw.s = []` is now correctly restored as zero active teeth
+
 ## v1.3.1 — 2026-07-31
 
 ### Fixed
