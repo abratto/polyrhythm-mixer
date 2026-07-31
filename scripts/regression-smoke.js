@@ -548,7 +548,7 @@ async function run() {
         await page.waitForFunction(() => JSON.parse(localStorage.getItem('alans-polyrhythm-mixer-saved-rhythms') || '[]').some(item => String(item.name || '').startsWith('Regression Save ')));
 
         const savedPayload = await page.evaluate(({ key, name }) => JSON.parse(localStorage.getItem(key)).find(item => item.name === name)?.payload, { key: SAVED_RHYTHMS_KEY, name: testName });
-        assert(savedPayload?.v === 3, 'Saved rhythm should use the current payload version.', savedPayload);
+        assert(savedPayload?.v === 4, 'Saved rhythm should use the current payload version.', savedPayload);
         assert(savedPayload?.m?.masterVolume === 72, 'Saved rhythm should include Master Volume.', savedPayload?.m);
         assert(!!(savedPayload?.p?.m?.some(v => v.n) || savedPayload?.p?.ap?.some(v => v.n) || savedPayload?.p?.bp?.some(v => v.n)), 'Saved rhythm should include nudge offsets.', savedPayload?.p);
 
