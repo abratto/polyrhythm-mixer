@@ -12,7 +12,9 @@
  * Future versions (v > current) are rejected.
  */
 
-const SHARE_VERSION = 3;
+import { lcm } from './math.js';
+
+const SHARE_VERSION = 4;
 
 /** Converts a Uint8Array to a binary string using chunked spread to avoid argument count limits. */
 function bytesToBinary(bytes) {
@@ -268,6 +270,35 @@ function migrateV1toV2(payload) {
 }
 
 /**
+ * Migrates v3 payloads (group-level wheel indices) to v4 (tooth-level positions).
+ * v3: aw.s = [0,1,2,3,4,5] — group indices for 6 active groups in 6×4
+ * v4: aw.s = [0,2,4,6,8,10] — onset tooth positions (mainTeeth = 12, teethA = 2)
+ */
+function migrateV3toV4(payload) {
+    const m = payload.m;
+    if (!m) return payload;
+
+    const mainTeeth = lcm(m.A, m.B);
+    const teethA = mainTeeth / m.A;
+    const teethB = mainTeeth / m.B;
+    const phaseA = m.phaseA || 0;
+    const phaseB = m.phaseB || 0;
+
+    const p = payload.p;
+    if (p) {
+        if (p.aw && Array.isArray(p.aw.s)) {
+            p.aw.s = p.aw.s.map(g => (g * teethA + phaseA) % mainTeeth);
+        }
+        if (p.bw && Array.isArray(p.bw.s)) {
+            p.bw.s = p.bw.s.map(g => (g * teethB + phaseB) % mainTeeth);
+        }
+    }
+
+    payload.v = 4;
+    return payload;
+}
+
+/**
  * Runs the appropriate migration functions based on the payload version.
  * Throws if the payload is invalid or from a future (unsupported) version.
  */
@@ -284,6 +315,11 @@ function migratePayload(payload) {
     // v0 or v1 → v2
     if (payload.v === 1) {
         payload = migrateV1toV2(payload);
+    }
+
+    // v2 or v3 → v4 (group-level → tooth-level wheel indices)
+    if (payload.v >= 2 && payload.v <= 3) {
+        payload = migrateV3toV4(payload);
     }
 
     // Reject payloads from future versions
