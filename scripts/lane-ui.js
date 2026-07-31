@@ -412,8 +412,14 @@ export function resetPatterns(state, lanes) {
         v.selected = new Array(state.phraseStepsB).fill(false);
         v.nudgeOffset = 0;
     });
-    lanes.Awheel.selected = new Array(state.A).fill(true);
-    lanes.Bwheel.selected = new Array(state.B).fill(true);
+    lanes.Awheel.selected = new Array(state.mainTeeth).fill(false);
+    lanes.Bwheel.selected = new Array(state.mainTeeth).fill(false);
+    for (let g = 0; g < state.A; g++) {
+        lanes.Awheel.selected[(g * state.teethA + state.phaseA) % state.mainTeeth] = true;
+    }
+    for (let g = 0; g < state.B; g++) {
+        lanes.Bwheel.selected[(g * state.teethB + state.phaseB) % state.mainTeeth] = true;
+    }
 
     if (lanes.master.voices[0]?.selected.length > 0) lanes.master.voices[0].selected[0] = true;
     if (lanes.Aphrase.voices[0]?.selected.length > 0) lanes.Aphrase.voices[0].selected[0] = true;
@@ -448,8 +454,8 @@ export function resizeAllLanes(state, lanes) {
     });
     lanes.Aphrase.voices.forEach(v => resizeVoice(v, state.phraseStepsA));
     lanes.Bphrase.voices.forEach(v => resizeVoice(v, state.phraseStepsB));
-    resizeSingleLane(lanes.Awheel, state.A, true);
-    resizeSingleLane(lanes.Bwheel, state.B, true);
+    resizeSingleLane(lanes.Awheel, state.mainTeeth, false);
+    resizeSingleLane(lanes.Bwheel, state.mainTeeth, false);
 
     if (lanes.master.voices[0]?.selected.length > 0) lanes.master.voices[0].selected[0] = true;
     if (lanes.Aphrase.voices[0]?.selected.length > 0) lanes.Aphrase.voices[0].selected[0] = true;
@@ -1048,15 +1054,12 @@ function buildGroupingLane(lane, state) {
     for (let p = 0; p < total; p++) {
         const groupIndex = Math.floor(p / groupSize);
         const isOnset = p % groupSize === 0;
-        const active = !!lane.selected[groupIndex];
+        const active = !!lane.selected[p];
 
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = `step-btn ${lane.className}`;
         btn.id = `${lane.stepId}-p${p}`;
-        // Onset carries the beat number; the remaining pulses within the beat
-        // carry their position inside that beat (2, 3, 4, …), so the grouping
-        // and its overlap read directly from the labels.
         btn.textContent = isOnset ? String(groupIndex + 1) : String((p % groupSize) + 1);
         btn.setAttribute('aria-pressed', String(active));
 
@@ -1064,19 +1067,14 @@ function buildGroupingLane(lane, state) {
         if (groupIndex % 2 === 1) btn.classList.add('step-alt');
 
         if (active) {
-            if (isOnset) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.add('pulse-fill');
-                btn.style.background = hexToRgba(lane.color, 0.28);
-            }
+            btn.classList.add('active');
         } else {
             btn.classList.add('inactive-group');
             btn.style.background = hexToRgba(lane.color, 0.06);
         }
 
         btn.addEventListener('click', () => {
-            lane.selected[groupIndex] = !lane.selected[groupIndex];
+            lane.selected[p] = !lane.selected[p];
             buildGroupingLane(lane, state);
         });
 
@@ -1153,7 +1151,7 @@ function addCurrentClass(button) {
 }
 
 /** Attaches click handlers to all lane clear buttons. */
-export function wireLaneClearButtons(lanes) {
+export function wireLaneClearButtons(lanes, state) {
     Object.values(lanes).forEach((lane) => {
         if (lane.clearBtn) {
             lane.clearBtn.addEventListener('click', () => {
@@ -1165,7 +1163,7 @@ export function wireLaneClearButtons(lanes) {
                 } else {
                     lane.selected.fill(false);
                 }
-                buildLane(lane);
+                buildLane(lane, state);
             });
         }
     });

@@ -165,6 +165,17 @@ function rebuildSystem() {
     updateDerivedState(state);
     updatePhaseUI(state, ui);
     resizeAllLanes(state, lanes);
+    // Recalculate wheel lane onset positions for the new polyrhythm grouping.
+    // resizeAllLanes preserves old per-tooth values, but onset positions change
+    // when teethPerPulse changes. Reset all teeth then activate new onsets.
+    lanes.Awheel.selected.fill(false);
+    lanes.Bwheel.selected.fill(false);
+    for (let g = 0; g < state.A; g++) {
+        lanes.Awheel.selected[(g * state.teethA + state.phaseA) % state.mainTeeth] = true;
+    }
+    for (let g = 0; g < state.B; g++) {
+        lanes.Bwheel.selected[(g * state.teethB + state.phaseB) % state.mainTeeth] = true;
+    }
     buildAllLanes(lanes, state);
     refreshSilenced(channels);
     updateBeatSchemeSummary();
@@ -387,7 +398,7 @@ const shareDeps = {
 updateDerivedState(state);
 populateMenus(channels);
 wireChannels(channels);
-wireLaneClearButtons(lanes);
+wireLaneClearButtons(lanes, state);
 wireLaneInfoButtons(lanes);
 
 // Cache global volume to avoid Number.parseInt per trigger

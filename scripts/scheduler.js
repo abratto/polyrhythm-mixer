@@ -12,7 +12,7 @@
  *   _updateSoloFlag       — cache the global solo state for fast per-trigger checks
  */
 
-import { getActivePhraseStep, getActiveWheelStep } from './math.js';
+import { getActivePhraseStep } from './math.js';
 import { instruments } from './instruments.js';
 import { isAnyChannelSoloed } from './channels.js';
 
@@ -58,12 +58,8 @@ function scheduleStepAudio(state, lanes, channels, stepIndex, hitTime, globalVol
         lsa.Aphrase = aps;
     }
 
-    const aws = getActiveWheelStep(stepIndex, state.phaseA, state.teethA, state.A);
-    if (aws !== lsa.Awheel) {
-        if (lanes.Awheel.selected[aws]) {
-            if (channels.Awheel) playSingleChannel(state, channels.Awheel, globalVolume, hitTime);
-        }
-        lsa.Awheel = aws;
+    if (lanes.Awheel.selected[((stepIndex % state.mainTeeth) + state.mainTeeth) % state.mainTeeth]) {
+        if (channels.Awheel) playSingleChannel(state, channels.Awheel, globalVolume, hitTime);
     }
 
     const bps = getActivePhraseStep(stepIndex, state.phaseB, state.teethB, state.phraseStepsB);
@@ -77,12 +73,8 @@ function scheduleStepAudio(state, lanes, channels, stepIndex, hitTime, globalVol
         lsa.Bphrase = bps;
     }
 
-    const bws = getActiveWheelStep(stepIndex, state.phaseB, state.teethB, state.B);
-    if (bws !== lsa.Bwheel) {
-        if (lanes.Bwheel.selected[bws]) {
-            if (channels.Bwheel) playSingleChannel(state, channels.Bwheel, globalVolume, hitTime);
-        }
-        lsa.Bwheel = bws;
+    if (lanes.Bwheel.selected[((stepIndex % state.mainTeeth) + state.mainTeeth) % state.mainTeeth]) {
+        if (channels.Bwheel) playSingleChannel(state, channels.Bwheel, globalVolume, hitTime);
     }
 }
 
