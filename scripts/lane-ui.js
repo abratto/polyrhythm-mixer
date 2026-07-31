@@ -920,6 +920,13 @@ function buildMultiVoiceLane(lane, state) {
         lane.container.appendChild(row);
     });
 
+    // "+ Voice" lives at the bottom of the lane so adding a voice never forces
+    // the user to scroll back up to the top toolbar — each new row pushes it
+    // further down. It is re-appended on every rebuild because container.innerHTML
+    // is cleared above, and its click handler (wired once in app.js) travels with
+    // the element.
+    if (lane.addVoiceBtn) lane.container.appendChild(lane.addVoiceBtn);
+
     // "Playhead is in another cycle" cue (shown when this lane is PINned away
     // from the cycle currently playing).
     const cue = document.createElement('div');
@@ -1359,10 +1366,11 @@ export function wireLaneMixButtons(lanes, channels) {
         reorderWheelLaneControls(mountFor(lanes.Awheel), ['soundAWheel', '.lane-volume', '.voice-mix-controls', 'clearAWheelBtn']);
         reorderWheelLaneControls(mountFor(lanes.Bwheel), ['soundBWheel', '.lane-volume', '.voice-mix-controls', 'clearBWheelBtn']);
 
-        // Reorder phrase lane toolbar controls: +Voice, Random/Reverse, Clear, Nudge Group
-        reorderWheelLaneControls(mountFor(lanes.master), ['addMasterVoiceBtn', '.lane-edit-controls', 'clearMasterBtn', '.group-nudge-control']);
-        reorderWheelLaneControls(mountFor(lanes.Aphrase), ['addAPhraseVoiceBtn', '.lane-edit-controls', 'clearAPhraseBtn', '.group-nudge-control']);
-        reorderWheelLaneControls(mountFor(lanes.Bphrase), ['addBPhraseVoiceBtn', '.lane-edit-controls', 'clearBPhraseBtn', '.group-nudge-control']);
+        // Reorder phrase lane toolbar controls: Random/Reverse, Clear, Nudge Group
+        // (+ Voice is now pinned to the bottom of the lane, below the voice rows).
+        reorderWheelLaneControls(mountFor(lanes.master), ['.lane-edit-controls', 'clearMasterBtn', '.group-nudge-control']);
+        reorderWheelLaneControls(mountFor(lanes.Aphrase), ['.lane-edit-controls', 'clearAPhraseBtn', '.group-nudge-control']);
+        reorderWheelLaneControls(mountFor(lanes.Bphrase), ['.lane-edit-controls', 'clearBPhraseBtn', '.group-nudge-control']);
     }
 
     function reorderWheelLaneControls(mount, selectors) {
