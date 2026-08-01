@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.11 — 2026-07-31
+
+### Fixed
+- Completed noise sources now disconnect from their audio graph so dense percussion patterns release unused audio resources
+
 ## v1.3.10 — 2026-07-31
 
 ### Fixed
