@@ -112,7 +112,7 @@ async function encodePayload(payload) {
     const bytes = new TextEncoder().encode(json);
 
     // v3+ payloads are compressed with a z: prefix
-    if (payload.v >= SHARE_VERSION) {
+    if (payload.v >= SHARE_VERSION && supportsCompressionStreams()) {
         const compressed = await deflateBytes(bytes);
         return 'z:' + base64UrlEncodeBytes(compressed);
     }
