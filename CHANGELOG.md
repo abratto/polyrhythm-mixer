@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.3 — 2026-07-31
+
+### Fixed
+- Changing a phrase length (master, A, or B) no longer resets the wheel lane patterns — `rebuildSystem` now only recalculates wheel onsets when the polyrhythm ratio (A/B) actually changes
+
 ## v1.3.2 — 2026-07-31
 
 ### Fixed
