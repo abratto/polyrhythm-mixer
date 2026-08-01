@@ -43,7 +43,7 @@ export function shouldAutoOpenHelpModal() {
  * Wires all UI controls to their corresponding state updates and callbacks.
  * Each selector/slider updates the shared state and triggers a rebuild when needed.
  */
-export function wireControls({ ui, state, rebuildSystem, resetMixerToStartingState, toggleAudio, onShare, onOpenSaveRhythm, onConfirmSaveRhythm, onCloseSaveRhythm, onOpenSavedRhythms, onCloseSavedRhythms }) {
+export function wireControls({ ui, state, lanes, rebuildSystem, resetMixerToStartingState, toggleAudio, onShare, onOpenSaveRhythm, onConfirmSaveRhythm, onCloseSaveRhythm, onOpenSavedRhythms, onCloseSavedRhythms }) {
     const polyrhythmView = document.getElementById('polyrhythmView');
     const mobileLayout = globalThis.matchMedia(MOBILE_LAYOUT_QUERY);
 
@@ -60,12 +60,12 @@ export function wireControls({ ui, state, rebuildSystem, resetMixerToStartingSta
     // Meter A/B selectors — changing either recalculates the entire polyrhythm
     ui.selectA.addEventListener('change', () => {
         state.A = parseInt(ui.selectA.value, 10);
-        rebuildSystem();
+        rebuildSystem(true);
     });
 
     ui.selectB.addEventListener('change', () => {
         state.B = parseInt(ui.selectB.value, 10);
-        rebuildSystem();
+        rebuildSystem(true);
     });
 
     // Phrase cycle selectors — changing either recalculates phrase step counts

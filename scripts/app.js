@@ -160,21 +160,23 @@ function _syncAudioAndVisualState() {
  * Recalculates derived state, resizes lanes (preserving patterns),
  * rebuilds lane buttons, and resets the animation angle to zero.
  */
-function rebuildSystem() {
+function rebuildSystem(resetWheels = false) {
     _syncAudioAndVisualState();
     updateDerivedState(state);
     updatePhaseUI(state, ui);
     resizeAllLanes(state, lanes);
-    // Recalculate wheel lane onset positions for the new polyrhythm grouping.
-    // resizeAllLanes preserves old per-tooth values, but onset positions change
-    // when teethPerPulse changes. Reset all teeth then activate new onsets.
-    lanes.Awheel.selected.fill(false);
-    lanes.Bwheel.selected.fill(false);
-    for (let g = 0; g < state.A; g++) {
-        lanes.Awheel.selected[(g * state.teethA + state.phaseA) % state.mainTeeth] = true;
-    }
-    for (let g = 0; g < state.B; g++) {
-        lanes.Bwheel.selected[(g * state.teethB + state.phaseB) % state.mainTeeth] = true;
+    if (resetWheels) {
+        // Recalculate wheel lane onset positions when the polyrhythm grouping
+        // changes (mainTeeth shifts, so old per-tooth positions are invalid).
+        // Phrase-cycle changes don't affect mainTeeth — skip to preserve patterns.
+        lanes.Awheel.selected.fill(false);
+        lanes.Bwheel.selected.fill(false);
+        for (let g = 0; g < state.A; g++) {
+            lanes.Awheel.selected[(g * state.teethA + state.phaseA) % state.mainTeeth] = true;
+        }
+        for (let g = 0; g < state.B; g++) {
+            lanes.Bwheel.selected[(g * state.teethB + state.phaseB) % state.mainTeeth] = true;
+        }
     }
     buildAllLanes(lanes, state);
     refreshSilenced(channels);
@@ -447,6 +449,7 @@ ui.addBPhraseVoiceBtn.addEventListener('click', () => {
 wireControls({
     ui,
     state,
+    lanes,
     rebuildSystem,
     resetMixerToStartingState,
     toggleAudio: async () => {
