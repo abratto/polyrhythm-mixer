@@ -199,6 +199,7 @@ async function run() {
                 masterVolInLane: !!document.querySelector('#volDriver'),
                 masterClickSound: selectValue('#soundDriver'),
                 masterClickMute: muteText('#muteDriver'),
+                BWheelSolo: document.querySelector('#soloBWheel')?.classList.contains('soloed') ?? false,
                 masterVoice1Sound: selectValue('#sound_master_0'),
                 masterVoice2Sound: selectValue('#sound_master_1'),
                 AVoice1Sound: selectValue('#sound_A_0'),
@@ -485,6 +486,7 @@ async function run() {
         await setSelect('#sound_master_1', 'claves');
         await setSelect('#sound_A_0', 'woodblock');
         await setSelect('#sound_B_0', 'cowbell');
+        await page.locator('#soloBWheel').click();
 
         const liveInstrumentLabels = await snapshot();
         assert(liveInstrumentLabels.voiceLabels.master1 === 'Snare Drum' && liveInstrumentLabels.voiceLabels.master2 === 'Claves' && liveInstrumentLabels.voiceLabels.A1 === 'Woodblock Clack' && liveInstrumentLabels.voiceLabels.B1 === 'Analog Cowbell', 'Voice row instrument labels should update when mixer selections change.', liveInstrumentLabels.voiceLabels);
@@ -526,6 +528,7 @@ async function run() {
         await setSelect('#sound_master_1', 'claves');
         await setSelect('#sound_A_0', 'woodblock');
         await setSelect('#sound_B_0', 'cowbell');
+        await page.locator('#soloBWheel').click();
 
         await clickStep('#masterGrid', 1, 3);
         await clickStep('#masterGrid', 1, 8);
@@ -554,6 +557,7 @@ async function run() {
         const savedPayload = await page.evaluate(({ key, name }) => JSON.parse(localStorage.getItem(key)).find(item => item.name === name)?.payload, { key: SAVED_RHYTHMS_KEY, name: testName });
         assert(savedPayload?.v === 4, 'Saved rhythm should use the current payload version.', savedPayload);
         assert(savedPayload?.m?.masterVolume === 72, 'Saved rhythm should include Master Volume.', savedPayload?.m);
+        assert(savedPayload?.c?.bwheel?.o === 1, 'Saved rhythm should include B-wheel solo state.', savedPayload?.c?.bwheel);
         assert(!!(savedPayload?.p?.m?.some(v => v.n) || savedPayload?.p?.ap?.some(v => v.n) || savedPayload?.p?.bp?.some(v => v.n)), 'Saved rhythm should include nudge offsets.', savedPayload?.p);
 
         await page.goto(`${BASE_URL}/?cache-bust=save-fresh-load-${Date.now()}`, { waitUntil: 'networkidle' });
