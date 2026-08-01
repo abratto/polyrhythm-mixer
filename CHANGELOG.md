@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.7 — 2026-07-31
+
+### Fixed
+- Share links now fall back to uncompressed encoding in browsers without Compression Streams support
+
 ## v1.3.6 — 2026-07-31
 
 ### Fixed
