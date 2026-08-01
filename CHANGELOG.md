@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.10 — 2026-07-31
+
+### Fixed
+- Stopped playback no longer redraws the full canvas at display refresh rate, and complex rhythm views now cap visual rendering at 30 fps without affecting audio timing
+
 ## v1.3.9 — 2026-07-31
 
 ### Fixed
