@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.9 — 2026-07-31
+
+### Fixed
+- Audio playback now resumes from the current clock position after a long tab or main-thread stall instead of replaying missed hits in a burst
+
 ## v1.3.8 — 2026-07-31
 
 ### Fixed
