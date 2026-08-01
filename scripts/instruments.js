@@ -87,6 +87,7 @@ function acquireNoiseSource(state) {
     }
     const newSource = state.audioCtx.createBufferSource();
     newSource.buffer = _noiseBuffer;
+    newSource.onended = () => newSource.disconnect();
     return newSource;
 }
 
