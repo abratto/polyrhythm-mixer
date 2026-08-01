@@ -80,6 +80,7 @@ function scheduleStepAudio(state, lanes, channels, stepIndex, hitTime, globalVol
 
 
 let _schedulerTimer = null;
+const MAX_CATCH_UP_STEPS = 8;
 
 /**
  * Self-adjusting audio scheduling loop. Runs independently of rAF,
@@ -139,6 +140,15 @@ export function startAudioScheduler(state, lanes, channels, globalVolumeSource) 
         const targetStep = Math.floor((elapsed + lookahead) / stepDuration);
         const targetQuarter = Math.floor((elapsed + lookahead) / quarterDuration);
         const globalVolume = currentGlobalVolume();
+
+        // A throttled tab or a long main-thread stall can leave thousands of
+        // expired events behind. Resume from the current clock position instead
+        // of collapsing every missed hit into an audible burst.
+        if (targetStep - state.lastScheduledStep > MAX_CATCH_UP_STEPS) {
+            state.lastScheduledStep = targetStep;
+            state.lastScheduledQuarter = targetQuarter;
+            state.lastScheduledActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };
+        }
 
         for (let s = state.lastScheduledStep + 1; s <= targetStep; s++) {
             const hitTime = state.audioStartTime + s * stepDuration;
