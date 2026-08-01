@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.8 — 2026-07-31
+
+### Fixed
+- Sustained playback now creates fresh one-shot oscillator sources instead of retaining and attempting to reuse stopped Web Audio nodes
+
 ## v1.3.7 — 2026-07-31
 
 ### Fixed
