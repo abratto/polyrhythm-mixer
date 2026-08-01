@@ -51,7 +51,7 @@ function attachStepHandlers(btn, lane, voice, index, isSingle) {
     const getBtn = (i) => isSingle ? lane.buttons[i] : voice.buttons[i];
     btn.setAttribute('aria-pressed', String(!!getArr()[index]));
 
-    btn.addEventListener('pointerdown', (e) => {
+    btn.onpointerdown = (e) => {
         if (e.button === 2) return; // right-click handled by contextmenu
         e.preventDefault();
         if (e.shiftKey) {
@@ -67,18 +67,18 @@ function attachStepHandlers(btn, lane, voice, index, isSingle) {
         _activeDrag = { lane, value: val, anchorIndex: index };
         lane._anchorIndex = index;
         setStepValue(arr, index, val, btn);
-    });
+    };
 
-    btn.addEventListener('pointerenter', (e) => {
+    btn.onpointerenter = (e) => {
         if (!_activeDrag || _activeDrag.lane !== lane) return;
         if (e.buttons === 0) { _activeDrag = null; return; }
         setStepValue(getArr(), index, _activeDrag.value, btn);
-    });
+    };
 
-    btn.addEventListener('contextmenu', (e) => {
+    btn.oncontextmenu = (e) => {
         e.preventDefault();
         setStepValue(getArr(), index, false, btn);
-    });
+    };
 }
 
 /** Returns a human-readable ratio like "3/4" for the master-to-meter relationship. */
@@ -449,8 +449,13 @@ function resizeVoice(voice, newLength) {
  */
 export function resizeAllLanes(state, lanes) {
     lanes.master.voices.forEach(v => {
+        const oldLen = v.selected.length;
         resizeVoice(v, state.masterPhraseSteps);
-        copyCyclePattern(v, state.mainTeeth);
+        // Only propagate cycle-0 pattern into newly-grown cycles — never
+        // overwrite a cycle the user has already edited.
+        if (v.selected.length > oldLen) {
+            copyCyclePattern(v, state.mainTeeth, oldLen);
+        }
     });
     lanes.Aphrase.voices.forEach(v => resizeVoice(v, state.phraseStepsA));
     lanes.Bphrase.voices.forEach(v => resizeVoice(v, state.phraseStepsB));
@@ -462,12 +467,15 @@ export function resizeAllLanes(state, lanes) {
     if (lanes.Bphrase.voices[0]?.selected.length > 0) lanes.Bphrase.voices[0].selected[0] = true;
 }
 
-/** Copies the first cycle's pattern slice into each subsequent cycle. */
-function copyCyclePattern(voice, cycleLength) {
+/** Copies the first cycle's pattern slice into each subsequent cycle, skipping
+    any destination already covered by `skipBefore` (preserving user edits in
+    existing cycles when the phrase length grows). */
+function copyCyclePattern(voice, cycleLength, skipBefore = 0) {
     const total = voice.selected.length;
     if (cycleLength <= 0 || total <= cycleLength) return;
     for (let src = 0; src < cycleLength; src++) {
         for (let dest = src + cycleLength; dest < total; dest += cycleLength) {
+            if (dest < skipBefore) continue;
             voice.selected[dest] = voice.selected[src];
         }
     }
@@ -775,10 +783,8 @@ export function updateVoiceStepsForCycle(lane, state) {
             const active = !!voice.selected[actualIndex];
             btn.classList.toggle('active', active);
             btn.setAttribute('aria-pressed', String(active));
-            // Re-attach handler with correct actualIndex
-            btn.onpointerdown = null;
-            const cloneBtn = btn;
-            voice.buttons.push(cloneBtn);
+            attachStepHandlers(btn, lane, voice, actualIndex, false);
+            voice.buttons.push(btn);
         });
     });
 
