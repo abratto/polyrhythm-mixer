@@ -566,6 +566,20 @@ async function run() {
         await waitForApp();
         assert(same(await snapshot(), expectedCurrent), 'Current share URL should restore the current state.', { expected: expectedCurrent, actual: await snapshot() });
 
+        // Editing a later phrase cycle must update that cycle's absolute step,
+        // not the same displayed step in cycle one.
+        const aPhraseCycleRow = page.locator('.matrix-row', { has: page.locator('#meterAPhraseGrid') });
+        const aPhraseNextCycle = aPhraseCycleRow.locator('.cycle-nav-btn[title="Next cycle"]');
+        const aPhrasePreviousCycle = aPhraseCycleRow.locator('.cycle-nav-btn[title="Previous cycle"]');
+        await aPhraseNextCycle.click();
+        await clickStep('#meterAPhraseGrid', 1, 4);
+        await aPhrasePreviousCycle.click();
+        await aPhraseNextCycle.click();
+        assert(
+            await page.locator('#meterAPhraseGrid .voice-row:nth-child(1) .step-btn').nth(4).getAttribute('aria-pressed') === 'true',
+            'A step selected in a later phrase cycle should remain selected after navigating away and back.'
+        );
+
         const legacySaveName = `Legacy Save ${Date.now()}`;
         await page.evaluate(({ key, originalRaw, legacyName, payload }) => {
             const rhythms = originalRaw ? JSON.parse(originalRaw) : [];
