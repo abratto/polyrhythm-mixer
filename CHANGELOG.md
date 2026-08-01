@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.5 — 2026-07-31
+
+### Fixed
+- Reset Mixer now refreshes the Polyrhythm Beat Scheme summary to match the restored meter ratio
+
 ## v1.3.4 — 2026-07-31
 
 ### Fixed
