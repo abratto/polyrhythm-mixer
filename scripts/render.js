@@ -450,7 +450,8 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width) {
 export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCurrentButtons, buildLane }) {
     let lastTime = null;
     const isMobile = window.matchMedia('(pointer: coarse)').matches;
-    const MIN_FRAME_MS = isMobile ? 33 : 0;
+    const THROTTLED_FRAME_MS = 33;
+    const IDLE_FRAME_MS = 250;
     let lastDrawTime = 0;
 
     // Lane rebuild queue — defer DOM rebuilds from the animation loop to avoid
@@ -465,17 +466,29 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
 
     function animate(timestamp) {
         try {
+        const totalVoices = lanes.master.voices.length + lanes.Aphrase.voices.length + lanes.Bphrase.voices.length;
+        const hasActiveFlash = Object.values(state.flash).some(value => value > 0);
+
+        // Keep a stopped transport visually current without redrawing the full
+        // canvas at display refresh rate. Audio has its own scheduler.
+        if (!state.playing && !hasActiveFlash) {
+            lastTime = timestamp;
+            setTimeout(() => requestAnimationFrame(animate), IDLE_FRAME_MS);
+            return;
+        }
+
         // Dynamically resize canvas height as voices are added/removed.
         // The timeline Y pushes down when there are many master voices, so the
         // full pattern timeline grows down from timelineY + 55 + its own rows.
-        const totalVoices = lanes.master.voices.length + lanes.Aphrase.voices.length + lanes.Bphrase.voices.length;
         const approxTimelineBottom = Math.max(395, 205 + 145 + 10 + (lanes.master.voices.length - 1) * 10) + 55 + 58 + totalVoices * 18;
         if (canvas.height < approxTimelineBottom) {
             canvas.height = approxTimelineBottom;
         }
 
-        // On mobile, throttle rendering to ~30fps; audio is handled by scheduler
-        if (isMobile && timestamp - lastDrawTime < MIN_FRAME_MS) {
+        // Audio is handled by its own scheduler, so cap expensive visual states
+        // to ~30fps as well as coarse-pointer devices.
+        const isComplex = state.mainTeeth > 120 || totalVoices > 6;
+        if ((isMobile || isComplex) && timestamp - lastDrawTime < THROTTLED_FRAME_MS) {
             requestAnimationFrame(animate);
             return;
         }
