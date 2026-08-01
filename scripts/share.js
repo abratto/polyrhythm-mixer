@@ -198,7 +198,8 @@ function serializeState({ state, ui, lanes, channels }) {
             bwheel: {
                 s: channels.Bwheel.sound,
                 v: channels.Bwheel.volume,
-                u: channels.Bwheel.muted ? 1 : 0
+                u: channels.Bwheel.muted ? 1 : 0,
+                o: channels.Bwheel.soloed ? 1 : 0
             }
         }
     };
