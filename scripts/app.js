@@ -268,6 +268,7 @@ function resetMixerToStartingState() {
     syncAudioStartTime(state);
     resetAudioScheduler(state);
     refreshSilenced(channels);
+    updateBeatSchemeSummary();
 }
 
 function rebuildAllVoiceMixerStrips() {
