@@ -567,9 +567,14 @@ async function run() {
         await page.waitForFunction(() => document.querySelector('#savedRhythmsModal')?.classList.contains('hidden'));
         assert(same(await snapshot(), expectedCurrent), 'Fresh-page saved rhythm load should restore the current state.', { expected: expectedCurrent, actual: await snapshot() });
 
+        await page.evaluate(() => { globalThis.CompressionStream = undefined; });
         await page.locator('#shareBtn').click();
         await page.waitForFunction(() => globalThis.__lastCopiedShareUrl && globalThis.__lastCopiedShareUrl.includes('?s='));
         const currentShareUrl = await page.evaluate(() => globalThis.__lastCopiedShareUrl);
+        assert(
+            !new URL(currentShareUrl).searchParams.get('s').startsWith('z:'),
+            'Share links should fall back to uncompressed encoding without Compression Streams.'
+        );
         await page.goto(currentShareUrl, { waitUntil: 'networkidle' });
         await waitForApp();
         assert(same(await snapshot(), expectedCurrent), 'Current share URL should restore the current state.', { expected: expectedCurrent, actual: await snapshot() });
