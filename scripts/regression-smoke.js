@@ -344,6 +344,10 @@ async function run() {
 
         await page.locator('#resetBtn').click();
         await page.waitForFunction(() => document.querySelector('#rhythmA')?.value === '6' && document.querySelector('#rhythmB')?.value === '4');
+        assert(
+            await page.locator('#beatSchemeSummary').textContent() === '— 6 against 4',
+            'Reset Mixer should restore the beat-scheme summary to the starting meter ratio.'
+        );
 
         // --- Button highlight advancement ---
         // Enable audio so the animation and scheduler both run, then verify
