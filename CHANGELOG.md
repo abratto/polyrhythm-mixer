@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.6 — 2026-07-31
+
+### Fixed
+- Saved rhythms and share links now preserve Meter B Pulse solo state
+
 ## v1.3.5 — 2026-07-31
 
 ### Fixed
