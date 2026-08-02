@@ -350,6 +350,24 @@ async function run() {
             'Reset Mixer should restore the beat-scheme summary to the starting meter ratio.'
         );
 
+        // Verify wheel lane descriptions also reset to the starting meter ratio.
+        // These are updated by updateLaneHeader() inside buildGroupingLane() via
+        // buildAllLanes() during resetMixerToStartingState(). Checking the text
+        // content of the (possibly hidden) description elements is sufficient —
+        // textContent is readable regardless of the element's visibility.
+        const aWheelDescAfterReset = await page.locator('#aWheelDescription').textContent();
+        assert(
+            aWheelDescAfterReset.includes('6') && aWheelDescAfterReset.includes('12'),
+            'Reset Mixer should restore Meter A Pulse description to reflect the starting meter ratio (6 against 4).',
+            aWheelDescAfterReset
+        );
+        const bWheelDescAfterReset = await page.locator('#bWheelDescription').textContent();
+        assert(
+            bWheelDescAfterReset.includes('4') && bWheelDescAfterReset.includes('12'),
+            'Reset Mixer should restore Meter B Pulse description to reflect the starting meter ratio (6 against 4).',
+            bWheelDescAfterReset
+        );
+
         // --- Button highlight advancement ---
         // Enable audio so the animation and scheduler both run, then verify
         // step highlighting advances over time.

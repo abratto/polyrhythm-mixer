@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.12 — 2026-08-02
+
+### Fixed
+- Regression test now verifies that Reset Mixer restores the Meter A and Meter B Pulse lane descriptions to match the starting meter ratio (previously only `#beatSchemeSummary` was asserted; wheel lane `description()` content was unguarded by any test)
+
 ## v1.3.11 — 2026-07-31
 
 ### Fixed
