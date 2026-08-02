@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.3.12 — 2026-08-02
+
+### Fixed
+- Wheel lane titles (Meter A Pulse and Meter B Pulse) now display the current polyrhythm ratio (e.g. "Meter A Pulse — 6 against 4") and update immediately whenever the meter changes or the mixer is reset, making stale-state regressions immediately visible
+- Reset Mixer now rebuilds wheel lane step buttons and active-beat patterns to match the restored meter ratio — button count, group layout, and onset positions all reflect the new state
+
 ## v1.3.11 — 2026-07-31
 
 ### Fixed

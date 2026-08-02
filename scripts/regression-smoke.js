@@ -350,6 +350,34 @@ async function run() {
             'Reset Mixer should restore the beat-scheme summary to the starting meter ratio.'
         );
 
+        // Wheel lane titles must reflect the restored meter ratio (6 against 4).
+        // These labels are dynamic — they read from live state via buildAllLanes →
+        // buildGroupingLane → updateLaneHeader, so a stale title is a sign that
+        // buildAllLanes was not called (or was called before updateDerivedState).
+        assert(
+            await page.locator('#titleAWheel').textContent() === 'Meter A Pulse — 6 against 4',
+            'Reset Mixer should refresh the Meter A wheel lane title to the restored meter ratio.'
+        );
+        assert(
+            await page.locator('#titleBWheel').textContent() === 'Meter B Pulse — 6 against 4',
+            'Reset Mixer should refresh the Meter B wheel lane title to the restored meter ratio.'
+        );
+
+        // Wheel button counts must match the restored meter (LCM(6,4) = 12 teeth).
+        // After 17-against-18 (306 teeth) this catches stale lane content.
+        const wheelStepsAfterReset = await page.evaluate(() => ({
+            wheelA: document.querySelectorAll('#meterAWheelGrid .step-btn').length,
+            wheelB: document.querySelectorAll('#meterBWheelGrid .step-btn').length,
+            wheelAActive: document.querySelectorAll('#meterAWheelGrid .step-btn.active').length,
+            wheelBActive: document.querySelectorAll('#meterBWheelGrid .step-btn.active').length
+        }));
+        assert(same(wheelStepsAfterReset, {
+            wheelA: 12,
+            wheelB: 12,
+            wheelAActive: 6,
+            wheelBActive: 4
+        }), 'Reset Mixer should rebuild wheel lane buttons to match the restored 6-against-4 meter.', wheelStepsAfterReset);
+
         // --- Button highlight advancement ---
         // Enable audio so the animation and scheduler both run, then verify
         // step highlighting advances over time.
