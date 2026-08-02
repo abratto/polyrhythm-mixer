@@ -10,6 +10,6 @@
     "test:smoke:headed": "HEADFUL=1 node scripts/regression-smoke.js"
   },
   "devDependencies": {
-    "playwright": "^1.60.0"
+    "playwright": "^1.62.1"
   }
 }
