@@ -264,6 +264,16 @@ function resetMixerToStartingState() {
     resetPatterns(state, lanes);
     rebuildAllVoiceMixerStrips();
     buildAllLanes(lanes, state);
+
+    // Restore description visibility and info-button state to match the initial
+    // HTML (all hidden, aria-expanded="false"). This ensures that if the user
+    // had an info panel open before clicking Reset Mixer, the panel collapses and
+    // shows fresh content the next time it is opened instead of stale text.
+    Object.values(lanes).forEach(lane => {
+        if (lane.descriptionEl) lane.descriptionEl.hidden = true;
+        if (lane.infoBtn) lane.infoBtn.setAttribute('aria-expanded', 'false');
+    });
+
     state.mainAngle = 0;
     syncAudioStartTime(state);
     resetAudioScheduler(state);

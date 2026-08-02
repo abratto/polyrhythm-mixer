@@ -350,6 +350,79 @@ async function run() {
             'Reset Mixer should restore the beat-scheme summary to the starting meter ratio.'
         );
 
+        // Verify wheel lane descriptions contain the correct pulse-group text and are
+        // hidden after reset (matching the initial HTML state). Checking both textContent
+        // and the hidden attribute guards against stale content being revealed when the
+        // user later taps the "?" info button on a tablet or phone.
+        const aWheelDescAfterReset = await page.locator('#aWheelDescription').textContent();
+        assert(
+            aWheelDescAfterReset.includes('6') && aWheelDescAfterReset.includes('12'),
+            'Reset Mixer should restore Meter A Pulse description to reflect the starting meter ratio (6 against 4).',
+            aWheelDescAfterReset
+        );
+        assert(
+            await page.locator('#aWheelDescription').evaluate(el => el.hidden),
+            'Meter A Pulse description should be hidden after Reset Mixer.'
+        );
+
+        const bWheelDescAfterReset = await page.locator('#bWheelDescription').textContent();
+        assert(
+            bWheelDescAfterReset.includes('4') && bWheelDescAfterReset.includes('12'),
+            'Reset Mixer should restore Meter B Pulse description to reflect the starting meter ratio (6 against 4).',
+            bWheelDescAfterReset
+        );
+        assert(
+            await page.locator('#bWheelDescription').evaluate(el => el.hidden),
+            'Meter B Pulse description should be hidden after Reset Mixer.'
+        );
+
+        // Verify info buttons are collapsed after reset
+        assert(
+            await page.locator('#aWheelInfoBtn').getAttribute('aria-expanded') === 'false',
+            'Meter A info button should have aria-expanded="false" after Reset Mixer.'
+        );
+        assert(
+            await page.locator('#bWheelInfoBtn').getAttribute('aria-expanded') === 'false',
+            'Meter B info button should have aria-expanded="false" after Reset Mixer.'
+        );
+
+        // --- Description visible when reset is clicked (tablet/phone regression) ---
+        // Reproduce the exact scenario reported on tablet/phone: change the meter,
+        // open the wheel lane descriptions via the info buttons, then click Reset.
+        // After reset the descriptions must be hidden with the correct (restored) text
+        // so that re-opening them never reveals stale content from the previous ratio.
+        await setSelect('#rhythmA', 10);
+        await page.waitForFunction(() => document.querySelector('#rhythmA')?.value === '10');
+        // Open both wheel lane descriptions
+        await page.locator('#aWheelInfoBtn').click();
+        await page.locator('#bWheelInfoBtn').click();
+        assert(
+            !await page.locator('#aWheelDescription').evaluate(el => el.hidden),
+            'Meter A Pulse description should be visible after clicking the info button.'
+        );
+        // Reset while descriptions are visible
+        await page.locator('#resetBtn').click();
+        await page.waitForFunction(() => document.querySelector('#rhythmA')?.value === '6');
+        // Descriptions must be hidden after reset even if they were open before
+        assert(
+            await page.locator('#aWheelDescription').evaluate(el => el.hidden),
+            'Meter A Pulse description should be hidden after Reset Mixer even if it was open beforehand.'
+        );
+        assert(
+            await page.locator('#bWheelDescription').evaluate(el => el.hidden),
+            'Meter B Pulse description should be hidden after Reset Mixer even if it was open beforehand.'
+        );
+        // Re-open via info button and confirm fresh (non-stale) content
+        await page.locator('#aWheelInfoBtn').click();
+        const aWheelDescReopened = await page.locator('#aWheelDescription').textContent();
+        assert(
+            aWheelDescReopened.includes('6') && aWheelDescReopened.includes('12'),
+            'Meter A Pulse description should show the restored meter ratio text after being re-opened post-reset.',
+            aWheelDescReopened
+        );
+        // Collapse the descriptions before proceeding so subsequent tests start clean
+        await page.locator('#aWheelInfoBtn').click();
+
         // --- Button highlight advancement ---
         // Enable audio so the animation and scheduler both run, then verify
         // step highlighting advances over time.

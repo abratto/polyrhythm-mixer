@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.12 — 2026-08-02
+
+### Fixed
+- Reset Mixer now collapses all open wheel lane info panels and resets `aria-expanded` on their buttons, ensuring the correct (restored) meter description is shown when the panel is re-opened — previously, descriptions visible before reset could display stale pulse-group text on tablet and phone
+
 ## v1.3.11 — 2026-07-31
 
 ### Fixed
