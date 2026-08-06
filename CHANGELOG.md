@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.13 — 2026-08-05
+
+### Fixed
+- Muted button now stays bright red while the rest of the channel controls dim, matching the visual behavior of the solo button
+
 ## v1.3.12 — 2026-08-05
 
 ### Fixed
