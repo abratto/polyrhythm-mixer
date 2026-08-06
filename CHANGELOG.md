@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.3.12 — 2026-08-05
+
+### Fixed
+- Oscillator and gain nodes now disconnect from the audio graph after playback completes, preventing GC accumulation that caused audible glitches during extended sessions
+
 ## v1.3.11 — 2026-07-31
 
 ### Fixed
