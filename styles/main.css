@@ -1759,8 +1759,7 @@
            channel is soloed.
            Opacity is applied to individual children rather than the row itself
            so that the active mute/solo buttons stay bright inside a dimmed row. */
-        .voice-row.lane-muted .voice-steps-column,
-        .voice-row.lane-muted .lane-label-area {
+        .voice-row.lane-muted .voice-steps-column {
             filter: saturate(0.35);
         }
         .voice-row.lane-muted .step-btn {
@@ -1777,6 +1776,7 @@
         .voice-row.lane-muted .edit-btn,
         .voice-row.lane-muted .voice-nudge-control {
             opacity: 0.38;
+            filter: saturate(0.35);
         }
         .sequencer-container.lane-muted {
             opacity: 0.4;
