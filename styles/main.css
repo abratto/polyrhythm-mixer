@@ -1764,6 +1764,10 @@
         .voice-row.lane-muted .step-btn.active {
             box-shadow: none;
         }
+        .voice-row.lane-muted .mute-btn.muted {
+            opacity: 1;
+            filter: none;
+        }
         .sequencer-container.lane-muted {
             opacity: 0.4;
             filter: saturate(0.35);
