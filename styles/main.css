@@ -1756,17 +1756,27 @@
         }
 
         /* Dim/suppress a lane (or voice row) when its channel is muted or another
-           channel is soloed. */
-        .voice-row.lane-muted {
-            opacity: 0.38;
+           channel is soloed.
+           Opacity is applied to individual children rather than the row itself
+           so that the active mute/solo buttons stay bright inside a dimmed row. */
+        .voice-row.lane-muted .voice-steps-column,
+        .voice-row.lane-muted .lane-label-area {
             filter: saturate(0.35);
+        }
+        .voice-row.lane-muted .step-btn {
+            opacity: 0.25;
         }
         .voice-row.lane-muted .step-btn.active {
             box-shadow: none;
+            opacity: 0.35;
         }
-        .voice-row.lane-muted .mute-btn.muted {
-            opacity: 1;
-            filter: none;
+        .voice-row.lane-muted .voice-label,
+        .voice-row.lane-muted .remove-voice-btn,
+        .voice-row.lane-muted select.voice-instrument-select,
+        .voice-row.lane-muted .lane-volume,
+        .voice-row.lane-muted .edit-btn,
+        .voice-row.lane-muted .voice-nudge-control {
+            opacity: 0.38;
         }
         .sequencer-container.lane-muted {
             opacity: 0.4;
