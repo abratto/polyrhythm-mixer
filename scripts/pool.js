@@ -7,5 +7,7 @@
  * the browser reclaim it once its graph is no longer active.
  */
 export function acquireOsc(ctx) {
-    return ctx.createOscillator();
+    const osc = ctx.createOscillator();
+    osc.onended = () => osc.disconnect();
+    return osc;
 }

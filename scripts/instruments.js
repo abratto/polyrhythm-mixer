@@ -10,6 +10,14 @@ import { instrumentData } from './instrument-data.js';
 
 function acquireOsc(state) { return poolAcquireOsc(state.audioCtx); }
 
+function registerCleanup(osc, ...nodes) {
+    const prev = osc.onended;
+    osc.onended = () => {
+        if (prev) prev.call(osc);
+        nodes.forEach(n => n.disconnect());
+    };
+}
+
 /**
  * Available percussion instruments, sorted alphabetically by display label.
  * Each entry maps a short value key (used in serialization) to a human-readable label.
@@ -104,6 +112,7 @@ function playKick(state, now, vol) {    const p = instrumentData.kick.params.red
     gain.gain.exponentialRampToValueAtTime(0.001, now + p.decay);
     osc.connect(gain); gain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + p.decay);
+    registerCleanup(osc, gain);
 }
 
 /** Snare: triangle oscillator body + highpass noise for snap. */
@@ -116,6 +125,7 @@ function playSnare(state, now, vol) {
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
     osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.08);
+    registerCleanup(osc, oscGain);
 
     const noise = acquireNoiseSource(state);
     if (!noise) return;
@@ -183,6 +193,7 @@ function playTom(state, now, vol, channelName) {    const p = instrumentData.tom
     gain.gain.exponentialRampToValueAtTime(0.001, now + p.decay);
     osc.connect(gain); gain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + p.decay);
+    registerCleanup(osc, gain);
 }
 
 /** Handclap: multiple short noise bursts followed by a longer tail through a bandpass filter. */
@@ -225,6 +236,7 @@ function playAgogo(state, now, vol, channelName) {
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
     osc.connect(gain); gain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.18);
+    registerCleanup(osc, gain);
 }
 
 /** Crystal ping: high-frequency sine tone, pitch varies by channel. */
@@ -237,6 +249,7 @@ function playPing(state, now, vol, channelName) {
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
     osc.connect(gain); gain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.3);
+    registerCleanup(osc, gain);
 }
 
 /** Rimshot: short triangle oscillator click at 680 Hz. */
@@ -249,6 +262,7 @@ function playRimshot(state, now, vol) {
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
     osc.connect(gain); gain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.05);
+    registerCleanup(osc, gain);
 }
 
 /** Woodblock: sine oscillator with a brief downward pitch sweep. */
@@ -262,6 +276,7 @@ function playWoodblock(state, now, vol) {
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
     osc.connect(gain); gain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.1);
+    registerCleanup(osc, gain);
 }
 
 /** Cowbell: two detuned square oscillators through a bandpass filter. */
@@ -280,6 +295,8 @@ function playCowbell(state, now, vol) {
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
     osc1.connect(filter); osc2.connect(filter); filter.connect(gain); gain.connect(state.audioCtx.destination);
     osc1.start(now); osc2.start(now); osc1.stop(now + 0.25); osc2.stop(now + 0.25);
+    registerCleanup(osc1, filter, gain);
+    registerCleanup(osc2, filter, gain);
 }
 
 /** Tambourine: bandpass noise for jingle + sine ring for body. */
@@ -304,6 +321,7 @@ function playTambourine(state, now, vol) {
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
     osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.15);
+    registerCleanup(osc, oscGain);
 }
 
 /** Conga low (Tumba): deep open tone with additive overtones and parabolic pitch drop. */
@@ -406,6 +424,7 @@ function createCongaTone(state, freq, volume, waveType, target, startTime, durat
     gain.connect(target);
     osc.start(startTime);
     osc.stop(startTime + duration);
+    registerCleanup(osc, gain);
 }
 
 /** Helper: generates high-frequency burst for conga slap strokes. */
@@ -461,6 +480,7 @@ function playBongoLow(state, now, vol, channelName) {
     gain1.gain.exponentialRampToValueAtTime(0.001, now + decay);
     osc1.connect(gain1); gain1.connect(masterGain);
     osc1.start(now); osc1.stop(now + decay);
+    registerCleanup(osc1, gain1);
 
     // 2. First Overtone (triangle, inharmonic ratio 1.593)
     const osc2 = acquireOsc(state);
@@ -472,6 +492,7 @@ function playBongoLow(state, now, vol, channelName) {
     gain2.gain.exponentialRampToValueAtTime(0.001, now + (decay * p.overDecay));
     osc2.connect(gain2); gain2.connect(masterGain);
     osc2.start(now); osc2.stop(now + (decay * 0.45));
+    registerCleanup(osc2, gain2);
 
     // 3. Hand impact transient (bandpass noise)
     const noise = acquireNoiseSource(state);
@@ -508,6 +529,7 @@ function playBongoHigh(state, now, vol, channelName) {
     gain1.gain.exponentialRampToValueAtTime(0.001, now + decay);
     osc1.connect(gain1); gain1.connect(masterGain);
     osc1.start(now); osc1.stop(now + decay);
+    registerCleanup(osc1, gain1);
 
     const osc2 = acquireOsc(state);
     const gain2 = acquireGain(state);
@@ -518,6 +540,7 @@ function playBongoHigh(state, now, vol, channelName) {
     gain2.gain.exponentialRampToValueAtTime(0.001, now + (decay * p.overDecay));
     osc2.connect(gain2); gain2.connect(masterGain);
     osc2.start(now); osc2.stop(now + (decay * p.overDecay));
+    registerCleanup(osc2, gain2);
 
     const noise = acquireNoiseSource(state);
     if (noise) {
@@ -574,6 +597,7 @@ function playCrash(state, now, vol) {
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
     osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.6);
+    registerCleanup(osc, oscGain);
 }
 
 /** Ride cymbal: bandpass noise ping + sustained sine bell tone. */
@@ -598,6 +622,7 @@ function playRide(state, now, vol) {
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
     osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.4);
+    registerCleanup(osc, oscGain);
 }
 
 /** Claves: two slightly detuned sines creating a 5 Hz beat frequency for wooden click. */
@@ -613,6 +638,8 @@ function playClaves(state, now, vol) {
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
     osc1.connect(gain); osc2.connect(gain); gain.connect(state.audioCtx.destination);
     osc1.start(now); osc2.start(now); osc1.stop(now + 0.08); osc2.stop(now + 0.08);
+    registerCleanup(osc1, gain);
+    registerCleanup(osc2, gain);
 }
 
 /** Djembe: sine + triangle mix with deep downward pitch sweep, frequency varies by channel. */
@@ -635,6 +662,7 @@ function playDjembe(state, now, vol, channelName) {
     subGain.gain.exponentialRampToValueAtTime(0.001, now + p.bassDecay);
     subOsc.connect(subGain); subGain.connect(masterGain);
     subOsc.start(now); subOsc.stop(now + bassDecay);
+    registerCleanup(subOsc, subGain);
 
     // 2. High skin resonance (triangle for stiffness)
     const skinOsc = acquireOsc(state);
@@ -647,6 +675,7 @@ function playDjembe(state, now, vol, channelName) {
     skinGain.gain.exponentialRampToValueAtTime(0.001, now + p.skinDecay);
     skinOsc.connect(skinGain); skinGain.connect(masterGain);
     skinOsc.start(now); skinOsc.stop(now + p.skinDecay);
+    registerCleanup(skinOsc, skinGain);
 
     // 3. Slap transient (bright bandpass noise)
     const noise = acquireNoiseSource(state);
@@ -683,6 +712,7 @@ function playFrameDrum(state, now, vol, channelName) {
     gain1.gain.exponentialRampToValueAtTime(0.001, now + decay);
     osc1.connect(gain1); gain1.connect(masterGain);
     osc1.start(now); osc1.stop(now + decay);
+    registerCleanup(osc1, gain1);
 
     // 2. Inharmonic edge overtone (Bessel ratio 1.593)
     const osc2 = acquireOsc(state);
@@ -694,6 +724,7 @@ function playFrameDrum(state, now, vol, channelName) {
     gain2.gain.exponentialRampToValueAtTime(0.001, now + (decay * 0.6));
     osc2.connect(gain2); gain2.connect(masterGain);
     osc2.start(now); osc2.stop(now + (decay * 0.6));
+    registerCleanup(osc2, gain2);
 
     // 3. Flesh transient (mid-range papery thud)
     const noise = acquireNoiseSource(state);
@@ -722,6 +753,7 @@ function playTimbale(state, now, vol, channelName) {
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
     osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.08);
+    registerCleanup(osc, oscGain);
 
     const noise = acquireNoiseSource(state);
     if (!noise) return;
@@ -757,6 +789,7 @@ function playCastanets(state, now, vol) {
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
     osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.04);
+    registerCleanup(osc, oscGain);
 }
 
 /** EDM synth kick: sub-bass sine + noise transient + mid-range click. */
@@ -771,6 +804,7 @@ function playSynthKick(state, now, vol) {
     subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
     subOsc.connect(subGain); subGain.connect(state.audioCtx.destination);
     subOsc.start(now); subOsc.stop(now + 0.25);
+    registerCleanup(subOsc, subGain);
 
     const noise = acquireNoiseSource(state);
     if (!noise) return;
@@ -792,6 +826,7 @@ function playSynthKick(state, now, vol) {
     midGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
     midOsc.connect(midGain); midGain.connect(state.audioCtx.destination);
     midOsc.start(now); midOsc.stop(now + 0.06);
+    registerCleanup(midOsc, midGain);
 }
 
 /** Electronic snare: sine body + noise through formant bandpass filter. */
@@ -805,6 +840,7 @@ function playElectronicSnare(state, now, vol) {
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
     osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.1);
+    registerCleanup(osc, oscGain);
 
     const noise = acquireNoiseSource(state);
     if (!noise) return;
@@ -856,6 +892,7 @@ function playSlap(state, now, vol) {
     oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
     osc.connect(oscGain); oscGain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.05);
+    registerCleanup(osc, oscGain);
 }
 
 function playBataTonalDrum(state, now, vol, { fundamental, overtoneRatio, chachaRatio, slapFilterFreq, rootDecay, overtoneDecay, chachaDecay, slapDecay }) {
@@ -872,6 +909,7 @@ function playBataTonalDrum(state, now, vol, { fundamental, overtoneRatio, chacha
     rootGain.gain.exponentialRampToValueAtTime(0.001, now + rootDecay);
     rootOsc.connect(rootGain); rootGain.connect(masterGain);
     rootOsc.start(now); rootOsc.stop(now + rootDecay + 0.05);
+    registerCleanup(rootOsc, rootGain);
 
     // 2. Shell overtone — inharmonic Bessel ratio, fast decay
     const overtoneOsc = acquireOsc(state);
@@ -882,6 +920,7 @@ function playBataTonalDrum(state, now, vol, { fundamental, overtoneRatio, chacha
     overtoneGain.gain.exponentialRampToValueAtTime(0.001, now + overtoneDecay);
     overtoneOsc.connect(overtoneGain); overtoneGain.connect(masterGain);
     overtoneOsc.start(now); overtoneOsc.stop(now + overtoneDecay + 0.05);
+    registerCleanup(overtoneOsc, overtoneGain);
 
     // 3. Chachá sympathetic — delayed swell from coupled head
     const chachaOsc = acquireOsc(state);
@@ -893,6 +932,7 @@ function playBataTonalDrum(state, now, vol, { fundamental, overtoneRatio, chacha
     chachaGain.gain.exponentialRampToValueAtTime(0.001, now + chachaDecay);
     chachaOsc.connect(chachaGain); chachaGain.connect(masterGain);
     chachaOsc.start(now); chachaOsc.stop(now + chachaDecay + 0.05);
+    registerCleanup(chachaOsc, chachaGain);
 
     // 4. Slap — hand impact transient
     createBataSlap(state, vol * 0.6, masterGain, now, slapDecay, slapFilterFreq);
@@ -1023,6 +1063,7 @@ function playChachaSlap(state, now, vol, { chachaFundamental, bodyOvertones, enu
     bodyGain.gain.exponentialRampToValueAtTime(0.001, now + bodyDecay);
     bodyOsc.connect(bodyGain); bodyGain.connect(masterGain);
     bodyOsc.start(now); bodyOsc.stop(now + bodyDecay + 0.05);
+    registerCleanup(bodyOsc, bodyGain);
 
     bodyOvertones.forEach(ratio => {
         const overtoneJitter = 0.85 + Math.random() * 0.3;
@@ -1034,6 +1075,7 @@ function playChachaSlap(state, now, vol, { chachaFundamental, bodyOvertones, enu
         gain.gain.exponentialRampToValueAtTime(0.001, now + bodyDecay * 0.7);
         osc.connect(gain); gain.connect(masterGain);
         osc.start(now); osc.stop(now + bodyDecay * 0.7 + 0.05);
+        registerCleanup(osc, gain);
     });
 
     // 3. Enú coupling — low-pass sine at enú fundamental, micro-delayed, smoothed attack
@@ -1047,6 +1089,7 @@ function playChachaSlap(state, now, vol, { chachaFundamental, bodyOvertones, enu
     couplingGain.gain.exponentialRampToValueAtTime(0.001, couplingDelay + couplingDecay);
     couplingOsc.connect(couplingGain); couplingGain.connect(masterGain);
     couplingOsc.start(couplingDelay); couplingOsc.stop(couplingDelay + couplingDecay + 0.05);
+    registerCleanup(couplingOsc, couplingGain);
 }
 
 /** Batá low press (Iyá): heavy muted thud, semitone pitch bend, slower sweep. */
@@ -1099,6 +1142,7 @@ function playBataPress(state, now, vol, { fundamental, overtoneFreq, pitchBendRa
     rootOsc.frequency.exponentialRampToValueAtTime(fundamental, now + pitchBendDuration);
     rootOsc.connect(filter);
     rootOsc.start(now); rootOsc.stop(now + ampDecay + 0.02);
+    registerCleanup(rootOsc, filter);
 
     const overtoneOsc = acquireOsc(state);
     overtoneOsc.type = 'sine';
@@ -1109,6 +1153,7 @@ function playBataPress(state, now, vol, { fundamental, overtoneFreq, pitchBendRa
 
     filter.connect(masterGain);
     overtoneOsc.start(now); overtoneOsc.stop(now + ampDecay + 0.02);
+    registerCleanup(overtoneOsc, filter);
 }
 
 /** Helper: creates an individual frequency component for Batá drums. */
@@ -1124,6 +1169,7 @@ function createBataTone(state, freq, volume, targetNode, startTime, duration) {
     gain.connect(targetNode);
     osc.start(startTime);
     osc.stop(startTime + duration);
+    registerCleanup(osc, gain);
 }
 
 /** Helper: generates a hand-impact slap transient using white noise through a high-pass filter. */
@@ -1157,6 +1203,7 @@ function playCajonBassTraditional(state, now, vol) {
     cavityGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
     cavityOsc.connect(cavityGain); cavityGain.connect(masterGain);
     cavityOsc.start(now); cavityOsc.stop(now + 0.35);
+    registerCleanup(cavityOsc, cavityGain);
 
     const woodOsc = acquireOsc(state);
     const woodGain = acquireGain(state);
@@ -1166,6 +1213,7 @@ function playCajonBassTraditional(state, now, vol) {
     woodGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
     woodOsc.connect(woodGain); woodGain.connect(masterGain);
     woodOsc.start(now); woodOsc.stop(now + 0.12);
+    registerCleanup(woodOsc, woodGain);
 
     const noise = acquireNoiseSource(state);
     if (noise) {
@@ -1194,6 +1242,7 @@ function playCajonSlapTraditional(state, now, vol) {
     edgeGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
     edgeOsc.connect(edgeGain); edgeGain.connect(masterGain);
     edgeOsc.start(now); edgeOsc.stop(now + 0.08);
+    registerCleanup(edgeOsc, edgeGain);
 
     const crackNoise = acquireNoiseSource(state);
     if (crackNoise) {
@@ -1243,6 +1292,7 @@ function playCajonSlapSnare(state, now, vol) {
     edgeGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
     edgeOsc.connect(edgeGain); edgeGain.connect(masterGain);
     edgeOsc.start(now); edgeOsc.stop(now + 0.08);
+    registerCleanup(edgeOsc, edgeGain);
 
     const crackNoise = acquireNoiseSource(state);
     if (crackNoise) {
@@ -1340,6 +1390,7 @@ function playTalkingDrum(state, now, vol, channelName) {
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
     osc.connect(gain); gain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.24);
+    registerCleanup(osc, gain);
 
     const noise = acquireNoiseSource(state);
     if (!noise) return;
@@ -1369,6 +1420,7 @@ function playTempleBlock(state, now, vol, channelName) {
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
     osc.connect(filter); filter.connect(gain); gain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.1);
+    registerCleanup(osc, filter, gain);
 }
 
 /** Triangle: bright metallic ring with a pure sustained decay. */
@@ -1392,6 +1444,7 @@ function playUdu(state, now, vol, channelName) {
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
     osc.connect(filter); filter.connect(gain); gain.connect(state.audioCtx.destination);
     osc.start(now); osc.stop(now + 0.3);
+    registerCleanup(osc, filter, gain);
 
     const air = acquireNoiseSource(state);
     if (!air) return;
@@ -1417,6 +1470,7 @@ function createMetalBellStrike(state, frequency, startTime, volume, duration) {
         gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration * (1 - partialIndex * 0.18));
         osc.connect(gain); gain.connect(state.audioCtx.destination);
         osc.start(startTime); osc.stop(startTime + duration);
+        registerCleanup(osc, gain);
     });
 }
 
