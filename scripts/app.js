@@ -25,8 +25,8 @@ import { startAnimation } from './render.js';
 const STARTING_MIXER_STATE = {
     A: 6,
     B: 4,
-    phraseCyclesA: 2,
-    phraseCyclesB: 2,
+    phraseCyclesA: 1,
+    phraseCyclesB: 1,
     masterPhraseCycles: 1,
     tempo: 90,
     masterVolume: 80,

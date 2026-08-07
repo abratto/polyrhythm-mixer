@@ -106,8 +106,8 @@ export function createVoiceChannel(container, voiceIndex, prefix, defaults, gain
 /** Default instruments for each voice channel prefix. */
 const voiceDefaults = {
     master: 'kick',
-    A: 'woodblock',
-    B: 'cowbell'
+    A: 'tambourine',
+    B: 'tambourine'
 };
 
 /** Adds a new voice channel to a multi-voice group. */

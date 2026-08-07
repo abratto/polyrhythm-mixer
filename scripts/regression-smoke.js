@@ -143,20 +143,35 @@ async function run() {
                 globalThis.__audioParamValues.push(value);
             }
         };
+        // Tag GainNode gain params so the volume assertion only samples actual
+        // output gains, not filter Q / frequency values that also fall in (0,1].
+        const tagGainParams = (Ctor) => {
+            if (!Ctor || !Ctor.prototype || !Ctor.prototype.createGain) return;
+            const originalCreateGain = Ctor.prototype.createGain;
+            Ctor.prototype.createGain = function (...args) {
+                const node = originalCreateGain.apply(this, args);
+                if (node && node.gain) node.gain.__isGainParam = true;
+                return node;
+            };
+        };
+        tagGainParams(globalThis.AudioContext);
+        tagGainParams(globalThis.webkitAudioContext);
+        tagGainParams(globalThis.OfflineAudioContext);
+        tagGainParams(globalThis.webkitOfflineAudioContext);
         if (globalThis.AudioParam) {
             const originalSetValueAtTime = globalThis.AudioParam.prototype.setValueAtTime;
             const originalLinearRampToValueAtTime = globalThis.AudioParam.prototype.linearRampToValueAtTime;
             const originalExponentialRampToValueAtTime = globalThis.AudioParam.prototype.exponentialRampToValueAtTime;
             globalThis.AudioParam.prototype.setValueAtTime = function (value, startTime) {
-                recordAudioParamValue(value);
+                if (this.__isGainParam) recordAudioParamValue(value);
                 return originalSetValueAtTime.call(this, value, startTime);
             };
             globalThis.AudioParam.prototype.linearRampToValueAtTime = function (value, endTime) {
-                recordAudioParamValue(value);
+                if (this.__isGainParam) recordAudioParamValue(value);
                 return originalLinearRampToValueAtTime.call(this, value, endTime);
             };
             globalThis.AudioParam.prototype.exponentialRampToValueAtTime = function (value, endTime) {
-                recordAudioParamValue(value);
+                if (this.__isGainParam) recordAudioParamValue(value);
                 return originalExponentialRampToValueAtTime.call(this, value, endTime);
             };
         }
@@ -269,7 +284,7 @@ async function run() {
         assert(same(initial.active.A1, [0]), 'Meter A voice 1 should start on pulse 1.', initial.active.A1);
         assert(same(initial.active.B1, [0]), 'Meter B voice 1 should start on pulse 1.', initial.active.B1);
         assert(initial.mixer.masterVolInLane, 'Master wheel volume fader should be colocated in the Master lane toolbar.', initial.mixer);
-        assert(initial.voiceLabels.master1 === 'Bass Drum (Kick)' && initial.voiceLabels.A1 === 'Woodblock Clack' && initial.voiceLabels.B1 === 'Analog Cowbell', 'Voice rows should display their default mixer instruments.', initial.voiceLabels);
+        assert(initial.voiceLabels.master1 === 'Bass Drum (Kick)' && initial.voiceLabels.A1 === 'Tambourine' && initial.voiceLabels.B1 === 'Tambourine', 'Voice rows should display their default mixer instruments.', initial.voiceLabels);
         assert(initial.helpLeads.length === 4, 'Help modal should expose four bold lead sentences.', initial.helpLeads);
         assert(await page.locator('#resetBtn').textContent() === 'Reset Mixer', 'Reset button should clearly describe full mixer reset.');
         const bataOptions = await page.locator('#soundDriver option').evaluateAll(options => options
