@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.5.0 — 2026-08-05
+
+### Changed
+- Reset Mixer now defaults the Meter A and Meter B phrase tracks to a single cycle (was 2) and sets their first voice to the tambourine sound. The phrase-length selectors also default to 1 cycle so the app starts in the same state it resets to.
+
 ## v1.4.0 — 2026-08-05
 
 ### Added
