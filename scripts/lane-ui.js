@@ -572,25 +572,28 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     row.className = 'voice-row';
     row.dataset.voiceIndex = voiceIndex;
 
-    // Voice label area — two rows: row1 (voice + mix) and row2 (edit + nudge).
+    // Voice label area — control surface grouped into three clusters so the
+    // mixer sub-panel (mix) reads distinctly from identity and pattern ops.
     const labelArea = document.createElement('div');
     labelArea.className = 'lane-label-area';
-    labelArea.style.flexDirection = 'column';
-    labelArea.style.flexWrap = 'nowrap';
-    labelArea.style.overflowX = 'visible';
-    labelArea.style.alignItems = 'flex-start';
 
-    const row1 = document.createElement('div');
-    row1.style.display = 'flex';
-    row1.style.alignItems = 'center';
-    row1.style.gap = '6px';
-    row1.style.flexWrap = 'wrap';
+    // Identity group: voice name, instrument, remove.
+    const identityGroup = document.createElement('div');
+    identityGroup.className = 'voice-control-group identity-group';
+
+    // Mix group: volume + solo/mute — the mixer sub-panel.
+    const mixGroup = document.createElement('div');
+    mixGroup.className = 'voice-control-group mix-group';
+
+    // Pattern group: clear, edit ops, nudge.
+    const patternGroup = document.createElement('div');
+    patternGroup.className = 'voice-control-group pattern-group';
 
     const label = document.createElement('span');
     label.className = 'voice-label';
     label.textContent = `Voice ${voiceIndex + 1}`;
     label.style.color = lane.color;
-    row1.appendChild(label);
+    identityGroup.appendChild(label);
 
     // Remove button (not for first voice)
     if (voiceIndex > 0) {
@@ -605,10 +608,10 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
             }
             buildMultiVoiceLane(lane, state);
         });
-        row1.appendChild(removeBtn);
+        identityGroup.appendChild(removeBtn);
     }
 
-    // Nudge control — built here, appended to row2.
+    // Nudge control — built here, lands in the pattern group.
     let nudgeControl = null;
     if (lane.allowVoiceNudge) {
         nudgeControl = document.createElement('div');
@@ -641,14 +644,16 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     // Per-voice instrument selector
     const instrumentSelect = buildVoiceInstrumentSelect(lane, voice, voiceIndex);
     instrumentSelect.title = `Voice ${voiceIndex + 1} instrument`;
+    identityGroup.appendChild(instrumentSelect);
 
-    // Per-voice Solo/Mute
+    // Per-voice Solo/Mute — mixer sub-panel.
     let soloMuteControls = null;
     if (voice.channel) {
         soloMuteControls = createSoloMuteControls(voice.channel, `solo_${lane.channelPrefix}_${voiceIndex}`, `mute_${lane.channelPrefix}_${voiceIndex}`);
+        mixGroup.appendChild(soloMuteControls);
     }
 
-    // Per-voice volume fader
+    // Per-voice volume fader — mixer sub-panel.
     let volWrap = null;
     if (voice.channel) {
         volWrap = document.createElement('div');
@@ -667,9 +672,10 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         volWrap.append(volLabel, vol);
         voice.channel.volEl = vol;
         vol.addEventListener('input', () => { voice.channel.volume = parseFloat(vol.value); });
+        mixGroup.appendChild(volWrap);
     }
 
-    // Clr button for this voice (separate from the edit group, goes in row1)
+    // Clr button for this voice — pattern group.
     let clrBtn = null;
     if (voice.channel) {
         clrBtn = document.createElement('button');
@@ -678,25 +684,14 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         clrBtn.textContent = 'Clear';
         clrBtn.title = `Clear voice ${voiceIndex + 1}`;
         clrBtn.addEventListener('click', () => clearVoice(lane, lane.voices[voiceIndex]));
+        patternGroup.appendChild(clrBtn);
     }
 
-    // Row 1: Voice n, (remove), instrument, Vol, Solo, Mute, Clr
-    if (instrumentSelect) row1.appendChild(instrumentSelect);
-    if (volWrap) row1.appendChild(volWrap);
-    if (soloMuteControls) row1.appendChild(soloMuteControls);
-    if (clrBtn) row1.appendChild(clrBtn);
+    // Assemble pattern group (clear + edit ops + nudge).
+    if (editControls) patternGroup.appendChild(editControls);
+    if (nudgeControl) patternGroup.appendChild(nudgeControl);
 
-    // Row 2: Rnd, Rev, Copy, Paste, Nudge
-    const row2 = document.createElement('div');
-    row2.style.display = 'flex';
-    row2.style.alignItems = 'center';
-    row2.style.gap = '6px';
-    row2.style.flexWrap = 'wrap';
-    if (editControls) row2.appendChild(editControls);
-    if (nudgeControl) row2.appendChild(nudgeControl);
-
-    labelArea.appendChild(row1);
-    labelArea.appendChild(row2);
+    labelArea.append(identityGroup, mixGroup, patternGroup);
     row.appendChild(labelArea);
 
 

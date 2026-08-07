@@ -1417,10 +1417,35 @@
         .lane-label-area {
             display: flex;
             align-items: center;
-            gap: 6px;
-            flex-wrap: nowrap;
-            overflow-x: auto;
+            gap: 8px;
+            flex-wrap: wrap;
             width: 100%;
+        }
+        .voice-control-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        /* The mixer sub-panel reads as a distinct chip tray so vol/solo/mute
+           are visually separated from identity and pattern operations. */
+        .voice-control-group.mix-group {
+            padding: 3px 6px;
+            background: #14141c;
+            border: 1px solid #2d2d3d;
+            border-radius: 6px;
+        }
+        /* Mid-width: stack the control clusters vertically with clear spacing
+           so the mixer sub-panel stays distinct without horizontal crowding. */
+        @media (max-width: 1024px) {
+            .lane-label-area {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 6px;
+            }
+            .voice-control-group.mix-group {
+                align-self: flex-start;
+            }
         }
         .voice-nudge-control {
             display: flex;
@@ -1473,10 +1498,10 @@
             background-color: #3a3a4c;
         }
         .voice-label {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
             flex-shrink: 0;
         }
         .voice-steps-column {
