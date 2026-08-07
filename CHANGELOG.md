@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.4.0 — 2026-08-05
+
+### Added
+- Voice-lane controls are now grouped into Identity (voice label, instrument, remove), Mix (volume, solo, mute — shown as a distinct bordered tray), and Pattern (clear, randomize, reverse, copy, paste, nudge) clusters for clearer visual separation
+- Mid-width (≤1024px) layout stacks the control clusters vertically so the mixer sub-panel stays distinct on tablets and narrow windows
+
 ## v1.3.13 — 2026-08-05
 
 ### Fixed
