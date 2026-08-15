@@ -641,23 +641,28 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     // Per-voice edit controls (Rnd/Rev/Copy)
     const editControls = createVoiceEditControls(lane, voiceIndex);
 
-    // Per-voice instrument selector
+    // Per-voice instrument selector — placed inline at the left of the step grid
+    // (not in the rail) so the instrument and its rhythm read on one row.
     const instrumentSelect = buildVoiceInstrumentSelect(lane, voice, voiceIndex);
     instrumentSelect.title = `Voice ${voiceIndex + 1} instrument`;
-    identityGroup.appendChild(instrumentSelect);
+    instrumentSelect.classList.add('voice-instrument-inline');
 
-    // Per-voice Solo/Mute — mixer sub-panel.
+    // Per-voice Solo/Mute — own row in the mixer sub-panel.
     let soloMuteControls = null;
     if (voice.channel) {
         soloMuteControls = createSoloMuteControls(voice.channel, `solo_${lane.channelPrefix}_${voiceIndex}`, `mute_${lane.channelPrefix}_${voiceIndex}`);
-        mixGroup.appendChild(soloMuteControls);
+        const soloMuteRow = document.createElement('div');
+        soloMuteRow.className = 'mix-row';
+        soloMuteRow.appendChild(soloMuteControls);
+        mixGroup.appendChild(soloMuteRow);
     }
 
-    // Per-voice volume fader — mixer sub-panel.
+    // Per-voice volume fader — own row in the mixer sub-panel (inserted first so
+    // Volume sits above Solo/Mute).
     let volWrap = null;
     if (voice.channel) {
         volWrap = document.createElement('div');
-        volWrap.className = 'lane-volume';
+        volWrap.className = 'lane-volume mix-row';
         const volLabel = document.createElement('span');
         volLabel.className = 'lane-volume-label';
         volLabel.textContent = 'Vol';
@@ -672,7 +677,7 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         volWrap.append(volLabel, vol);
         voice.channel.volEl = vol;
         vol.addEventListener('input', () => { voice.channel.volume = parseFloat(vol.value); });
-        mixGroup.appendChild(volWrap);
+        mixGroup.insertBefore(volWrap, mixGroup.firstChild);
     }
 
     // Clr button for this voice — pattern group.
@@ -693,8 +698,9 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
 
     labelArea.append(identityGroup, mixGroup, patternGroup);
     row.appendChild(labelArea);
-
-
+    // Instrument selector sits inline at the left of the step grid (same row as
+    // the rhythm it drives), so voice — instrument — pattern read on one line.
+    if (instrumentSelect) row.insertBefore(instrumentSelect, null);
 
     const stepsColumn = document.createElement('div');
     stepsColumn.className = 'voice-steps-column';

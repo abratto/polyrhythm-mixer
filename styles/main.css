@@ -25,7 +25,7 @@
             border: 1px solid #27273a;
             box-shadow: 0 8px 20px rgba(0,0,0,0.7);
             margin-bottom: 12px;
-            max-width: 960px;
+            max-width: 1440px;
             width: 100%;
             box-sizing: border-box;
         }
@@ -1402,9 +1402,9 @@
         }
         .voice-row {
             display: flex;
-            flex-direction: column;
-            align-items: stretch;
-            gap: 6px;
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 12px;
             width: 100%;
             margin-bottom: 8px;
             padding-top: 8px;
@@ -1414,37 +1414,84 @@
             border-top: 1px solid #22222b;
             padding-top: 4px;
         }
+        /* Left control rail: fixed-width so every voice's step grid aligns
+           vertically (the rail is the Y-axis of the matrix). Controls stack as a
+           clean vertical panel; no wrapping into the grid. Subtly raised panel
+           background separates it from the step grid. */
         .lane-label-area {
             display: flex;
-            align-items: center;
+            flex-direction: column;
+            align-items: stretch;
             gap: 8px;
-            flex-wrap: wrap;
-            width: 100%;
+            flex: 0 0 260px;
+            width: 260px;
+            flex-wrap: nowrap;
+            background: #12121a;
+            border: 1px solid #2a2a38;
+            border-radius: 6px;
+            padding: 8px;
         }
         .voice-control-group {
             display: flex;
-            align-items: center;
+            flex-direction: column;
+            align-items: stretch;
             gap: 6px;
+            flex-wrap: nowrap;
+        }
+        .voice-control-group.identity-group {
+            flex-direction: row;
+            align-items: center;
             flex-wrap: wrap;
+            gap: 6px;
         }
         /* The mixer sub-panel reads as a distinct chip tray so vol/solo/mute
            are visually separated from identity and pattern operations. */
         .voice-control-group.mix-group {
-            padding: 3px 6px;
+            padding: 4px 6px;
             background: #14141c;
             border: 1px solid #2d2d3d;
             border-radius: 6px;
         }
-        /* Mid-width: stack the control clusters vertically with clear spacing
-           so the mixer sub-panel stays distinct without horizontal crowding. */
+        /* Step grid: its own subtly-tinted, bordered panel so the rail and grid
+           read as two distinct boxes (no shared divider needed). */
+        .voice-steps-column {
+            background: #0e1118;
+            border: 1px solid #23232f;
+            border-radius: 6px;
+            padding: 8px 10px;
+        }
+        /* Instrument selector sits inline at the left of the step grid, on the
+           same row as the rhythm it drives. Fixed width keeps every voice's step
+           grid aligned vertically. */
+        .voice-instrument-inline {
+            flex: 0 0 180px;
+            width: 180px;
+            align-self: flex-start;
+            margin-top: 2px;
+        }
+        /* Each mixer sub-row (Volume, Solo/Mute) gets its own full-width line. */
+        .mix-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            width: 100%;
+        }
+        /* Narrow: fall back to stacked (rail above grid) so the step grid
+           keeps its full width instead of being squeezed by the rail. */
         @media (max-width: 1024px) {
-            .lane-label-area {
+            .voice-row {
                 flex-direction: column;
-                align-items: stretch;
                 gap: 6px;
             }
+            .lane-label-area {
+                flex: 1 1 auto;
+                width: 100%;
+                flex-direction: row;
+                flex-wrap: wrap;
+                align-items: center;
+            }
             .voice-control-group.mix-group {
-                align-self: flex-start;
+                align-self: auto;
             }
         }
         .voice-nudge-control {
@@ -1697,7 +1744,7 @@
             border: 1px solid #232332;
             border-radius: 8px;
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
-            max-width: 960px;
+            max-width: 1440px;
             width: 100%;
             margin-left: auto;
             margin-right: auto;
@@ -1865,9 +1912,10 @@
             color: #fff;
         }
         .voice-edit-controls {
-            display: inline-flex;
+            display: flex;
+            flex-wrap: wrap;
             gap: 3px;
-            margin-left: 4px;
+            width: 100%;
         }
         .edit-btn-sm {
             padding: 0 6px;
@@ -1875,14 +1923,16 @@
         }
 
         /* Uniform button sizing inside voice rows -- all buttons in the lane-label-area
-           get the same height, padding, and font-size for a clean horizontal line. */
+           get the same height and compact padding so they wrap cleanly within the
+           fixed-width rail instead of overflowing its bounding box. */
         .lane-label-area button,
         .lane-label-area .edit-btn-sm {
             height: 26px;
-            padding: 0 10px;
-            font-size: 11px;
+            padding: 0 6px;
+            font-size: 10px;
             line-height: 1;
             box-sizing: border-box;
+            min-width: 0;
         }
         /* Icon-only buttons stay square (nudge arrows, nudge reset, remove). */
         .lane-label-area .voice-nudge-btn,
