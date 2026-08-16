@@ -509,6 +509,11 @@
         .pulse-select-line .pulse-select-name {
             font-weight: 700;
         }
+        /* The help "?" rides the same row as the meter name + pulse picker (right-aligned)
+           so the lane no longer needs a dedicated header row. */
+        .pulse-select-line .lane-info-btn {
+            margin-left: auto;
+        }
         .lane-title-group {
             display: flex;
             align-items: center;
