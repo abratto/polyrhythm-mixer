@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.7.0 — 2026-08-16
+
+### Changed
+- The Meter A/B Pulse "?" help toggle now shares the row with the meter name and pulse picker instead of occupying its own header row, reclaiming vertical space.
+
 ## v1.6.0 — 2026-08-16
 
 ### Added
