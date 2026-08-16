@@ -455,8 +455,8 @@
             gap: 8px;
             flex-wrap: wrap;
         }
-        /* Meter A/B ratio selectors relocated into the pulse lane headers so the
-           control that defines each pulse grid sits right beside its lane. */
+        /* Inline, row-oriented meter selectors (pulse + phrase length). The colored
+           border/label variants below tint each meter. */
         .lane-meter-select {
             flex-direction: row;
             align-items: center;
@@ -496,6 +496,18 @@
         }
         .meter-master-select label {
             color: #ffb866;
+        }
+        /* Meter A/B Pulse selector sits inline just above its own step sequencer,
+           reading e.g. "Meter A [16]". */
+        .pulse-select-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 4px 0 8px;
+            font-size: 13px;
+        }
+        .pulse-select-line .pulse-select-name {
+            font-weight: 700;
         }
         .lane-title-group {
             display: flex;
@@ -556,6 +568,15 @@
         }
         .master-beat-label {
             align-items: baseline;
+        }
+        /* Lay the Master Beat reference strip out as a horizontal row (label box |
+           beat cells), consistent with the other lanes. In the default column
+           layout the .lane-label-area's `flex: 0 0 260px` resolves to a 260px
+           HEIGHT, leaving a tall empty box — this collapses it to one line. */
+        .master-beat-row {
+            flex-direction: row;
+            align-items: flex-start;
+            gap: 12px;
         }
         .master-beat-title {
             font-size: 11px;
@@ -622,6 +643,16 @@
             align-items: center;
             gap: 4px;
             margin-left: auto;
+        }
+        /* Inside a rail mix-row the row owns the justification, so don't push the
+           Solo/Mute cluster to the right edge. */
+        .mix-row .voice-mix-controls {
+            margin-left: 0;
+        }
+        /* Wheel lanes (Meter A/B Pulse) mount Solo/Mute directly in the rail mix-group
+           (no mix-row wrapper), so keep them left-justified like the other rails. */
+        .wheel-rail .voice-mix-controls {
+            margin-left: 0;
         }
         .lane-info-btn {
             align-items: center;
@@ -988,12 +1019,12 @@
             box-shadow: 0 12px 30px rgba(0,0,0,0.8);
             overflow-y: auto;
             overflow-x: hidden;
-            max-width: 960px;
+            max-width: 1440px;
             width: 100%;
             max-height: 80vh;
         }
         .visual-guide {
-            max-width: 960px;
+            max-width: 1440px;
             width: 100%;
             margin-bottom: 12px;
             box-sizing: border-box;
@@ -1460,14 +1491,13 @@
             border-radius: 6px;
             padding: 8px 10px;
         }
-        /* Instrument selector sits inline at the left of the step grid, on the
-           same row as the rhythm it drives. Fixed width keeps every voice's step
-           grid aligned vertically. */
-        .voice-instrument-inline {
-            flex: 0 0 180px;
-            width: 180px;
-            align-self: flex-start;
-            margin-top: 2px;
+        /* Instrument selector sits next to the "Voice N" label in the rail's top
+           row (aligned with the step grid). Sized to share the fixed-width rail
+           with the label and remove button. */
+        .identity-group .voice-instrument-select {
+            flex: 1 1 120px;
+            min-width: 0;
+            max-width: 168px;
         }
         /* Each mixer sub-row (Volume, Solo/Mute) gets its own full-width line. */
         .mix-row {
@@ -1476,11 +1506,44 @@
             gap: 6px;
             width: 100%;
         }
+        /* Collapse/expand toggle for a voice's rail controls — lives in the
+           always-visible identity row. */
+        .rail-toggle-btn {
+            flex: 0 0 auto;
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            line-height: 1;
+            color: #c8c8d2;
+            background: #20202c;
+            border: 1px solid #3a3a48;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .rail-toggle-btn:hover {
+            background: #2a2a38;
+            border-color: #4a4a5c;
+        }
+        /* Collapsed: hide the mix + pattern groups, keep the identity row. */
+        .lane-label-area.rail-collapsed .mix-group,
+        .lane-label-area.rail-collapsed .pattern-group {
+            display: none;
+        }
+        /* Master Beat collapse also hides its 4/4 click-track grid (the lane's
+           body lives outside the rail, as a sibling of #masterBeatControls). */
+        .master-beat-voice-row.rail-collapsed .master-beat-grid {
+            display: none;
+        }
         /* Narrow: fall back to stacked (rail above grid) so the step grid
            keeps its full width instead of being squeezed by the rail. */
         @media (max-width: 1024px) {
             .voice-row {
                 flex-direction: column;
+                align-items: stretch;
                 gap: 6px;
             }
             .lane-label-area {

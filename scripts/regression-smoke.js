@@ -453,17 +453,29 @@ async function run() {
             assert(textFinal === 'Solo', `Solo button ${id} should toggle back to 'Solo'`, textFinal);
         }
 
+        // Voices now default to collapsed (per the rail-controls UI change). Expand
+        // every collapsed voice rail so per-voice controls (Solo/Mute/Clear/Nudge)
+        // are reachable in this regression run.
+        async function expandAllRails() {
+            await page.locator('.rail-toggle-btn[aria-expanded="false"]').evaluateAll(els => els.forEach(e => e.click()));
+            await page.waitForTimeout(80);
+        }
+
         // The Master lane intentionally has no lane-level Solo button (its
         // per-voice Solo already covers it); assert it's absent so it isn't
         // accidentally re-added.
         const masterSoloCount = await page.locator('#soloDriver').count();
         assert(masterSoloCount === 1, 'Master beat should have a colocated Solo button in the beat-scheme controls', `found ${masterSoloCount}`);
+        // Pulse-section rails now default to collapsed; expand them so the colocated
+        // Solo/Mute controls are reachable.
+        await expandAllRails();
         await testSolo('soloDriver');
         await testSolo('soloAWheel');
         await testSolo('soloBWheel');
         // Voice channels: add one, test solo, remove
         await page.locator('#addMasterVoiceBtn').click();
         await page.waitForTimeout(300);
+        await expandAllRails();
         await testSolo('solo_master_1');
         await page.locator('#resetBtn').click();
         await page.waitForTimeout(300);
@@ -501,6 +513,8 @@ async function run() {
         await setSelect('#sound_master_1', 'claves');
         await setSelect('#sound_A_0', 'woodblock');
         await setSelect('#sound_B_0', 'cowbell');
+        // Pulse-section rails default to collapsed; expand so #soloBWheel is reachable.
+        await expandAllRails();
         await page.locator('#soloBWheel').click();
 
         const liveInstrumentLabels = await snapshot();
@@ -519,6 +533,7 @@ async function run() {
         await clickStep('#meterBPhraseGrid', 2, 3);
         await clickStep('#meterBPhraseGrid', 2, 6);
 
+        await expandAllRails();
         await page.locator('#masterGrid .voice-row:nth-child(2) .voice-nudge-btn[title="Shift Voice 2 right"]').click();
         await page.locator('#meterAPhraseGrid .voice-row:nth-child(1) .voice-nudge-btn[title="Shift Voice 1 right"]').click();
         await page.locator('#meterBPhraseGrid .voice-row:nth-child(2) .voice-nudge-btn[title="Shift Voice 2 left"]').click();
@@ -543,6 +558,8 @@ async function run() {
         await setSelect('#sound_master_1', 'claves');
         await setSelect('#sound_A_0', 'woodblock');
         await setSelect('#sound_B_0', 'cowbell');
+        // Pulse-section rails default to collapsed; expand so #soloBWheel is reachable.
+        await expandAllRails();
         await page.locator('#soloBWheel').click();
 
         await clickStep('#masterGrid', 1, 3);
@@ -558,6 +575,7 @@ async function run() {
         await clickStep('#meterBPhraseGrid', 2, 3);
         await clickStep('#meterBPhraseGrid', 2, 6);
 
+        await expandAllRails();
         await page.locator('#masterGrid .voice-row:nth-child(2) .voice-nudge-btn[title="Shift Voice 2 right"]').click();
         await page.locator('#meterAPhraseGrid .voice-row:nth-child(1) .voice-nudge-btn[title="Shift Voice 1 right"]').click();
         await page.locator('#meterBPhraseGrid .voice-row:nth-child(2) .voice-nudge-btn[title="Shift Voice 2 left"]').click();

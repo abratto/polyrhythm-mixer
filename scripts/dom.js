@@ -81,9 +81,7 @@ export function getDomRefs() {
         // Title/label elements that show descriptive text for each lane
         masterTitle: document.getElementById('masterTitle'),
         titleAPhrase: document.getElementById('titleAPhrase'),
-        titleAWheel: document.getElementById('titleAWheel'),
         titleBPhrase: document.getElementById('titleBPhrase'),
-        titleBWheel: document.getElementById('titleBWheel'),
 
         // Lane explanation toggles and copy
         masterInfoBtn: document.getElementById('masterInfoBtn'),

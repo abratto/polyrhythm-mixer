@@ -258,8 +258,8 @@ export function createLanes(ui, state) {
             allowLaneEdit: false,
             label: () => 'Meter A Pulse',
             kind: 'pulse',
-            description: () => `Pulse groups (per cycle): ${state.A} groups of ${state.teethA} pulses over ${state.mainTeeth}`,
-            titleEl: ui.titleAWheel,
+            description: () => `${state.A} groups of ${state.teethA} pulses out of ${state.mainTeeth} pulses per cycle`,
+            titleEl: null,
             descriptionEl: ui.aWheelDescription,
             infoBtn: ui.aWheelInfoBtn,
             textForStep: i => i + 1,
@@ -311,8 +311,8 @@ export function createLanes(ui, state) {
             allowLaneEdit: false,
             label: () => 'Meter B Pulse',
             kind: 'pulse',
-            description: () => `Pulse groups (per cycle): ${state.B} groups of ${state.teethB} pulses over ${state.mainTeeth}`,
-            titleEl: ui.titleBWheel,
+            description: () => `${state.B} groups of ${state.teethB} pulses out of ${state.mainTeeth} pulses per cycle`,
+            titleEl: null,
             descriptionEl: ui.bWheelDescription,
             infoBtn: ui.bWheelInfoBtn,
             textForStep: i => i + 1,
@@ -328,12 +328,12 @@ export function createLanes(ui, state) {
     };
 }
 
-function updateLaneHeader(lane) {
+function updateLaneHeader(lane, state) {
     if (lane.titleEl) lane.titleEl.textContent = lane.label();
     if (lane.descriptionEl && lane.description) {
         lane.descriptionEl.textContent = lane.description();
     }
-    ensureGroupNudgeControl(lane);
+    ensureGroupNudgeControl(lane, state);
     ensureKindHint(lane);
 }
 
@@ -364,7 +364,7 @@ function createNudgeButton(label, title, onClick, className = 'voice-nudge-btn')
     return button;
 }
 
-function ensureGroupNudgeControl(lane) {
+function ensureGroupNudgeControl(lane, state) {
     if (!lane.allowGroupNudge || !lane.clearBtn || lane.groupNudgeControl) return;
 
     const nudgeControl = document.createElement('div');
@@ -377,15 +377,15 @@ function ensureGroupNudgeControl(lane) {
 
     const nudgeDown = createNudgeButton('←', `Shift all ${lane.label()} voices left`, () => {
         nudgeLaneVoices(lane, -1);
-        buildMultiVoiceLane(lane);
+        buildMultiVoiceLane(lane, state);
     });
     const nudgeReset = createNudgeButton('1', `Reset all ${lane.label()} voices to start on 1`, () => {
         resetLaneVoices(lane);
-        buildMultiVoiceLane(lane);
+        buildMultiVoiceLane(lane, state);
     }, 'voice-nudge-reset-btn');
     const nudgeUp = createNudgeButton('→', `Shift all ${lane.label()} voices right`, () => {
         nudgeLaneVoices(lane, 1);
-        buildMultiVoiceLane(lane);
+        buildMultiVoiceLane(lane, state);
     });
 
     nudgeControl.append(nudgeLabel, nudgeDown, nudgeReset, nudgeUp);
@@ -595,6 +595,13 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     label.style.color = lane.color;
     identityGroup.appendChild(label);
 
+    // Per-voice instrument selector — sits next to the "Voice N" label in the
+    // rail (top row, aligned with the step grid) to keep it associated with its
+    // rhythm while reclaiming the horizontal space the inline cell used.
+    const instrumentSelect = buildVoiceInstrumentSelect(lane, voice, voiceIndex);
+    instrumentSelect.title = `Voice ${voiceIndex + 1} instrument`;
+    identityGroup.appendChild(instrumentSelect);
+
     // Remove button (not for first voice)
     if (voiceIndex > 0) {
         const removeBtn = document.createElement('button');
@@ -610,6 +617,25 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         });
         identityGroup.appendChild(removeBtn);
     }
+
+    // Collapse/expand toggle for this voice's rail controls. The identity row
+    // (Voice N + instrument) always stays visible; mix + pattern groups hide.
+    // New voices (no stored state) default to collapsed on load/reset.
+    if (voice.railCollapsed === undefined) voice.railCollapsed = true;
+    const railToggle = document.createElement('button');
+    railToggle.type = 'button';
+    railToggle.className = 'rail-toggle-btn';
+    railToggle.textContent = voice.railCollapsed ? '▸' : '▾';
+    railToggle.title = voice.railCollapsed ? 'Expand voice controls' : 'Collapse voice controls';
+    railToggle.setAttribute('aria-expanded', String(!voice.railCollapsed));
+    railToggle.addEventListener('click', () => {
+        voice.railCollapsed = !voice.railCollapsed;
+        railToggle.textContent = voice.railCollapsed ? '▸' : '▾';
+        railToggle.title = voice.railCollapsed ? 'Expand voice controls' : 'Collapse voice controls';
+        railToggle.setAttribute('aria-expanded', String(!voice.railCollapsed));
+        labelArea.classList.toggle('rail-collapsed', voice.railCollapsed);
+    });
+    identityGroup.appendChild(railToggle);
 
     // Nudge control — built here, lands in the pattern group.
     let nudgeControl = null;
@@ -641,17 +667,13 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     // Per-voice edit controls (Rnd/Rev/Copy)
     const editControls = createVoiceEditControls(lane, voiceIndex);
 
-    // Per-voice instrument selector — placed inline at the left of the step grid
-    // (not in the rail) so the instrument and its rhythm read on one row.
-    const instrumentSelect = buildVoiceInstrumentSelect(lane, voice, voiceIndex);
-    instrumentSelect.title = `Voice ${voiceIndex + 1} instrument`;
-    instrumentSelect.classList.add('voice-instrument-inline');
-
-    // Per-voice Solo/Mute — own row in the mixer sub-panel.
+    // Per-voice Solo/Mute — own row in the mixer sub-panel (also hosts Clear so
+    // Solo / Mute / Clear share one rail row).
     let soloMuteControls = null;
+    let soloMuteRow = null;
     if (voice.channel) {
         soloMuteControls = createSoloMuteControls(voice.channel, `solo_${lane.channelPrefix}_${voiceIndex}`, `mute_${lane.channelPrefix}_${voiceIndex}`);
-        const soloMuteRow = document.createElement('div');
+        soloMuteRow = document.createElement('div');
         soloMuteRow.className = 'mix-row';
         soloMuteRow.appendChild(soloMuteControls);
         mixGroup.appendChild(soloMuteRow);
@@ -680,7 +702,8 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         mixGroup.insertBefore(volWrap, mixGroup.firstChild);
     }
 
-    // Clr button for this voice — pattern group.
+    // Clr button for this voice — shares the Solo/Mute row so Solo / Mute / Clear
+    // sit together on one rail row.
     let clrBtn = null;
     if (voice.channel) {
         clrBtn = document.createElement('button');
@@ -689,18 +712,17 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         clrBtn.textContent = 'Clear';
         clrBtn.title = `Clear voice ${voiceIndex + 1}`;
         clrBtn.addEventListener('click', () => clearVoice(lane, lane.voices[voiceIndex]));
-        patternGroup.appendChild(clrBtn);
+        if (soloMuteRow) soloMuteRow.appendChild(clrBtn);
+        else patternGroup.appendChild(clrBtn);
     }
 
-    // Assemble pattern group (clear + edit ops + nudge).
+    // Assemble pattern group (edit ops + nudge; Clear moved up to the Solo/Mute row).
     if (editControls) patternGroup.appendChild(editControls);
     if (nudgeControl) patternGroup.appendChild(nudgeControl);
 
     labelArea.append(identityGroup, mixGroup, patternGroup);
+    if (voice.railCollapsed) labelArea.classList.add('rail-collapsed');
     row.appendChild(labelArea);
-    // Instrument selector sits inline at the left of the step grid (same row as
-    // the rhythm it drives), so voice — instrument — pattern read on one line.
-    if (instrumentSelect) row.insertBefore(instrumentSelect, null);
 
     const stepsColumn = document.createElement('div');
     stepsColumn.className = 'voice-steps-column';
@@ -893,7 +915,7 @@ function buildMultiVoiceLane(lane, state) {
     lane.container.innerHTML = '';
     lane.container.style.position = 'relative';
     lane._playheads = [];
-    updateLaneHeader(lane);
+    updateLaneHeader(lane, state);
 
     const totalCycles = lane.totalCycles?.() ?? 1;
     if (totalCycles > 1 && state) {
@@ -913,11 +935,11 @@ function buildMultiVoiceLane(lane, state) {
     // instance first to avoid accumulation across rebuilds (phrase-length change,
     // cycle advance, reset).
     if (lane.channelPrefix === 'master' && state) {
-        const pulses = document.querySelector('.pulses-section');
-        if (pulses) {
-            pulses.querySelector('.master-beat-row')?.remove();
+        const row = document.querySelector('.master-beat-voice-row');
+        if (row) {
+            row.querySelector('.master-beat-grid')?.remove();
             const ref = buildMasterBeatReference(lane, state);
-            pulses.appendChild(ref);
+            row.appendChild(ref);
         }
     }
 
@@ -959,22 +981,10 @@ function buildMultiVoiceLane(lane, state) {
  * polyrhythm is measured against is visible. Purely visual — no audio or editing.
  */
 function buildMasterBeatReference(lane, state) {
-    const row = document.createElement('div');
-    row.className = 'matrix-row master-beat-row';
-    row.setAttribute('aria-hidden', 'true');
-
-    const labelArea = document.createElement('div');
-    labelArea.className = 'lane-label-area master-beat-label';
-    const title = document.createElement('div');
-    title.className = 'master-beat-title';
-    title.textContent = 'Master Beat';
-    const sub = document.createElement('div');
-    sub.className = 'master-beat-sub';
-    sub.textContent = '4/4 reference · the click track the polyrhythm rides on';
-    labelArea.append(title, sub);
-
+    // The Master Beat rail (#masterBeatControls) holds the label/instrument/volume/
+    // solo/mute; this returns only the reference step grid to sit beside it.
     const stepsColumn = document.createElement('div');
-    stepsColumn.className = 'voice-steps-column';
+    stepsColumn.className = 'voice-steps-column master-beat-grid';
     const steps = document.createElement('div');
     steps.className = 'voice-steps';
 
@@ -997,8 +1007,7 @@ function buildMasterBeatReference(lane, state) {
     }
 
     stepsColumn.appendChild(steps);
-    row.append(labelArea, stepsColumn);
-    return row;
+    return stepsColumn;
 }
 
 /** Builds a single-voice lane. */
@@ -1007,15 +1016,23 @@ function buildSingleLane(lane) {
     updateLaneHeader(lane);
     lane.container.style.position = 'relative';
     lane.buttons = [];
+    // Wrap steps in the same box (voice-steps-column > voice-steps) as the multi-voice
+    // lanes, so wheel lanes share the left-rail + step-grid layout.
+    const stepsColumn = document.createElement('div');
+    stepsColumn.className = 'voice-steps-column';
+    const steps = document.createElement('div');
+    steps.className = 'voice-steps';
+    lane.container.appendChild(stepsColumn);
+    stepsColumn.appendChild(steps);
     for (let i = 0; i < lane.count(); i++) {
         const btn = createStepButtonForSingle(lane, i);
-        lane.container.appendChild(btn);
+        steps.appendChild(btn);
         lane.buttons.push(btn);
     }
     const playhead = document.createElement('div');
     playhead.className = 'lane-playhead lane-playhead-single';
     playhead.setAttribute('aria-hidden', 'true');
-    lane.container.appendChild(playhead);
+    stepsColumn.appendChild(playhead);
     lane._playhead = playhead;
 }
 
@@ -1030,6 +1047,66 @@ export function wireLaneInfoButtons(lanes) {
             lane.infoBtn.setAttribute('aria-expanded', String(shouldShow));
         });
     });
+}
+
+/**
+ * Adds a collapse/expand toggle to a static lane left rail (the Meter A/B Pulse
+ * and Master Beat rails), mirroring the per-voice rail toggle used by the phrase
+ * lanes. The identity row stays visible; the mix + pattern groups hide when
+ * collapsed. Returns the created button (or null if no identity group exists).
+ */
+export function attachRailCollapseToggle(labelArea, { collapsed = false, label = 'controls', extraTarget = null } = {}) {
+    const identityGroup = labelArea.querySelector('.identity-group');
+    if (!identityGroup) return null;
+
+    let isCollapsed = collapsed;
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'rail-toggle-btn';
+    const sync = () => {
+        toggle.textContent = isCollapsed ? '▸' : '▾';
+        toggle.title = isCollapsed ? `Expand ${label}` : `Collapse ${label}`;
+        toggle.setAttribute('aria-expanded', String(!isCollapsed));
+        labelArea.classList.toggle('rail-collapsed', isCollapsed);
+        if (extraTarget) extraTarget.classList.toggle('rail-collapsed', isCollapsed);
+    };
+    // Lets callers (e.g. mixer reset) force the collapsed state without a click,
+    // mirroring how the phrase voice rails reset to collapsed.
+    toggle.setCollapsed = (val) => { isCollapsed = !!val; sync(); };
+    sync();
+    toggle.addEventListener('click', () => {
+        isCollapsed = !isCollapsed;
+        sync();
+    });
+    identityGroup.appendChild(toggle);
+    return toggle;
+}
+
+/** Controllers for the static pulse-section rails, populated by wirePulseRailCollapses. */
+const _pulseRailControllers = [];
+
+/** Wires collapse toggles onto the static pulse-section rails. */
+export function wirePulseRailCollapses({ defaultCollapsed = true } = {}) {
+    const beatRow = document.querySelector('.master-beat-voice-row');
+    const defs = [
+        { id: 'meterAWheelRail', label: 'Meter A Pulse controls' },
+        { id: 'meterBWheelRail', label: 'Meter B Pulse controls' },
+        // The Master Beat lane's body is its 4/4 click-track grid (a sibling of the
+        // rail), so collapsing the rail also collapses the click track.
+        { id: 'masterBeatControls', label: 'Master Beat controls', extraTarget: beatRow }
+    ];
+    _pulseRailControllers.length = 0;
+    defs.forEach(({ id, label, extraTarget }) => {
+        const rail = document.getElementById(id);
+        if (!rail) return;
+        const toggle = attachRailCollapseToggle(rail, { label, extraTarget, collapsed: defaultCollapsed });
+        if (toggle?.setCollapsed) _pulseRailControllers.push(toggle.setCollapsed);
+    });
+}
+
+/** Re-collapses every pulse-section rail (used by mixer reset, matching the default load state). */
+export function collapsePulseRails() {
+    _pulseRailControllers.forEach(set => set(true));
 }
 
 /** Creates a step button for a single-voice lane. */
@@ -1066,7 +1143,7 @@ function hexToRgba(hex, alpha) {
  */
 function buildGroupingLane(lane, state) {
     lane.container.innerHTML = '';
-    updateLaneHeader(lane);
+    updateLaneHeader(lane, state);
     lane.container.style.position = 'relative';
     lane.buttons = [];
     lane._markedPulse = null;
@@ -1345,40 +1422,35 @@ function createSoloMuteControls(channel, idSolo, idMute, { solo = true } = {}) {
 export function wireLaneMixButtons(lanes, channels) {
     const mountFor = (lane) =>
         lane.container?.closest('.matrix-row')?.querySelector('.lane-actions');
-    const add = (lane, channel, idSolo, idMute) => {
-        const mount = mountFor(lane);
+    const add = (lane, channel, idSolo, idMute, mountSel) => {
+        const matrixRow = lane.container?.closest('.matrix-row');
+        const mount = mountSel ? matrixRow?.querySelector(mountSel) : mountFor(lane);
         if (!mount || !channel) return;
         if (mount.querySelector(`#${idSolo}`)) return; // already wired
         mount.appendChild(createSoloMuteControls(channel, idSolo, idMute));
     };
 
-    add(lanes.Awheel, channels.Awheel, 'soloAWheel', 'muteAWheel');
-    add(lanes.Bwheel, channels.Bwheel, 'soloBWheel', 'muteBWheel');
+    // Wheel lanes + master beat: Solo/Mute live in the lane's left-rail mix-group,
+    // matching the phrase-lane voice rows.
+    add(lanes.Awheel, channels.Awheel, 'soloAWheel', 'muteAWheel', '.mix-group');
+    add(lanes.Bwheel, channels.Bwheel, 'soloBWheel', 'muteBWheel', '.mix-group');
 
-        // 'driver' is the master wheel (the Master Beat reference). Its instrument,
-        // volume, solo, and mute are colocated in the Polyryhthm Beat Scheme controls
-        // row (#masterBeatControls), alongside the reference strip.
-        const beatControls = document.getElementById('masterBeatControls');
-        if (beatControls && channels.driver) {
-            if (!beatControls.querySelector('#soloDriver')) {
-                beatControls.appendChild(createSoloMuteControls(channels.driver, 'soloDriver', 'muteDriver'));
-            }
-            // Reorder master beat controls: label, instrument, volume, solo, mute
-            reorderWheelLaneControls(beatControls, ['.master-beat-control-label', 'soundDriver', '.lane-volume', '.voice-mix-controls']);
+    // 'driver' is the master wheel (the Master Beat reference). Its instrument,
+    // volume, and solo/mute are colocated in the Master Beat rail.
+    const beatControls = document.getElementById('masterBeatControls');
+    if (beatControls && channels.driver) {
+        const mixGroup = beatControls.querySelector('.mix-group');
+        if (mixGroup && !beatControls.querySelector('#soloDriver')) {
+            mixGroup.appendChild(createSoloMuteControls(channels.driver, 'soloDriver', 'muteDriver'));
         }
-
-        // Arrange A/B pulse lane controls as: Instrument -> Volume -> Solo -> Mute -> Clear
-        // Operate on top-level children (the instrument, the volume wrapper, the
-        // Solo/Mute wrapper, and Clear) so we don't pull buttons out of their wrappers.
-        reorderWheelLaneControls(mountFor(lanes.Awheel), ['soundAWheel', '.lane-volume', '.voice-mix-controls', 'clearAWheelBtn']);
-        reorderWheelLaneControls(mountFor(lanes.Bwheel), ['soundBWheel', '.lane-volume', '.voice-mix-controls', 'clearBWheelBtn']);
-
-        // Reorder phrase lane toolbar controls: Random/Reverse, Clear, Nudge Group
-        // (+ Voice is now pinned to the bottom of the lane, below the voice rows).
-        reorderWheelLaneControls(mountFor(lanes.master), ['.lane-edit-controls', 'clearMasterBtn', '.group-nudge-control']);
-        reorderWheelLaneControls(mountFor(lanes.Aphrase), ['.lane-edit-controls', 'clearAPhraseBtn', '.group-nudge-control']);
-        reorderWheelLaneControls(mountFor(lanes.Bphrase), ['.lane-edit-controls', 'clearBPhraseBtn', '.group-nudge-control']);
     }
+
+    // Reorder phrase lane toolbar controls: Random/Reverse, Clear, Nudge Group
+    // (+ Voice is now pinned to the bottom of the lane, below the voice rows).
+    reorderWheelLaneControls(mountFor(lanes.master), ['.lane-edit-controls', 'clearMasterBtn', '.group-nudge-control']);
+    reorderWheelLaneControls(mountFor(lanes.Aphrase), ['.lane-edit-controls', 'clearAPhraseBtn', '.group-nudge-control']);
+    reorderWheelLaneControls(mountFor(lanes.Bphrase), ['.lane-edit-controls', 'clearBPhraseBtn', '.group-nudge-control']);
+}
 
     function reorderWheelLaneControls(mount, selectors) {
         if (!mount) return;

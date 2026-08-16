@@ -16,6 +16,7 @@
 import { getDomRefs } from './dom.js';
 import { createState, resetFlashState, updateDerivedState, updatePhaseUI } from './state.js';
 import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons, addVoice, updateVoiceInstrumentLabels, applyMixVisuals, addLaneEditControls, setMixChannels, wireLaneMixButtons } from './lanes.js';
+import { wirePulseRailCollapses, collapsePulseRails } from './lane-ui.js';
 import { createChannels, populateMenus, wireChannels, toggleAudio, addVoiceChannel, syncAudioStartTime, startAudioScheduler, stopAudioScheduler, resetAudioScheduler, populateInstrumentSelect, refreshSilenced } from './audio.js';
 import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } from './controls.js';
 import { copyShareLink, loadStateFromUrl, applyChannelState } from './share.js';
@@ -125,13 +126,15 @@ function initVoiceChannels() {
  * per-voice selectors, which are rebuilt with each voice row).
  */
 function createFixedLaneInstrumentSelects() {
-    const mountForGrid = (gridId) =>
-        document.getElementById(gridId)?.closest('.matrix-row')?.querySelector('.lane-actions') || null;
+    // Instruments live in each lane's left rail (identity-group), consistent with the
+    // phrase-lane voice rows. Resolve those rail groups directly.
+    const railIdentity = (railId) =>
+        document.getElementById(railId)?.querySelector('.identity-group') || null;
 
     const defs = [
-        { id: 'soundDriver', channel: channels.driver, mount: document.getElementById('masterBeatControls'), color: '#ff9100' },
-        { id: 'soundAWheel', channel: channels.Awheel, mount: mountForGrid('meterAWheelGrid'), color: '#ff6b8f' },
-        { id: 'soundBWheel', channel: channels.Bwheel, mount: mountForGrid('meterBWheelGrid'), color: '#6ef2ff' }
+        { id: 'soundDriver', channel: channels.driver, mount: railIdentity('masterBeatControls'), color: '#ff9100' },
+        { id: 'soundAWheel', channel: channels.Awheel, mount: railIdentity('meterAWheelRail'), color: '#ff6b8f' },
+        { id: 'soundBWheel', channel: channels.Bwheel, mount: railIdentity('meterBWheelRail'), color: '#6ef2ff' }
     ];
 
     defs.forEach(({ id, channel, mount, color }) => {
@@ -257,6 +260,14 @@ function resetMixerToStartingState() {
     resetLaneVoicesToSingle(lanes.master);
     resetLaneVoicesToSingle(lanes.Aphrase);
     resetLaneVoicesToSingle(lanes.Bphrase);
+
+    // Collapse every voice's rail controls on reset (matches the default load state).
+    [lanes.master, lanes.Aphrase, lanes.Bphrase].forEach(lane =>
+        lane.voices.forEach(v => { v.railCollapsed = true; }));
+
+    // Re-collapse the static pulse-section rails (Meter A/B Pulse + Master Beat click
+    // track) so reset matches the default collapsed load state.
+    collapsePulseRails();
 
     updateDerivedState(state);
     updatePhaseUI(state, ui);
@@ -473,6 +484,10 @@ wireControls({
         buildAllLanes(lanes, state);
         wireLaneMixButtons(lanes, channels);
         applyMixVisuals(lanes, channels);
+        // Re-collapse every left rail to its default (collapsed) state so loading a
+        // saved rhythm behaves like a fresh load. Phrase voice rails already default
+        // to collapsed on rebuild; the pulse-section rails are DOM-based, so force them.
+        collapsePulseRails();
     }),
     onCloseSavedRhythms: () => closeSavedRhythmsModal(ui)
 });
@@ -483,6 +498,7 @@ updatePhaseUI(state, ui);
 buildAllLanes(lanes, state);
 updateBeatSchemeSummary();
 createFixedLaneInstrumentSelects();
+wirePulseRailCollapses();
 // Mount Solo/Mute inside the lanes (single-channel + master wheel) now that the
 // lane toolbars exist; per-voice Solo/Mute are created in each voice row above.
 // Add per-lane editing controls (randomize / reverse) before wireLaneMixButtons
