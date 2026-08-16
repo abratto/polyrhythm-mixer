@@ -216,11 +216,6 @@
             <div class="lane-group-heading">Rhythm Tracks</div>
 
             <div class="matrix-row master-pattern-row" style="--lane-accent: #ff9100;">
-                <div class="matrix-header" id="masterHeaderContainer">
-                    <div class="lane-title-group">
-                        <button id="masterInfoBtn" class="lane-info-btn" aria-label="Show master wheel explanation" aria-expanded="false" aria-controls="masterDescription">?</button>
-                    </div>
-                </div>
                 <div class="lane-toolbar">
                     <div class="lane-actions">
                         <div class="control-group lane-meter-select meter-master-select">
@@ -239,7 +234,9 @@
                         <button id="clearMasterBtn" class="clear-btn">Clear</button>
                         <button id="addMasterVoiceBtn" class="add-voice-btn">+ Voice</button>
                     </div>
-                    <div class="lane-view-actions"></div>
+                    <div class="lane-view-actions">
+                        <button id="masterInfoBtn" class="lane-info-btn" aria-label="Show master wheel explanation" aria-expanded="false" aria-controls="masterDescription">?</button>
+                    </div>
                 </div>
                 <div id="masterDescription" class="lane-description" hidden></div>
                 <div id="masterGrid" class="sequencer-container"></div>
