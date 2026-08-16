@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.6.0 — 2026-08-16
+
+### Added
+- The Meter A Pulse, Meter B Pulse, and Master Beat (4/4 click-track) left rails are now collapsible, matching the phrase-lane voice rails. They default to collapsed on load, on mixer reset, and when loading a saved rhythm.
+
+### Changed
+- Left-rail Solo/Mute controls for the Meter A/B pulse lanes are now left-justified.
+- The Meter A/B Pulses selectors sit inline directly above each step sequencer. The redundant lane titles and the "Pulses" suffix were removed, and the per-meter help text was simplified.
+
 ## v1.5.0 — 2026-08-05
 
 ### Changed
