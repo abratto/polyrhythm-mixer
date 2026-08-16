@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.9.0 — 2026-08-16
+
+### Changed
+- The Rhythm Tracks "?" help toggle now shares the Master Phrase Length row (right-aligned), matching the pulse-lane help button placement.
+
 ## v1.8.0 — 2026-08-16
 
 ### Changed
