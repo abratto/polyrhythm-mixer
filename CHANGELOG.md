@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.8.0 — 2026-08-16
+
+### Changed
+- The Meter A/B Pulse help text now opens directly below the meter name and pulse picker rather than above it.
+
 ## v1.7.0 — 2026-08-16
 
 ### Changed
