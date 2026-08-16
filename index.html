@@ -112,7 +112,6 @@
             </div>
 
              <div class="matrix-row" style="--lane-accent: #ff6b8f;">
-                   <div id="aWheelDescription" class="lane-description" hidden></div>
                    <div class="pulse-select-line meter-a-select">
                       <span class="pulse-select-name" style="color: #ff6b8f;">Meter A</span>
                       <select id="rhythmA">
@@ -133,9 +132,10 @@
                           <option value="17">17</option>
                           <option value="18">18</option>
                        </select>
-                       <button id="aWheelInfoBtn" class="lane-info-btn" aria-label="Show Meter A pulse explanation" aria-expanded="false" aria-controls="aWheelDescription">?</button>
-                   </div>
-                 <div class="voice-row">
+                        <button id="aWheelInfoBtn" class="lane-info-btn" aria-label="Show Meter A pulse explanation" aria-expanded="false" aria-controls="aWheelDescription">?</button>
+                    </div>
+                    <div id="aWheelDescription" class="lane-description" hidden></div>
+                  <div class="voice-row">
                  <div class="lane-label-area wheel-rail" id="meterAWheelRail">
                     <div class="voice-control-group identity-group">
                         <span class="voice-label">Voice 1</span>
@@ -155,7 +155,6 @@
              </div>
 
             <div class="matrix-row" style="--lane-accent: #6ef2ff;">
-                <div id="bWheelDescription" class="lane-description" hidden></div>
                 <div class="pulse-select-line meter-b-select">
                     <span class="pulse-select-name" style="color: #6ef2ff;">Meter B</span>
                     <select id="rhythmB">
@@ -178,6 +177,7 @@
                     </select>
                     <button id="bWheelInfoBtn" class="lane-info-btn" aria-label="Show Meter B pulse explanation" aria-expanded="false" aria-controls="bWheelDescription">?</button>
                 </div>
+                <div id="bWheelDescription" class="lane-description" hidden></div>
                 <div class="voice-row">
                 <div class="lane-label-area wheel-rail" id="meterBWheelRail">
                     <div class="voice-control-group identity-group">
