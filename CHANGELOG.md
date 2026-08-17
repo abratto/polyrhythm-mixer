@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.12.0 — 2026-08-17
+
+### Changed
+- The sticky top transport bar is now split into two left-aligned rows: a "commands" row (transport buttons + Save / Load / Share / Help) and a "settings" row (Tempo, Master Output, transport readout, and mini-playhead). Playback/file actions are now separated from the global timing and output controls, and the layout stays a stable two rows at every width instead of wrapping unpredictably.
+
 ## v1.11.1 — 2026-08-17
 
 ### Fixed
