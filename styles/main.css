@@ -1852,6 +1852,13 @@
                 flex: none;
                 width: 100%;
             }
+            /* The Master Beat strip must remain a single flex row: its 4/4 overlay
+               maps quarter positions linearly onto the equal-width pulse cells,
+               so letting it wrap into the grid above would break the band geometry. */
+            .master-beat-grid .voice-steps {
+                display: flex !important;
+                gap: 4px;
+            }
             .voice-instrument-label {
                 white-space: normal;
             }
