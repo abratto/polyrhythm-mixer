@@ -1817,7 +1817,7 @@
             .transport-controls {
                 flex-wrap: wrap;
             }
-            .sticky-secondary {
+            .bar-group {
                 flex-wrap: wrap;
             }
             .transport-btn {
@@ -1878,9 +1878,9 @@
             top: 0;
             z-index: 50;
             display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 14px;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
             padding: 8px 12px;
             margin-bottom: 12px;
             background: rgba(12, 12, 18, 0.92);
@@ -1908,21 +1908,26 @@
         }
         .sticky-bar .tempo-display input[type="range"],
         .sticky-bar .volume-display input[type="range"] {
-            width: 130px;
+            width: 120px;
         }
 
-        /* Compact playhead track (one master cycle). */
-        .sticky-secondary {
+        /* Top-bar regrouping prototype: commands (transport + file actions) on the
+           left, global settings (tempo, master output, status, playhead) on the right. */
+        .bar-group {
             display: flex;
             align-items: center;
             gap: 14px;
-            width: 100%;
+            flex-wrap: wrap;
+            min-width: 0;
         }
-        .sticky-secondary .secondary-actions {
+        .bar-commands .secondary-actions {
             margin-left: 0;
         }
-        .sticky-secondary .transport-readout {
-            margin-left: auto;
+        .bar-settings .transport-readout {
+            margin-left: 0;
+        }
+        .bar-settings {
+            justify-content: flex-start;
         }
         .mini-playhead {
             position: relative;
