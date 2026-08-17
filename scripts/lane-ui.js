@@ -976,38 +976,156 @@ function buildMultiVoiceLane(lane, state) {
 
 /**
  * Builds the read-only Master Beat reference strip shown at the top of the Master
- * lane. It renders one cell per master tick across every phrase cycle and marks
- * the quarter-note beats (and the downbeat) so the steady 4/4 click track the
- * polyrhythm is measured against is visible. Purely visual — no audio or editing.
+ * lane. It renders one cell per master tick across every phrase cycle (so it
+ * lines up cell-for-cell with the A/B pulse rows) and overlays the steady 4/4
+ * click track the polyrhythm is measured against.
+ *
+ * The 4/4 divisions are positioned at their TRUE time-fractions (q/4 of each
+ * cycle), measured from the actual cell geometry — never snapped to a tick cell.
+ * When mainTeeth is not divisible by 4 the quarter lines therefore fall BETWEEN
+ * pulse cells, which is the honest statement that the meter and the pulse
+ * resolution don't perfectly coincide. Purely visual — no audio or editing.
  */
+let _mbQuarterObserver = null;
+let _mbBeatRAF = null;
+let _mbBeatTimer = null;
+let _mbLastQuarter = null;
+let _mbLastHit = null;
+
 function buildMasterBeatReference(lane, state) {
     // The Master Beat rail (#masterBeatControls) holds the label/instrument/volume/
     // solo/mute; this returns only the reference step grid to sit beside it.
     const stepsColumn = document.createElement('div');
     stepsColumn.className = 'voice-steps-column master-beat-grid';
     const steps = document.createElement('div');
-    steps.className = 'voice-steps';
+    steps.className = 'voice-steps master-beat-steps';
 
     const stepsPerCycle = lane.stepsPerCycle?.() ?? lane.count();
     const totalCycles = lane.totalCycles?.() ?? 1;
     const total = stepsPerCycle * totalCycles;
     const mainTeeth = state.mainTeeth;
 
-    const quarterCells = [0, 1, 2, 3].map(
-        q => Math.round(q * mainTeeth / 4) % mainTeeth
-    );
+    // The pulse grid: one cell per master tick, uniformly dimmed. The 4/4 meter
+    // itself is drawn by the accurate overlay below (positioned at true fractional
+    // quarter positions — never snapped to a cell).
     for (let i = 0; i < total; i++) {
-        const t = ((i % mainTeeth) + mainTeeth) % mainTeeth;
         const cell = document.createElement('div');
-        cell.className = 'step-btn master-beat-cell';
-        if (t === quarterCells[0]) cell.classList.add('bar');
-        else if (quarterCells.includes(t)) cell.classList.add('beat');
-        else cell.classList.add('teeth');
+        cell.className = 'step-btn master-beat-cell teeth';
         steps.appendChild(cell);
     }
 
+    // Accurate 4/4 overlay: 4 equal time-segments per cycle, each exactly one
+    // quarter of the cycle regardless of how many pulse ticks fall inside it.
+    const beatLabels = ['1', '2', '3', '4'];
+    const quarters = document.createElement('div');
+    quarters.className = 'master-beat-quarters';
+    for (let c = 0; c < totalCycles; c++) {
+        for (let q = 0; q < 4; q++) {
+            const band = document.createElement('div');
+            band.className = 'mb-quarter' + (q === 0 ? ' mb-quarter-downbeat' : '');
+            const label = document.createElement('span');
+            label.className = 'mb-quarter-label';
+            label.textContent = beatLabels[q];
+            band.appendChild(label);
+            quarters.appendChild(band);
+        }
+    }
+    steps.appendChild(quarters);
+
+    steps.dataset.mainTeeth = String(mainTeeth);
+    steps.dataset.totalCycles = String(totalCycles);
     stepsColumn.appendChild(steps);
+
+    // Position the overlay from real cell geometry so the quarter lines sit at
+    // exact fractional ticks (no rounding). Re-runs on layout changes (incl. the
+    // rail collapse toggle, which flips the grid between display:none and block).
+    _mbQuarterObserver?.disconnect();
+    const layout = () => layoutMasterBeatQuarters(steps);
+    requestAnimationFrame(layout);
+    _mbQuarterObserver = new ResizeObserver(layout);
+    _mbQuarterObserver.observe(steps);
+
+    // Light up each numbered beat (1/2/3/4) in time with the Master Beat click.
+    // state.mainAngle equals q·quarterDuration, so the beat derived here lands on
+    // the exact audio click fired by the scheduler's driver channel.
+    if (_mbBeatRAF) cancelAnimationFrame(_mbBeatRAF);
+    if (_mbBeatTimer) clearTimeout(_mbBeatTimer);
+    _mbBeatRAF = null;
+    _mbBeatTimer = null;
+    _mbLastQuarter = null;
+    _mbLastHit = null;
+    _mbBeatRAF = requestAnimationFrame(() => animateMasterBeatQuarters(state, steps));
+
     return stepsColumn;
+}
+
+/**
+ * Positions the Master Beat 4/4 overlay bands at their true fractional tick
+ * positions, measured from the rendered pulse cells so the result is exact
+ * regardless of cell width, gap, or whether mainTeeth divides by 4.
+ */
+function layoutMasterBeatQuarters(steps) {
+    const cells = steps.querySelectorAll('.master-beat-cell');
+    const quarters = steps.querySelector('.master-beat-quarters');
+    if (!cells.length || !quarters) return;
+    const first = cells[0];
+    const last = cells[cells.length - 1];
+    const left0 = first.offsetLeft;
+    const span = (last.offsetLeft + last.offsetWidth) - left0;
+    if (span <= 0) return;
+    const total = cells.length;
+    const perTick = span / total;
+    const mainTeeth = Number(steps.dataset.mainTeeth);
+    const totalCycles = Number(steps.dataset.totalCycles);
+    if (!mainTeeth || !totalCycles) return;
+    const bands = quarters.querySelectorAll('.mb-quarter');
+    let idx = 0;
+    for (let c = 0; c < totalCycles; c++) {
+        for (let q = 0; q < 4; q++) {
+            const band = bands[idx++];
+            const t0 = c * mainTeeth + (q * mainTeeth) / 4;
+            band.style.left = (left0 + t0 * perTick) + 'px';
+            band.style.width = ((mainTeeth / 4) * perTick) + 'px';
+        }
+    }
+}
+
+/**
+ * Flashes the numbered Master Beat band (1/2/3/4) that corresponds to the
+ * current quarter, in sync with the audio click track. Reads state.mainAngle
+ * (which equals q·quarterDuration), so the lit band matches the driver channel's
+ * hit fired by the scheduler. The beat's band index is (cycle·4 + beat), where
+ * beat = q mod 4 and cycle = floor(q/4) mod totalCycles — so multi-cycle phrases
+ * light the band in whichever cycle is currently playing.
+ */
+function animateMasterBeatQuarters(state, steps) {
+    const bands = steps.querySelectorAll('.mb-quarter');
+    if (bands.length) {
+        const currentQuarter = Math.floor((state.mainAngle || 0) / (Math.PI / 2));
+        const totalCycles = Number(steps.dataset.totalCycles) || 1;
+        if (state.playing) {
+            if (currentQuarter !== _mbLastQuarter) {
+                _mbLastQuarter = currentQuarter;
+                const beat = ((currentQuarter % 4) + 4) % 4;
+                const cycle = (((Math.floor(currentQuarter / 4)) % totalCycles) + totalCycles) % totalCycles;
+                const band = bands[cycle * 4 + beat];
+                if (band) {
+                    if (_mbLastHit && _mbLastHit !== band) _mbLastHit.classList.remove('is-hit');
+                    band.classList.remove('is-hit');
+                    band.classList.add('is-hit');
+                    _mbLastHit = band;
+                    if (_mbBeatTimer) clearTimeout(_mbBeatTimer);
+                    _mbBeatTimer = setTimeout(() => {
+                        band.classList.remove('is-hit');
+                        if (_mbLastHit === band) _mbLastHit = null;
+                    }, 160);
+                }
+            }
+        } else {
+            _mbLastQuarter = currentQuarter;
+        }
+    }
+    _mbBeatRAF = requestAnimationFrame(() => animateMasterBeatQuarters(state, steps));
 }
 
 /** Builds a single-voice lane. */
@@ -1087,13 +1205,13 @@ const _pulseRailControllers = [];
 
 /** Wires collapse toggles onto the static pulse-section rails. */
 export function wirePulseRailCollapses({ defaultCollapsed = true } = {}) {
-    const beatRow = document.querySelector('.master-beat-voice-row');
     const defs = [
         { id: 'meterAWheelRail', label: 'Meter A Pulse controls' },
         { id: 'meterBWheelRail', label: 'Meter B Pulse controls' },
-        // The Master Beat lane's body is its 4/4 click-track grid (a sibling of the
-        // rail), so collapsing the rail also collapses the click track.
-        { id: 'masterBeatControls', label: 'Master Beat controls', extraTarget: beatRow }
+        // The Master Beat 4/4 click-track grid is a sibling of the rail and must
+        // stay visible at all times (like the Meter A/B step strips), so collapsing
+        // the rail only hides its own controls — not the reference grid.
+        { id: 'masterBeatControls', label: 'Master Beat controls' }
     ];
     _pulseRailControllers.length = 0;
     defs.forEach(({ id, label, extraTarget }) => {
