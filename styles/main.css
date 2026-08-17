@@ -606,20 +606,69 @@
         .voice-steps .master-beat-cell.teeth {
             opacity: 0.45;
         }
-        .voice-steps .master-beat-cell.beat::after {
-            content: '';
-            width: 3px;
-            height: 62%;
-            background: #ff9100;
-            border-radius: 2px;
+        /* Accurate 4/4 meter overlay for the Master Beat strip. Bands are
+           positioned in JS at their true q/4 time-fractions (measured from the
+           rendered pulse cells), so the quarter lines sit at exact fractional
+           ticks — they cut through a pulse cell whenever mainTeeth % 4 !== 0. */
+        .master-beat-grid .voice-steps {
+            position: relative;
         }
-        .voice-steps .master-beat-cell.bar::after {
-            content: '';
-            width: 4px;
-            height: 72%;
-            background: #ffce7a;
-            border-radius: 2px;
-            box-shadow: 0 0 6px rgba(255, 206, 122, 0.5);
+        /* The Master Beat grid must line up cell-for-cell with the Meter A/B
+           pulse rows. Those rows place .step-btn cells DIRECTLY in their
+           .sequencer-container (no inner panel), so we strip the .voice-steps-column
+           padding/border here — otherwise the cells start ~11px to the right of
+           the A/B cells and the grid can collapse (no intrinsic width). */
+        .voice-steps-column.master-beat-grid {
+            padding: 0;
+            border: none;
+            background: none;
+            width: 100%;
+            flex: 1 1 auto;
+            box-sizing: border-box;
+        }
+        .master-beat-grid .voice-steps {
+            background: rgba(255, 145, 0, 0.05);
+            border-radius: 6px;
+        }
+        .master-beat-quarters {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            box-sizing: border-box;
+        }
+        .mb-quarter {
+            position: absolute;
+            top: -3px;
+            bottom: -3px;
+            box-sizing: border-box;
+            border-left: 2px solid rgba(255, 145, 0, 0.55);
+            background: rgba(255, 145, 0, 0.04);
+        }
+        .mb-quarter.mb-quarter-downbeat {
+            border-left: 2px solid #ffce7a;
+            background: rgba(255, 206, 122, 0.09);
+            box-shadow: -1px 0 6px rgba(255, 206, 122, 0.45);
+        }
+        .mb-quarter-label {
+            position: absolute;
+            top: 2px;
+            left: 4px;
+            font-size: 9px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: 0.4px;
+            color: #ffb866;
+            text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+        }
+        /* Transient flash on the numbered beat whose Master Beat click is firing
+           right now (driven by state.mainAngle in lane-ui). */
+        .mb-quarter.is-hit {
+            background: rgba(255, 206, 122, 0.38);
+            box-shadow: 0 0 10px rgba(255, 206, 122, 0.6), -1px 0 6px rgba(255, 206, 122, 0.7);
+        }
+        .mb-quarter.is-hit .mb-quarter-label {
+            color: #fff;
+            text-shadow: 0 0 6px rgba(255, 206, 122, 0.9);
         }
         /* Master Beat controls row (instrument select), colocated with the reference
            strip at the bottom of the Polyryhthm Beat Scheme section. */
@@ -1538,11 +1587,6 @@
         .lane-label-area.rail-collapsed .pattern-group {
             display: none;
         }
-        /* Master Beat collapse also hides its 4/4 click-track grid (the lane's
-           body lives outside the rail, as a sibling of #masterBeatControls). */
-        .master-beat-voice-row.rail-collapsed .master-beat-grid {
-            display: none;
-        }
         /* Narrow: fall back to stacked (rail above grid) so the step grid
            keeps its full width instead of being squeezed by the rail. */
         @media (max-width: 1024px) {
@@ -1640,7 +1684,7 @@
         }
         .voice-instrument-select,
         .lane-instrument-select {
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 700;
             padding: 3px 6px;
             border-radius: 4px;
@@ -1651,6 +1695,31 @@
         }
         .lane-instrument-select {
             margin-left: auto;
+        }
+        /* Voice instrument dropdowns take their meter's phrase-length dropdown
+           text color, so each voice reads as belonging to its meter. !important
+           overrides the inline color set in buildVoiceInstrumentSelect(). */
+        #meterAPhraseGrid .voice-instrument-select {
+            color: #ffd3e2 !important;
+        }
+        #meterBPhraseGrid .voice-instrument-select {
+            color: #d2f7ff !important;
+        }
+        /* Master (Rhythm track) voices take the Master Phrase Length dropdown
+           text color for the same reason. */
+        #masterGrid .voice-instrument-select {
+            color: #ffd9a8 !important;
+        }
+        /* Polyrhythm Beat Scheme section: the A/B wheel and Master Beat instrument
+           dropdowns take their meter's phrase-length dropdown text color. */
+        #meterAWheelRail .lane-instrument-select {
+            color: #ffd3e2 !important;
+        }
+        #meterBWheelRail .lane-instrument-select {
+            color: #d2f7ff !important;
+        }
+        #masterBeatControls .lane-instrument-select {
+            color: #ffd9a8 !important;
         }
         .voice-steps {
             display: flex;
