@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.11.0 — 2026-08-17
+
+### Changed
+- The Meter A/B Phrase Length "?" help toggle now shares the right-aligned lane-view-actions row with its controls, matching the Master Phrase Length row (removed the dedicated header row that previously sat above each phrase-length selector).
+- The cycle navigator/counter now always renders for the Master Phrase Length row, matching Meter A/B (previously it was hidden while the phrase was a single cycle).
+- The "?" help button sits to the right of the cycle navigator/counter on every phrase row (Master, Meter A, Meter B) for a consistent layout.
+
 ## v1.10.0 — 2026-08-17
 
 ### Added
