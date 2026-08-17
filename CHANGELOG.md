@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.10.0 — 2026-08-17
+
+### Added
+- Master Beat (4/4 click-track) reference strip now renders quarter divisions at their true time-fractions, measured from the pulse-cell geometry, so the beat lines cut through cells whenever the cycle length is not divisible by 4 (no rounding to cells).
+- The active numbered beat (1/2/3/4) now flashes in sync with the Master Beat click track.
+
+### Changed
+- Master Beat strip aligns cell-for-cell with the Meter A/B pulse rows (removed the inner panel padding/border offset).
+- Master Beat strip is always visible, no longer hidden by the left-rail collapse toggle.
+- Instrument dropdown font colors now match each meter's phrase-length dropdown (Meter A, Meter B, and Master across the Rhythm Tracks and Polyrhythm Beat Scheme sections).
+
 ## v1.9.0 — 2026-08-16
 
 ### Changed
