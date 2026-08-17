@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.11.1 — 2026-08-17
+
+### Fixed
+- Master Beat (4/4) strip now stays a single row on viewports at or below 720px, so its accurate quarter-overlay bands keep aligning cell-for-cell with the pulse rows (the responsive grid rule previously wrapped the strip and broke the linear band mapping).
+
 ## v1.11.0 — 2026-08-17
 
 ### Changed
