@@ -193,7 +193,6 @@ export function createLanes(ui, state) {
     return {
         master: {
             container: ui.masterGrid,
-            headerContainer: ui.masterHeaderContainer,
             addVoiceBtn: ui.addMasterVoiceBtn,
             clearBtn: ui.clearMasterBtn,
             className: 'master-btn',
@@ -221,7 +220,6 @@ export function createLanes(ui, state) {
         },
         Aphrase: {
             container: ui.meterAPhraseGrid,
-            headerContainer: ui.meterAPhraseHeaderContainer,
             addVoiceBtn: ui.addAPhraseVoiceBtn,
             clearBtn: ui.clearAPhraseBtn,
             className: 'meterA-btn',
@@ -274,7 +272,6 @@ export function createLanes(ui, state) {
         },
         Bphrase: {
             container: ui.meterBPhraseGrid,
-            headerContainer: ui.meterBPhraseHeaderContainer,
             addVoiceBtn: ui.addBPhraseVoiceBtn,
             clearBtn: ui.clearBPhraseBtn,
             className: 'meterB-btn',
@@ -905,7 +902,12 @@ function addCycleNavigation(lane, state) {
     nextBtn.addEventListener('click', () => navigateCycle(lane, state, 1));
 
     nav.append(title, prevBtn, label, nextBtn);
-    viewActions.appendChild(nav);
+    const infoBtn = viewActions.querySelector('.lane-info-btn');
+    if (infoBtn) {
+        viewActions.insertBefore(nav, infoBtn);
+    } else {
+        viewActions.appendChild(nav);
+    }
 }
 
 /** Builds all voice rows for a multi-voice lane. */
@@ -917,8 +919,7 @@ function buildMultiVoiceLane(lane, state) {
     lane._playheads = [];
     updateLaneHeader(lane, state);
 
-    const totalCycles = lane.totalCycles?.() ?? 1;
-    if (totalCycles > 1 && state) {
+    if (state) {
         addCycleNavigation(lane, state);
     }
 
