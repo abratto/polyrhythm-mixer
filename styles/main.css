@@ -761,8 +761,8 @@
             overflow-x: auto;
         }
         .pulses-section .sequencer-container .step-btn {
-            flex: 0 0 24px;
-            width: 24px;
+            flex: 1 1 24px;
+            min-width: 24px;
         }
         .step-btn {
             flex: 1;
@@ -1771,10 +1771,26 @@
             width: 100%;
             overflow-x: auto;
         }
+        /* Cells grow to fill the lane when they fit (so a short sequence still
+           spans the full width), but never shrink below 24px. Once there are
+           more than fit (e.g. 16 x 17 = 272 pulses) they hold 24px and the lane
+           scrolls horizontally, with the active step auto-scrolled into view. */
         .voice-steps .step-btn {
-            flex: 0 0 24px;
-            width: 24px;
-            min-width: 0;
+            flex: 1 1 24px;
+            min-width: 24px;
+        }
+        /* Hide the horizontal scrollbar on scrollable sequence lanes. The
+           follow-playhead keeps the view in sync, so a visible scrollbar is
+           just visual noise — and with multiple voices it stacks one bar per
+           row (the "superimposed" bars). Scrolling still works. */
+        .voice-steps,
+        .pulses-section .sequencer-container {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .voice-steps::-webkit-scrollbar,
+        .pulses-section .sequencer-container::-webkit-scrollbar {
+            display: none;
         }
         /* Multi-voice sequencer containers stack rows vertically */
         #masterGrid, #meterAPhraseGrid, #meterBPhraseGrid {

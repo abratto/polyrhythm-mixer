@@ -30,6 +30,9 @@ export function getDomRefs() {
         // Left-rail "Expand all / Collapse all" controls
         expandAllRailsBtn: document.getElementById('expandAllRailsBtn'),
         collapseAllRailsBtn: document.getElementById('collapseAllRailsBtn'),
+
+        // Follow-playhead toggle for scrollable sequence lanes
+        followScrollBtn: document.getElementById('followScrollBtn'),
         // Action buttons
         resetBtn: document.getElementById('resetBtn'),
         audioBtn: document.getElementById('audioBtn'),

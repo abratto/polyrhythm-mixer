@@ -16,7 +16,7 @@
 import { getDomRefs } from './dom.js';
 import { createState, resetFlashState, updateDerivedState, updatePhaseUI } from './state.js';
 import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons, addVoice, updateVoiceInstrumentLabels, applyMixVisuals, addLaneEditControls, setMixChannels, wireLaneMixButtons } from './lanes.js';
-import { wirePulseRailCollapses, collapsePulseRails, setAllRailsCollapsed } from './lane-ui.js';
+import { wirePulseRailCollapses, collapsePulseRails, setAllRailsCollapsed, setScrollFollow, isScrollFollow, onScrollFollowChange } from './lane-ui.js';
 import { createChannels, populateMenus, wireChannels, toggleAudio, addVoiceChannel, syncAudioStartTime, startAudioScheduler, stopAudioScheduler, resetAudioScheduler, populateInstrumentSelect, refreshSilenced } from './audio.js';
 import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } from './controls.js';
 import { copyShareLink, loadStateFromUrl, applyChannelState } from './share.js';
@@ -501,6 +501,29 @@ createFixedLaneInstrumentSelects();
 wirePulseRailCollapses();
 if (ui.expandAllRailsBtn) ui.expandAllRailsBtn.addEventListener('click', () => setAllRailsCollapsed(false));
 if (ui.collapseAllRailsBtn) ui.collapseAllRailsBtn.addEventListener('click', () => setAllRailsCollapsed(true));
+
+// Follow-playhead toggle for scrollable sequence lanes.
+if (ui.followScrollBtn) {
+    const syncFollowBtn = (on) => {
+        ui.followScrollBtn.classList.toggle('active', on);
+        ui.followScrollBtn.textContent = on ? 'Follow: On' : 'Follow: Off';
+        ui.followScrollBtn.setAttribute('aria-pressed', String(on));
+        ui.followScrollBtn.title = on ? 'Following playhead — click to disable' : 'Stopped following — click to follow playhead';
+    };
+    ui.followScrollBtn.addEventListener('click', () => setScrollFollow(!isScrollFollow()));
+    onScrollFollowChange(syncFollowBtn);
+    syncFollowBtn(isScrollFollow());
+}
+
+// Manually scrolling a sequence lane (horizontal wheel / shift+wheel / trackpad
+// swipe) disables follow, matching Ableton's follow-override behaviour.
+document.addEventListener('wheel', (e) => {
+    if (!(Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.shiftKey)) return;
+    const scroller = e.target && e.target.closest ? e.target.closest('.voice-steps, .sequencer-container') : null;
+    if (scroller && scroller.scrollWidth > scroller.clientWidth) {
+        setScrollFollow(false);
+    }
+}, { passive: true });
 // Mount Solo/Mute inside the lanes (single-channel + master wheel) now that the
 // lane toolbars exist; per-voice Solo/Mute are created in each voice row above.
 // Add per-lane editing controls (randomize / reverse) before wireLaneMixButtons
