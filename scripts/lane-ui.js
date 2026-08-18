@@ -622,17 +622,22 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     const railToggle = document.createElement('button');
     railToggle.type = 'button';
     railToggle.className = 'rail-toggle-btn';
-    railToggle.textContent = voice.railCollapsed ? '▸' : '▾';
-    railToggle.title = voice.railCollapsed ? 'Expand voice controls' : 'Collapse voice controls';
-    railToggle.setAttribute('aria-expanded', String(!voice.railCollapsed));
+    let _railCollapsed = voice.railCollapsed;
+    const syncRail = () => {
+        voice.railCollapsed = _railCollapsed;
+        railToggle.textContent = _railCollapsed ? '▸' : '▾';
+        railToggle.title = _railCollapsed ? 'Expand voice controls' : 'Collapse voice controls';
+        railToggle.setAttribute('aria-expanded', String(!_railCollapsed));
+        labelArea.classList.toggle('rail-collapsed', _railCollapsed);
+    };
+    const setRailCollapsed = (val) => { _railCollapsed = !!val; syncRail(); };
+    syncRail();
     railToggle.addEventListener('click', () => {
-        voice.railCollapsed = !voice.railCollapsed;
-        railToggle.textContent = voice.railCollapsed ? '▸' : '▾';
-        railToggle.title = voice.railCollapsed ? 'Expand voice controls' : 'Collapse voice controls';
-        railToggle.setAttribute('aria-expanded', String(!voice.railCollapsed));
-        labelArea.classList.toggle('rail-collapsed', voice.railCollapsed);
+        _railCollapsed = !_railCollapsed;
+        syncRail();
     });
     identityGroup.appendChild(railToggle);
+    lane._voiceRailCtrls.push(setRailCollapsed);
 
     // Nudge control — built here, lands in the pattern group.
     let nudgeControl = null;
@@ -917,6 +922,7 @@ function buildMultiVoiceLane(lane, state) {
     lane.container.innerHTML = '';
     lane.container.style.position = 'relative';
     lane._playheads = [];
+    lane._voiceRailCtrls = [];
     updateLaneHeader(lane, state);
 
     if (state) {
@@ -1228,6 +1234,28 @@ export function collapsePulseRails() {
     _pulseRailControllers.forEach(set => set(true));
 }
 
+// Every collapsible left-rail control (pulse-section rails + per-voice phrase
+// rails) registers a setCollapsed(fn) here so a single "Expand all / Collapse
+// all" action can drive them. Voice-rail controllers are stored per-lane
+// (lane._voiceRailCtrls) and reset on each lane rebuild, so the registry never
+// holds stale closures after the dynamic phrase lanes are re-rendered.
+let _railLanes = null;
+
+/** Captures the lanes map so setAllRailsCollapsed can reach every voice rail. */
+export function registerRailLanes(lanes) {
+    _railLanes = lanes;
+}
+
+/** Expands (val = false) or collapses (val = true) every collapsible rail. */
+export function setAllRailsCollapsed(val) {
+    _pulseRailControllers.forEach(set => set(val));
+    if (_railLanes) {
+        Object.values(_railLanes).forEach(lane => {
+            (lane._voiceRailCtrls || []).forEach(set => set(val));
+        });
+    }
+}
+
 /** Creates a step button for a single-voice lane. */
 function createStepButtonForSingle(lane, i) {
     const btn = document.createElement('button');
@@ -1358,6 +1386,7 @@ export function applyMixVisuals(lanes) {
 
 /** Rebuilds every lane's DOM buttons. */
 export function buildAllLanes(lanes, state) {
+    registerRailLanes(lanes);
     Object.values(lanes).forEach(lane => buildLane(lane, state));
 }
 
