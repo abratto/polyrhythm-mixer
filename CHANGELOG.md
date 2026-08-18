@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.13.0 — 2026-08-18
+
+### Added
+- "Expand all / Collapse all" toolbar at the top of the left-rail panel that expands or collapses every collapsible control at once — the three pulse-section rails (Meter A Pulse, Meter B Pulse, Master Beat) and all per-voice phrase rails.
+
 ## v1.12.1 — 2026-08-18
 
 ### Fixed
