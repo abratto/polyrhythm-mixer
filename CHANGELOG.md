@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.13.4 — 2026-08-18
+
+### Fixed
+- Step sequences no longer overflow the mixer at very dense polyrhythms (e.g. 16 × 17 = 272 pulses). Cells keep a 24px floor and the lane scrolls horizontally when there are more than fit, with paged follow-playhead (the view flips a page as the playhead sweeps, hardware step-grid style).
+- The playhead is now single per lane — multi-voice lanes previously drew one playhead bar per voice row.
+
+### Added
+- "Follow" toggle in the transport bar; manually scrolling a lane disables follow.
+- Tempo floor lowered to 5 BPM.
+
 ## v1.13.3 — 2026-08-18
 
 ### Fixed
