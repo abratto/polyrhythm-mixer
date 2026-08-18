@@ -26,6 +26,10 @@ export function getDomRefs() {
         // Master volume slider and its display label
         masterVolumeSlider: document.getElementById('masterVolumeSlider'),
         masterVolumeLabel: document.getElementById('masterVolumeLabel'),
+
+        // Left-rail "Expand all / Collapse all" controls
+        expandAllRailsBtn: document.getElementById('expandAllRailsBtn'),
+        collapseAllRailsBtn: document.getElementById('collapseAllRailsBtn'),
         // Action buttons
         resetBtn: document.getElementById('resetBtn'),
         audioBtn: document.getElementById('audioBtn'),

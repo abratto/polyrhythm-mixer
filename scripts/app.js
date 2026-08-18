@@ -16,7 +16,7 @@
 import { getDomRefs } from './dom.js';
 import { createState, resetFlashState, updateDerivedState, updatePhaseUI } from './state.js';
 import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons, addVoice, updateVoiceInstrumentLabels, applyMixVisuals, addLaneEditControls, setMixChannels, wireLaneMixButtons } from './lanes.js';
-import { wirePulseRailCollapses, collapsePulseRails } from './lane-ui.js';
+import { wirePulseRailCollapses, collapsePulseRails, setAllRailsCollapsed } from './lane-ui.js';
 import { createChannels, populateMenus, wireChannels, toggleAudio, addVoiceChannel, syncAudioStartTime, startAudioScheduler, stopAudioScheduler, resetAudioScheduler, populateInstrumentSelect, refreshSilenced } from './audio.js';
 import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } from './controls.js';
 import { copyShareLink, loadStateFromUrl, applyChannelState } from './share.js';
@@ -499,6 +499,8 @@ buildAllLanes(lanes, state);
 updateBeatSchemeSummary();
 createFixedLaneInstrumentSelects();
 wirePulseRailCollapses();
+if (ui.expandAllRailsBtn) ui.expandAllRailsBtn.addEventListener('click', () => setAllRailsCollapsed(false));
+if (ui.collapseAllRailsBtn) ui.collapseAllRailsBtn.addEventListener('click', () => setAllRailsCollapsed(true));
 // Mount Solo/Mute inside the lanes (single-channel + master wheel) now that the
 // lane toolbars exist; per-voice Solo/Mute are created in each voice row above.
 // Add per-lane editing controls (randomize / reverse) before wireLaneMixButtons

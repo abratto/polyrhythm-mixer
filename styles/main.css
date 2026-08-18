@@ -1582,6 +1582,34 @@
             background: #2a2a38;
             border-color: #4a4a5c;
         }
+        /* "Expand all / Collapse all" toolbar for every left-rail control. */
+        .rail-all-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 8px 2px;
+        }
+        .rail-all-label {
+            font-size: 11px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #8a8a9c;
+        }
+        .rail-all-btn {
+            flex: 0 0 auto;
+            padding: 3px 10px;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #c8c8d2;
+            background: #20202c;
+            border: 1px solid #3a3a48;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .rail-all-btn:hover {
+            background: #2a2a38;
+            border-color: #4a4a5c;
+        }
         /* Collapsed: hide the mix + pattern groups, keep the identity row. */
         .lane-label-area.rail-collapsed .mix-group,
         .lane-label-area.rail-collapsed .pattern-group {
