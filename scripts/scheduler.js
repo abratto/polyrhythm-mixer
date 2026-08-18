@@ -35,42 +35,61 @@ export function syncAudioStartTime(state) {
  */
 function scheduleStepAudio(state, lanes, channels, stepIndex, hitTime, globalVolume) {
     const lsa = state.lastScheduledActive;
-    const stepWithinPhrase = stepIndex % state.masterPhraseSteps;
 
-    if (stepWithinPhrase !== lsa.master) {
+    // Master lane. When pinned (followPlayhead === false) the lane locks onto the
+    // single visible cycle and loops it continuously — its active step is anchored
+    // inside that cycle and wraps within it every `mainTeeth` master steps, so the
+    // segment repeats regardless of where the master playhead is. When not pinned
+    // it tracks the master playhead as before.
+    const stepWithinPhrase = stepIndex % state.masterPhraseSteps;
+    let masterStep = stepWithinPhrase;
+    if (state.followPlayhead.master === false) {
+        masterStep = state.visibleCycle.master * state.mainTeeth + (stepIndex % state.mainTeeth);
+    }
+    if (masterStep !== lsa.master) {
         lanes.master.voices.forEach((voice, vi) => {
-            if (voice.selected[stepWithinPhrase]) {
+            if (voice.selected[masterStep]) {
                 const ch = channels.masterVoices[vi];
                 if (ch) playSingleChannel(state, ch, globalVolume, hitTime);
             }
         });
-        lsa.master = stepWithinPhrase;
+        lsa.master = masterStep;
     }
 
+    // A-phrase lane. Pinned → loop the visible phrase cycle continuously.
     const aps = getActivePhraseStep(stepIndex, state.phaseA, state.teethA, state.phraseStepsA);
-    if (aps !== lsa.Aphrase) {
+    let aStep = aps;
+    if (state.followPlayhead.Aphrase === false) {
+        aStep = state.visibleCycle.Aphrase * state.A + (aps % state.A);
+    }
+    if (aStep !== lsa.Aphrase) {
         lanes.Aphrase.voices.forEach((voice, vi) => {
-            if (voice.selected[aps]) {
+            if (voice.selected[aStep]) {
                 const ch = channels.Avoices[vi];
                 if (ch) playSingleChannel(state, ch, globalVolume, hitTime);
             }
         });
-        lsa.Aphrase = aps;
+        lsa.Aphrase = aStep;
     }
 
     if (lanes.Awheel.selected[((stepIndex % state.mainTeeth) + state.mainTeeth) % state.mainTeeth]) {
         if (channels.Awheel) playSingleChannel(state, channels.Awheel, globalVolume, hitTime);
     }
 
+    // B-phrase lane. Pinned → loop the visible phrase cycle continuously.
     const bps = getActivePhraseStep(stepIndex, state.phaseB, state.teethB, state.phraseStepsB);
-    if (bps !== lsa.Bphrase) {
+    let bStep = bps;
+    if (state.followPlayhead.Bphrase === false) {
+        bStep = state.visibleCycle.Bphrase * state.B + (bps % state.B);
+    }
+    if (bStep !== lsa.Bphrase) {
         lanes.Bphrase.voices.forEach((voice, vi) => {
-            if (voice.selected[bps]) {
+            if (voice.selected[bStep]) {
                 const ch = channels.Bvoices[vi];
                 if (ch) playSingleChannel(state, ch, globalVolume, hitTime);
             }
         });
-        lsa.Bphrase = bps;
+        lsa.Bphrase = bStep;
     }
 
     if (lanes.Bwheel.selected[((stepIndex % state.mainTeeth) + state.mainTeeth) % state.mainTeeth]) {
