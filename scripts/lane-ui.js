@@ -747,13 +747,17 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         voice.buttons.push(btn);
     }
 
-    // Per-voice playhead column overlay (spans this voice's step row).
-    const playhead = document.createElement('div');
-    playhead.className = 'lane-playhead';
-    playhead.setAttribute('aria-hidden', 'true');
-    stepsContainer.appendChild(playhead);
-    lane._playheads = lane._playheads || [];
-    lane._playheads.push(playhead);
+    // Single playhead column overlay for the lane. All voices in a lane share
+    // the same step position, so only the first voice carries the playhead —
+    // one bar for the lane instead of one per voice row.
+    if (voiceIndex === 0) {
+        const playhead = document.createElement('div');
+        playhead.className = 'lane-playhead';
+        playhead.setAttribute('aria-hidden', 'true');
+        stepsContainer.appendChild(playhead);
+        lane._playheads = lane._playheads || [];
+        lane._playheads.push(playhead);
+    }
 
     stepsColumn.appendChild(stepsContainer);
     row.appendChild(stepsColumn);
@@ -1620,6 +1624,52 @@ function positionPlayhead(overlay, displayedIndex, stepsPerCycle) {
     overlay.style.width = (1 / stepsPerCycle) * 100 + '%';
 }
 
+// Follow-playhead state for over-long scrollable sequences. When on, the view
+// tracks the active step (Ableton-style). Scrolling a lane manually disables
+// follow; the transport-bar "Follow" toggle re-enables it.
+let _followScroll = true;
+let _followChangeListener = null;
+
+/** Sets follow mode and notifies the transport-bar toggle of the new state. */
+export function setScrollFollow(value) {
+    const v = !!value;
+    if (_followScroll === v) return;
+    _followScroll = v;
+    if (_followChangeListener) _followChangeListener(v);
+}
+
+/** Returns whether follow-playhead mode is currently enabled. */
+export function isScrollFollow() {
+    return _followScroll;
+}
+
+/** Registers a listener invoked whenever follow mode toggles (on or off). */
+export function onScrollFollowChange(fn) {
+    _followChangeListener = fn;
+}
+
+/**
+ * Paged follow-playhead: keeps the view on a fixed page (one viewport of
+ * steps) while the playhead sweeps left-to-right through it, then flips a
+ * full page when the active step crosses the right edge (hardware step-grid
+ * style). A no-op when follow is off or the whole row already fits. The last
+ * page clamps to the sequence end, and a loop wrap returns to page 0.
+ */
+function revealStepInView(btn) {
+    if (!_followScroll || !btn) return;
+    const scroller = btn.closest('.voice-steps, .sequencer-container');
+    if (!scroller) return;
+    const clientWidth = scroller.clientWidth;
+    if (scroller.scrollWidth <= clientWidth) return;
+    const sRect = scroller.getBoundingClientRect();
+    const bRect = btn.getBoundingClientRect();
+    const scrollLeft = scroller.scrollLeft;
+    const bLeft = bRect.left - sRect.left + scrollLeft;
+    const page = Math.floor(bLeft / clientWidth);
+    const max = scroller.scrollWidth - clientWidth;
+    scroller.scrollLeft = Math.max(0, Math.min(page * clientWidth, max));
+}
+
 function markMultiVoiceCurrentButtons(lane, state, previous, next) {
     const currentIndexes = Array.isArray(next) ? next : lane.voices.map(() => next);
     const totalCycles = lane.totalCycles?.() ?? 1;
@@ -1645,6 +1695,7 @@ function markMultiVoiceCurrentButtons(lane, state, previous, next) {
                     addCurrentClass(voice.buttons[displayedCurr]);
                     voice._currentIndex = displayedCurr;
                     positionPlayhead(lane._playheads?.[voiceIndex], displayedCurr, stepsPerCycle);
+                    revealStepInView(voice.buttons[displayedCurr]);
                 }
             } else {
                 const activeInVisible = currentIndexes[voiceIndex] - cycleStart;
@@ -1652,6 +1703,7 @@ function markMultiVoiceCurrentButtons(lane, state, previous, next) {
                     addCurrentClass(voice.buttons[activeInVisible]);
                     voice._currentIndex = activeInVisible;
                     positionPlayhead(lane._playheads?.[voiceIndex], activeInVisible, stepsPerCycle);
+                    revealStepInView(voice.buttons[activeInVisible]);
                 }
             }
         });
@@ -1677,6 +1729,7 @@ function markMultiVoiceCurrentButtons(lane, state, previous, next) {
             removeCurrentClass(voice.buttons[previousIndexes[voiceIndex]]);
             addCurrentClass(voice.buttons[currentIndexes[voiceIndex]]);
             positionPlayhead(lane._playheads?.[voiceIndex], currentIndexes[voiceIndex], stepsPerCycle);
+            revealStepInView(voice.buttons[currentIndexes[voiceIndex]]);
         });
         if (lane._cue) lane._cue.hidden = true;
     }
@@ -1696,6 +1749,7 @@ function markSingleVoiceCurrentButtons(lane, previous, next, state, masterPulse)
         addCurrentClass(lane.buttons[pulse]);
         lane._markedPulse = pulse;
         positionPlayhead(lane._playhead, pulse, total);
+        revealStepInView(lane.buttons[pulse]);
         return;
     }
     removeCurrentClass(lane.buttons[previous]);
