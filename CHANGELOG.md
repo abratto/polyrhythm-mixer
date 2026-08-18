@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.13.2 — 2026-08-18
+
+### Fixed
+- Step sequences no longer overflow the mixer at extreme pulse counts (e.g. 16 × 17 = 272). The sequence grids now wrap onto extra rows when they can't fit on one line, instead of pushing the layout wider. Single-line layout is preserved for normal and moderate counts.
+
 ## v1.13.1 — 2026-08-18
 
 ### Fixed
