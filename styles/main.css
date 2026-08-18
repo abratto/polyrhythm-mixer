@@ -749,6 +749,15 @@
             align-items: center;
             box-sizing: border-box;
         }
+        /* Pulse-grouping lanes (Meter A/B wheels) place their cells directly in
+           the .sequencer-container, without the inner .voice-steps wrapper the
+           phrase lanes use. That wrapper carries min-width: 0, so without it the
+           grid can't shrink inside the .voice-row and a high pulse count
+           (e.g. 9 × 14 = 126) overflows the mixer to the right. Mirror it here. */
+        .pulses-section .sequencer-container {
+            flex: 1 1 0;
+            min-width: 0;
+        }
         .step-btn {
             flex: 1;
             min-width: 0;
