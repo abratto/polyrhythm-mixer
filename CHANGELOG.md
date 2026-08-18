@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.13.3 — 2026-08-18
+
+### Fixed
+- Step sequences now use the conventional fixed-step + horizontal-scroll behaviour instead of wrapping. Cells keep a constant width and each lane scrolls when there are more steps than fit, preserving the single time axis and per-cycle grouping while never overflowing the mixer (covers extreme polyrhythms like 16 × 17 = 272 pulses).
+
 ## v1.13.2 — 2026-08-18
 
 ### Fixed
