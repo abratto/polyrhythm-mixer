@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.13.1 — 2026-08-18
+
+### Fixed
+- Meter A and Meter B pulse lanes no longer overflow the mixer at high pulse counts (e.g. 9 × 14 = 126 pulses). Their grids now shrink to fit the lane like the phrase grids do.
+
 ## v1.13.0 — 2026-08-18
 
 ### Added
