@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.12.1 — 2026-08-18
+
+### Fixed
+- Pinned (non-following) phrase lanes now loop their visible cycle continuously instead of staying silent until the master playhead swept through that cycle. The audio now matches the already-parked visual playhead.
+
 ## v1.12.0 — 2026-08-17
 
 ### Changed
