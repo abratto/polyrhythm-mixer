@@ -1648,6 +1648,22 @@
             .voice-control-group.mix-group {
                 align-self: auto;
             }
+            /* Landscape phones are wider than 720px, so the ≤720px toolbar rules
+               never fire and the nowrap lane toolbar (master phrase length + its
+               buttons + cycle nav) spills off the right edge. Wrap them here. */
+            .lane-toolbar {
+                flex-wrap: wrap;
+            }
+            .lane-actions {
+                width: 100%;
+                flex-wrap: wrap;
+            }
+            .lane-view-actions {
+                width: 100%;
+            }
+            .transport-controls {
+                flex-wrap: wrap;
+            }
         }
         .voice-nudge-control {
             display: flex;
