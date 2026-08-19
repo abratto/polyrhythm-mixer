@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.13.6 — 2026-08-18
+
+### Fixed
+- Meter A/B pulse-lane step boxes no longer truncate at the bottom in portrait (pulse strip min-height now matches the 42px step height).
+
+### Added
+- Collapse toggle on the sticky transport bar, shrinking it to a single row of transport controls to free up screen space in landscape.
+
 ## v1.13.5 — 2026-08-18
 
 ### Fixed
