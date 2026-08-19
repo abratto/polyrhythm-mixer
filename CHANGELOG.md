@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.13.5 — 2026-08-18
+
+### Fixed
+- Lane toolbars (master phrase length controls, buttons, cycle nav) and transport controls no longer spill off the right edge in mobile landscape. The wrapping rules now apply up to the 1024px breakpoint, covering landscape phones (720–926px) that previously fell through to the desktop layout.
+
 ## v1.13.4 — 2026-08-18
 
 ### Fixed
