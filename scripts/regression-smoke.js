@@ -194,6 +194,7 @@ async function run() {
                 B: selectValue('#rhythmB'),
                 phraseA: selectValue('#phraseCyclesA'),
                 phraseB: selectValue('#phraseCyclesB'),
+                masterPhrase: selectValue('#masterPhraseCycles'),
                 tempo: document.querySelector('#tempoSlider')?.value ?? null,
                 masterVolume: document.querySelector('#masterVolumeSlider')?.value ?? null
             },
@@ -647,6 +648,25 @@ async function run() {
         const legacyShared = await snapshot();
         assert(legacyShared.meters.A === '3' && legacyShared.meters.B === '4' && legacyShared.meters.tempo === '96', 'Legacy share URL should migrate meter settings.', legacyShared);
         assert(same(legacyShared.active.master1, [0]) && same(legacyShared.active.A1, [0, 2]) && same(legacyShared.active.B1, [0, 3]), 'Legacy share URL should migrate patterns.', legacyShared.active);
+
+        // --- Master phrase cycle count round-trips through share (regression:
+        //     the restore clamp once capped masterPhrase at 4, but the selector
+        //     offers up to 8 cycles) ---
+        await setSelect('#masterPhraseCycles', 7);
+        const masterBeatBandsAt7 = await page.evaluate(() => document.querySelectorAll('.master-beat-grid .mb-quarter').length);
+        assert(masterBeatBandsAt7 === 4, 'The Master Beat should always render exactly 4 quarter beats, regardless of the master phrase cycle count.', { masterBeatBandsAt7 });
+
+        await page.evaluate(() => { globalThis.CompressionStream = undefined; });
+        await page.locator('#shareBtn').click();
+        await page.waitForFunction(() => globalThis.__lastCopiedShareUrl && globalThis.__lastCopiedShareUrl.includes('?s='));
+        const sevenCycleShareUrl = await page.evaluate(() => globalThis.__lastCopiedShareUrl);
+        await page.goto(sevenCycleShareUrl, { waitUntil: 'networkidle' });
+        await waitForApp();
+        assert(
+            (await snapshot()).meters.masterPhrase === '7',
+            'A shared rhythm with 7 master phrase cycles should rehydrate with 7 cycles, not clamp to a lower count.',
+            await snapshot()
+        );
 
         assert(pageErrors.length === 0, 'No page errors should be emitted.', pageErrors);
         assert(consoleErrors.length === 0, 'No console errors should be emitted.', consoleErrors);

@@ -389,7 +389,7 @@ function restoreFromPayload(payload, deps) {
     const b = clampInteger(meters.B, 2, 18);
     const phraseA = clampInteger(meters.phraseA, 1, 4);
     const phraseB = clampInteger(meters.phraseB, 1, 4);
-    const masterPhrase = clampInteger(meters.masterPhrase, 1, 4);
+    const masterPhrase = clampInteger(meters.masterPhrase, 1, 8);
 
     if (a !== null) state.A = a;
     if (b !== null) state.B = b;

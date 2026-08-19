@@ -1949,13 +1949,15 @@
                staying a single horizontal scroll strip, so every pulse stays
                visible on a narrow portrait screen. */
             .pulses-section .sequencer-container {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
+                flex: 0 0 auto;
+                flex-wrap: wrap;
                 gap: 6px;
-                width: 100%;
-                min-height: 42px;
                 overflow-x: visible;
                 align-items: stretch;
+            }
+            .pulses-section .sequencer-container .step-btn {
+                flex: 1 1 40px;
+                min-width: 40px;
             }
             /* Keep the Master Beat strip a single flex row (its 4/4 overlay
                needs a linear row), but let its cells shrink so all four quarter

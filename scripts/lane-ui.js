@@ -1012,8 +1012,12 @@ function buildMasterBeatReference(lane, state) {
     steps.className = 'voice-steps master-beat-steps';
 
     const stepsPerCycle = lane.stepsPerCycle?.() ?? lane.count();
-    const totalCycles = lane.totalCycles?.() ?? 1;
-    const total = stepsPerCycle * totalCycles;
+    // The Master Beat is a single-measure 4/4 reference: it always shows one
+    // cycle of pulse teeth plus four quarter beats, regardless of how many
+    // cycles the master phrase spans. Rendering every cycle made the strip
+    // overflow/scroll and the 1-2-3-4 beat flash stop animating cleanly.
+    const totalCycles = 1;
+    const total = stepsPerCycle;
     const mainTeeth = state.mainTeeth;
 
     // The pulse grid: one cell per master tick, uniformly dimmed. The 4/4 meter
