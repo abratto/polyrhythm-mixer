@@ -1945,6 +1945,13 @@
                 height: 42px;
                 font-size: 12px;
             }
+            /* The Meter A/B pulse lanes stay a horizontal flex strip (they don't
+               switch to the wrap grid above), so their buttons keep the 42px
+               touch height — bump the strip's min-height to match and stop the
+               step boxes from overflowing/truncating at the bottom. */
+            .pulses-section .sequencer-container {
+                min-height: 42px;
+            }
         }
 
         /* ----- UX improvements: sticky transport, playhead column, mix dimming ----- */
@@ -1970,6 +1977,33 @@
             margin-left: auto;
             margin-right: auto;
             box-sizing: border-box;
+        }
+        /* Collapse toggle: shrinks the sticky bar to a single row of transport
+           buttons (hide the settings row and Save/Load/Share/Help) so it doesn't
+           cover too much of the screen in landscape. */
+        .sticky-bar-toggle {
+            margin-left: auto;
+            background: #20202c;
+            border: 1px solid #3a3a48;
+            border-radius: 6px;
+            color: #a1a1aa;
+            cursor: pointer;
+            font-size: 11px;
+            line-height: 1;
+            height: 32px;
+            width: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+        }
+        .sticky-bar-toggle:hover { background: #2a2a38; color: #fff; }
+        .sticky-bar.collapsed .bar-settings,
+        .sticky-bar.collapsed .secondary-actions {
+            display: none;
+        }
+        .sticky-bar.collapsed {
+            gap: 0;
         }
         /* Global Tempo / Master Output / Reset now live in the sticky bar
            alongside transport; lay them out inline rather than as a grid. */
