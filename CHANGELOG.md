@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.13.8 — 2026-08-18
+
+### Fixed
+- Shared/saved rhythms with more than 4 master phrase cycles now rehydrate correctly (the restore clamp previously capped master phrase at 4 of 8).
+- The Master Beat strip now always renders a single measure (4 quarter beats), so its 1-2-3-4 click animation stays clean regardless of screen width or master phrase cycle count.
+- Meter A/B pulse lanes wrap in portrait (no more steps or beats cut off), and the sticky transport bar can collapse to a single row.
+
 ## v1.13.7 — 2026-08-18
 
 ### Fixed
