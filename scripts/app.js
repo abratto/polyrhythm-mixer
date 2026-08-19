@@ -524,6 +524,21 @@ document.addEventListener('wheel', (e) => {
         setScrollFollow(false);
     }
 }, { passive: true });
+
+// Collapse the sticky transport bar down to a single row of controls.
+const stickyBarToggle = document.getElementById('stickyBarToggle');
+const stickyBar = document.getElementById('stickyBar');
+if (stickyBarToggle && stickyBar) {
+    const syncStickyToggle = (collapsed) => {
+        stickyBar.classList.toggle('collapsed', collapsed);
+        stickyBarToggle.setAttribute('aria-expanded', String(!collapsed));
+        stickyBarToggle.textContent = collapsed ? '\u25be' : '\u25b4';
+        stickyBarToggle.title = collapsed ? 'Expand controls' : 'Collapse controls';
+    };
+    stickyBarToggle.addEventListener('click', () => {
+        syncStickyToggle(!stickyBar.classList.contains('collapsed'));
+    });
+}
 // Mount Solo/Mute inside the lanes (single-channel + master wheel) now that the
 // lane toolbars exist; per-voice Solo/Mute are created in each voice row above.
 // Add per-lane editing controls (randomize / reverse) before wireLaneMixButtons
