@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.13.7 — 2026-08-18
+
+### Fixed
+- In portrait, the Meter A/B pulse lanes now wrap into a grid like the rhythm-track lanes, and the Master Beat cells shrink to fit, so no steps or quarter beats get cut off on narrow screens.
+
 ## v1.13.6 — 2026-08-18
 
 ### Fixed
