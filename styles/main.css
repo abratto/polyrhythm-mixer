@@ -1945,12 +1945,24 @@
                 height: 42px;
                 font-size: 12px;
             }
-            /* The Meter A/B pulse lanes stay a horizontal flex strip (they don't
-               switch to the wrap grid above), so their buttons keep the 42px
-               touch height — bump the strip's min-height to match and stop the
-               step boxes from overflowing/truncating at the bottom. */
+            /* The Meter A/B pulse lanes wrap like the rhythm tracks instead of
+               staying a single horizontal scroll strip, so every pulse stays
+               visible on a narrow portrait screen. */
             .pulses-section .sequencer-container {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
+                gap: 6px;
+                width: 100%;
                 min-height: 42px;
+                overflow-x: visible;
+                align-items: stretch;
+            }
+            /* Keep the Master Beat strip a single flex row (its 4/4 overlay
+               needs a linear row), but let its cells shrink so all four quarter
+               beats stay on screen instead of the 4th getting cut off. */
+            .master-beat-grid .step-btn {
+                flex: 1 1 0;
+                min-width: 0;
             }
         }
 
