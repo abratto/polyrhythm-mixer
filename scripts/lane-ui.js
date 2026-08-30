@@ -1658,7 +1658,14 @@ export function onScrollFollowChange(fn) {
  * full page when the active step crosses the right edge (hardware step-grid
  * style). A no-op when follow is off or the whole row already fits. The last
  * page clamps to the sequence end, and a loop wrap returns to page 0.
+ *
+ * DOM work (two getBoundingClientRect reads + a scrollLeft write, all of
+ which force layout) happens only when the target page differs from the
+ last page applied to that scroller — the common case is the playhead
+ moving within the current page, which costs nothing.
  */
+const _lastPageByScroller = new WeakMap();
+
 function revealStepInView(btn) {
     if (!_followScroll || !btn) return;
     const scroller = btn.closest('.voice-steps, .sequencer-container');
@@ -1669,9 +1676,16 @@ function revealStepInView(btn) {
     const bRect = btn.getBoundingClientRect();
     const scrollLeft = scroller.scrollLeft;
     const bLeft = bRect.left - sRect.left + scrollLeft;
-    const page = Math.floor(bLeft / clientWidth);
+    const page = Math.max(0, Math.floor(bLeft / clientWidth));
+    if (_lastPageByScroller.get(scroller) === page) return;
     const max = scroller.scrollWidth - clientWidth;
-    scroller.scrollLeft = Math.max(0, Math.min(page * clientWidth, max));
+    const clamped = Math.min(page * clientWidth, max);
+    if (Math.abs(scroller.scrollLeft - clamped) < 1) {
+        _lastPageByScroller.set(scroller, page);
+        return;
+    }
+    scroller.scrollLeft = clamped;
+    _lastPageByScroller.set(scroller, page);
 }
 
 function markMultiVoiceCurrentButtons(lane, state, previous, next) {
