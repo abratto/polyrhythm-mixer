@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.15.0 — 2026-08-18
+
+### Added
+- Nested meter rings inside the master wheel: a circular clock-face view of the measure, complementing the side gears. The innermost orange ring always divides the cycle into 4 equal parts (the 4/4 reference beat); pink and cyan rings carry Meter A's and Meter B's pulse marks. A radial indicator sweeps once per measure, crossing each ring's mark k exactly when that meter's pulse k fires — coincidences read as the hand lining up marks from two rings at once. Rings sit at fixed radii (3:2, Meter A outer / Meter B inner) so they never resize when meters change; the ratio reads by counting marks.
+- The visualization "?" help text was rewritten in plainer language, with a concrete 6-against-4 example and a new Rings section.
+
 ## v1.13.9 — 2026-08-18
 
 ### Changed (performance)
