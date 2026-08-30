@@ -435,7 +435,7 @@ function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width, cycleProgr
  * across multiple master cycles. Each row represents a phrase (A or B),
  * with markers showing where selected steps fall within the full pattern.
  */
-function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width) {
+function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width, includePlayhead = true) {
     const totalCycles = state.fullPatternCycles;
     const totalSteps = totalCycles * state.mainTeeth;
     const pixelPerStep = width / totalSteps;
@@ -576,17 +576,21 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width) {
         });
     });
 
-    // Playhead showing progress through the full pattern
-    const masterCyclesElapsed = state.mainAngle / (2 * Math.PI);
-    const playheadProgress = (masterCyclesElapsed % totalCycles) / totalCycles;
-    const playheadX = startX + playheadProgress * width;
+    // Playhead showing progress through the full pattern — drawn live per
+    // frame (it moves continuously), so the cached static layer skips it.
+    if (includePlayhead) {
+        const masterCyclesElapsed = state.mainAngle / (2 * Math.PI);
+        const playheadProgress = (masterCyclesElapsed % totalCycles) / totalCycles;
+        const playheadX = startX + playheadProgress * width;
 
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(playheadX, yTop - 4);
-    ctx.lineTo(playheadX, bottomY);
-    ctx.stroke();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(playheadX, yTop - 4);
+        ctx.lineTo(playheadX, bottomY);
+        ctx.stroke();
+    }
+    return bottomY;
 }
 
 /**
@@ -621,6 +625,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
     let _layerASig = null;
     let _layerB = null;
     let _layerBSig = null;
+    let _fullPatternBottom = 0;
 
     // Reused buffer for merging master voice selections.
     // Grow it on demand so higher meter pairs such as 17 against 18 still render correctly.
@@ -896,7 +901,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             o.fillText(`${state.B} groups of ${state.teethB} beats`, cxB, cy + rBOuter + 66);
             o.font = 'bold 13px sans-serif';
 
-            drawFullPatternTimeline(o, state, lanes, timelineX, timelineY + 55, timelineWidth);
+            _fullPatternBottom = drawFullPatternTimeline(o, state, lanes, timelineX, timelineY + 55, timelineWidth, false);
             _layerASig = baseSig;
         }
         ctx.drawImage(_layerA, 0, 0);
@@ -940,7 +945,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         }
         ctx.drawImage(_layerB, 0, 0);
 
-        // Master-cycle playhead line — the only per-frame timeline element
+        // Master-cycle playhead line — drawn live per frame
         const playheadX = timelineX + cycleProgress * timelineWidth;
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 2;
@@ -948,6 +953,20 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         ctx.moveTo(playheadX, timelineY - 34);
         ctx.lineTo(playheadX, timelineY + 34);
         ctx.stroke();
+
+        // Full-pattern playhead line — also drawn live per frame
+        if (_fullPatternBottom > 0) {
+            const fullYTop = timelineY + 55;
+            const masterCyclesElapsed = state.mainAngle / (2 * Math.PI);
+            const fullProgress = (masterCyclesElapsed % state.fullPatternCycles) / state.fullPatternCycles;
+            const fullPlayheadX = timelineX + fullProgress * timelineWidth;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(fullPlayheadX, fullYTop - 4);
+            ctx.lineTo(fullPlayheadX, _fullPatternBottom);
+            ctx.stroke();
+        }
 
         requestAnimationFrame(animate);
         } catch (err) { console.error('Animation error:', err); requestAnimationFrame(animate); }
