@@ -689,6 +689,18 @@ async function run() {
         assert(pinnedSamples.every(idx => idx >= 0), 'A pinned phrase lane should keep its playhead highlight lit at every sample, not only while the master playhead sweeps the pinned cycle.', pinnedSamples);
         assert(new Set(pinnedSamples).size > 1, 'A pinned phrase lane highlight should advance through the pinned cycle over time.', pinnedSamples);
 
+        // --- Main-thread stall recovery ---
+        // A long stall (GC, layout) makes the audio-clock-derived angle jump.
+        // The visual catch-up must bound itself and recover on the next frame
+        // rather than replaying hundreds of steps or wedging.
+        await page.evaluate(() => { const start = Date.now(); while (Date.now() - start < 300) {} });
+        await page.waitForTimeout(600);
+        const recoveredHighlight = await page.evaluate(() => {
+            const btns = document.querySelectorAll('#masterGrid .voice-row:nth-child(1) .step-btn');
+            return Array.from(btns).some(b => b.classList.contains('current'));
+        });
+        assert(recoveredHighlight, 'After a main-thread stall, the step highlight should recover on the next frame.');
+
         assert(pageErrors.length === 0, 'No page errors should be emitted.', pageErrors);
         assert(consoleErrors.length === 0, 'No console errors should be emitted.', consoleErrors);
 

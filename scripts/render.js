@@ -138,7 +138,7 @@ function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop
         ctx.save();
         ctx.translate(cx, cy - rOuter - 18);
         ctx.fillStyle = flashIntensity > 0 ? '#ffffff' : color;
-        if (flashIntensity > 0) {
+        if (flashIntensity > 0 && !isMobile) {
             ctx.shadowBlur = 25;
             ctx.shadowColor = color;
         }
@@ -453,6 +453,8 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
     const THROTTLED_FRAME_MS = 33;
     const IDLE_FRAME_MS = 250;
     let lastDrawTime = 0;
+    let _lastReadout = null;
+    let _lastMiniPct = null;
 
     // Lane rebuild queue — defer DOM rebuilds from the animation loop to avoid
     // innerHTML teardown + recreation mid-rAF, which guarantees a frame drop.
@@ -533,20 +535,25 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
 
         // Update the transport readout: a status when stopped/paused, otherwise
         // the live position (beat within the measure, cycle within the pattern).
+        // Written only when the string changes — assigning textContent every
+        // frame dirties the DOM and costs layout work on low-end devices.
         if (ui && ui.transportReadout) {
             if (!state.playing) {
-                ui.transportReadout.textContent = state.transport === 'paused' ? 'Paused' : 'Stopped';
+                const status = state.transport === 'paused' ? 'Paused' : 'Stopped';
+                if (_lastReadout !== status) { ui.transportReadout.textContent = status; _lastReadout = status; }
             } else {
                 const beat = Math.floor(state.mainAngle / (Math.PI / 2)) + 1;
                 const cycleInPattern = ((Math.floor(state.mainAngle / (2 * Math.PI)) % state.fullPatternCycles) + state.fullPatternCycles) % state.fullPatternCycles + 1;
-                ui.transportReadout.textContent = `Beat ${beat} / 4  ·  Cycle ${cycleInPattern} / ${state.fullPatternCycles}`;
+                const readout = `Beat ${beat} / 4  ·  Cycle ${cycleInPattern} / ${state.fullPatternCycles}`;
+                if (_lastReadout !== readout) { ui.transportReadout.textContent = readout; _lastReadout = readout; }
             }
         }
 
         // Compact playhead in the sticky transport bar tracks master-cycle progress.
         const cycleProgress = (state.mainAngle % (2 * Math.PI)) / (2 * Math.PI);
         if (ui && ui.miniPlayhead) {
-            ui.miniPlayhead.style.left = `${cycleProgress * 100}%`;
+            const pct = (cycleProgress * 100).toFixed(2);
+            if (_lastMiniPct !== pct) { ui.miniPlayhead.style.left = `${pct}%`; _lastMiniPct = pct; }
         }
 
         // Header: current polyrhythm displayed above the gears
@@ -621,17 +628,35 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
                 Awheel: state.lastActive.Awheel,
                 Bwheel: state.lastActive.Bwheel
             };
-            let lastActive = null;
-            for (let s = prevStep + 1; s <= currentStep; s++) {
-                const active = {
-                    master: ((s % state.masterPhraseSteps) + state.masterPhraseSteps) % state.masterPhraseSteps,
-                    Aphrase: getActivePhraseStep(s, state.phaseA, state.teethA, state.phraseStepsA),
-                    Bphrase: getActivePhraseStep(s, state.phaseB, state.teethB, state.phraseStepsB),
-                    Awheel: getActiveWheelStep(s, state.phaseA, state.teethA, state.A),
-                    Bwheel: getActiveWheelStep(s, state.phaseB, state.teethB, state.B)
+            // Bound catch-up after a main-thread stall (GC, layout, etc.): the
+            // audio-clock-derived mainAngle jumps forward, and replaying every
+            // skipped step in one frame turns a single stall into a visible
+            // multi-step jerk. Mirror the audio scheduler's catch-up clamp —
+            // past MAX steps, jump to the current step without per-step replay
+            // (the audio scheduler already drops the missed hits).
+            const MAX_VISUAL_CATCH_UP_STEPS = 8;
+            const catchUpSteps = currentStep - prevStep;
+            let lastActive;
+            if (catchUpSteps > MAX_VISUAL_CATCH_UP_STEPS) {
+                lastActive = {
+                    master: ((currentStep % state.masterPhraseSteps) + state.masterPhraseSteps) % state.masterPhraseSteps,
+                    Aphrase: getActivePhraseStep(currentStep, state.phaseA, state.teethA, state.phraseStepsA),
+                    Bphrase: getActivePhraseStep(currentStep, state.phaseB, state.teethB, state.phraseStepsB),
+                    Awheel: getActiveWheelStep(currentStep, state.phaseA, state.teethA, state.A),
+                    Bwheel: getActiveWheelStep(currentStep, state.phaseB, state.teethB, state.B)
                 };
-                lastActive = active;
-                processTriggers(state, lanes, active, channels);
+                state.lastActive = { ...lastActive };
+            } else {
+                for (let s = prevStep + 1; s <= currentStep; s++) {
+                    lastActive = {
+                        master: ((s % state.masterPhraseSteps) + state.masterPhraseSteps) % state.masterPhraseSteps,
+                        Aphrase: getActivePhraseStep(s, state.phaseA, state.teethA, state.phraseStepsA),
+                        Bphrase: getActivePhraseStep(s, state.phaseB, state.teethB, state.phraseStepsB),
+                        Awheel: getActiveWheelStep(s, state.phaseA, state.teethA, state.A),
+                        Bwheel: getActiveWheelStep(s, state.phaseB, state.teethB, state.B)
+                    };
+                    processTriggers(state, lanes, lastActive, channels);
+                }
             }
             if (lastActive) markCurrentButtons(lastActive, previousActive);
 
