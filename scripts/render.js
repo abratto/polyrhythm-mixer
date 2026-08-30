@@ -259,7 +259,7 @@ function getMasterDotsSprite(state, lanes, rMainInner, markerRadius, dotRadius, 
 //             r = rMainOuter * sin(pi/mainTeeth) / sin(pi/N)
 //   'rate'  — radius proportional to the meter's onset fraction of the
 //             master tick rate: r = rMainOuter * (N / mainTeeth)
-const NESTED_RADIUS_MODE = 'chord';
+const NESTED_RADIUS_MODE = 'rate';
 
 let _nestedSprite = null;
 let _nestedSig = '';
