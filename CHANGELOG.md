@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.14.0 — 2026-08-18
+
+### Added
+- Pinned phrase lanes now loop their playhead highlight continuously over the pinned cycle, in sync with the audio loop, instead of only lighting while the master playhead sweeps through that cycle. The frozen position still shows while the transport is stopped.
+
 ## v1.13.8 — 2026-08-18
 
 ### Fixed
