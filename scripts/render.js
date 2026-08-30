@@ -254,19 +254,27 @@ function getMasterDotsSprite(state, lanes, rMainInner, markerRadius, dotRadius, 
 // two circles at once, that meter coincidence is visible as radial alignment.
 //
 // NESTED_RADIUS_MODE picks the experiment to try:
+//   'fixed' — rings never change size. Meter A always rides the outer ring,
+//             Meter B the inner, with radii in a 3:2 ratio so mark spacing
+//             is generous and near-equal for 6-against-4. The ratio is read
+//             by counting marks, not comparing circumferences.
 //   'chord' — each circle sized so consecutive marks are one master
 //             tooth-chord apart (same module as the meshed gears):
 //             r = rMainOuter * sin(pi/mainTeeth) / sin(pi/N)
 //   'rate'  — radius proportional to the meter's onset fraction of the
 //             master tick rate: r = rMainOuter * (N / mainTeeth)
-const NESTED_RADIUS_MODE = 'rate';
+const NESTED_RADIUS_MODE = 'fixed';
+const NESTED_RING_FRACTIONS = { A: 0.68, B: 0.46 }; // of rMainOuter
 
 let _nestedSprite = null;
 let _nestedSig = '';
 
-function nestedMeterRadius(N, state, rMainOuter, rMainInner) {
+function nestedMeterRadius(N, state, rMainOuter, rMainInner, isMeterA) {
     let r;
-    if (NESTED_RADIUS_MODE === 'rate') {
+    if (NESTED_RADIUS_MODE === 'fixed') {
+        // A rides the outer ring, B the inner — stable across meter changes.
+        r = rMainOuter * (isMeterA ? NESTED_RING_FRACTIONS.A : NESTED_RING_FRACTIONS.B);
+    } else if (NESTED_RADIUS_MODE === 'rate') {
         r = rMainOuter * (N / state.mainTeeth);
     } else {
         r = rMainOuter * Math.sin(Math.PI / state.mainTeeth) / Math.sin(Math.PI / N);
@@ -301,11 +309,11 @@ function getNestedCirclesSprite(state, rMainInner, rMainOuter, isMobile) {
     g.translate(size / 2, size / 2);
 
     const meters = [
-        { N: state.A, color: '#ff3366' },
-        { N: state.B, color: '#00e5ff' }
+        { N: state.A, color: '#ff3366', isMeterA: true },
+        { N: state.B, color: '#00e5ff', isMeterA: false }
     ];
-    for (const { N, color } of meters) {
-        const r = nestedMeterRadius(N, state, rMainOuter, rMainInner);
+    for (const { N, color, isMeterA } of meters) {
+        const r = nestedMeterRadius(N, state, rMainOuter, rMainInner, isMeterA);
         g.strokeStyle = color;
         g.globalAlpha = 0.55;
         g.lineWidth = isMobile ? 1.5 : 2;
@@ -1011,8 +1019,8 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         // Nested meter circles (screen-static) + live radial indicator
         const nestedSprite = getNestedCirclesSprite(state, rMainInner, rMainOuter, isMobile);
         ctx.drawImage(nestedSprite.canvas, cx - nestedSprite.half, cy - nestedSprite.half);
-        const nestedRa = nestedMeterRadius(state.A, state, rMainOuter, rMainInner);
-        const nestedRb = nestedMeterRadius(state.B, state, rMainOuter, rMainInner);
+        const nestedRa = nestedMeterRadius(state.A, state, rMainOuter, rMainInner, true);
+        const nestedRb = nestedMeterRadius(state.B, state, rMainOuter, rMainInner, false);
         const maxNestedR = Math.max(nestedRa, nestedRb);
         const indicatorAngle = -Math.PI / 2 - state.mainAngle;
         ctx.save();
