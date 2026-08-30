@@ -1476,6 +1476,73 @@ function createMetalBellStrike(state, frequency, startTime, volume, duration) {
 
 function acquireGain(state) { return state.audioCtx.createGain(); }
 
+// ── Offline pre-render cache ────────────────────────────────────────────
+// Live synthesis creates 3-6 nodes per hit (oscillators, gains, filters, all
+// connected per hit), which on low-end devices competes with rAF and produces
+// audible/visible jitter. Every instrument's parameters are static, so each
+// one (per A/B channel variant) is rendered once at unit volume into an
+// OfflineAudioContext; a live hit then plays that buffer through a single
+// gain node — two nodes instead of three to six, with no per-hit automation.
+// Live synthesis remains the fallback: it runs while the offline render is
+// pending and permanently if rendering fails.
+const PRERENDER_SECONDS = 3;
+const _prerenderBuffers = new Map();   // variant -> AudioBuffer | null (null = live-only)
+const _prerenderPending = new Set();
+
+function variantKeyFor(key, channelName) {
+    return channelName && channelName.startsWith('A') ? `${key}:A` : key;
+}
+
+function prerenderVariant(state, key, variant, channelName) {
+    try {
+        const sampleRate = state.audioCtx.sampleRate;
+        const offline = new OfflineAudioContext(1, Math.ceil(sampleRate * PRERENDER_SECONDS), sampleRate);
+        const fn = instruments[key];
+        if (!fn) throw new Error(`Unknown instrument: ${key}`);
+        fn({ audioCtx: offline }, 0, 1, channelName || '');
+        offline.startRendering().then(buffer => {
+            _prerenderBuffers.set(variant, buffer);
+        }).catch(() => {
+            _prerenderBuffers.set(variant, null);
+        });
+    } catch (err) {
+        _prerenderBuffers.set(variant, null);
+    }
+}
+
+/**
+ * Triggers one instrument hit. Uses the pre-rendered buffer for this
+ * instrument + channel variant when it is available (BufferSource + gain),
+ * falling back to live synthesis until the offline render resolves — so the
+ * first hit for a new instrument sounds exactly as before.
+ */
+export function triggerInstrument(state, key, now, vol, channelName) {
+    const variant = variantKeyFor(key, channelName);
+    let buffer = _prerenderBuffers.get(variant);
+    if (buffer === undefined) {
+        if (!_prerenderPending.has(variant)) {
+            _prerenderPending.add(variant);
+            prerenderVariant(state, key, variant, channelName);
+        }
+        buffer = null;
+    }
+    if (!buffer) {
+        const fn = instruments[key];
+        if (fn) fn(state, now, vol, channelName || '');
+        return;
+    }
+
+    const ctx = state.audioCtx;
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(vol, now);
+    source.connect(gain);
+    gain.connect(ctx.destination);
+    source.start(now);
+    source.onended = () => { source.disconnect(); gain.disconnect(); };
+}
+
 /** Dispatch table mapping instrument value keys to their synthesis functions. */
 export const instruments = {
     kick: playKick,

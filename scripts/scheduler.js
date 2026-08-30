@@ -13,7 +13,7 @@
  */
 
 import { getActivePhraseStep } from './math.js';
-import { instruments } from './instruments.js';
+import { triggerInstrument } from './instruments.js';
 import { isAnyChannelSoloed } from './channels.js';
 
 /**
@@ -235,12 +235,9 @@ export function playSingleChannel(state, channel, globalVolume, hitTime) {
     const vol = channel.volume * channel.gainScale * globalVolume;
     if (vol <= 0) return;
 
-    const fn = instruments[channel.sound];
-    if (!fn) return;
-
     const now = hitTime
         ? Math.max(hitTime, state.audioCtx.currentTime + 0.025)
         : state.audioCtx.currentTime;
-    try { fn(state, now, vol, channel.prefix || ''); }
+    try { triggerInstrument(state, channel.sound, now, vol, channel.prefix || ''); }
     catch (err) { console.error('Instrument error:', err, 'for sound', channel.sound); }
 }
