@@ -264,7 +264,7 @@ function getMasterDotsSprite(state, lanes, rMainInner, markerRadius, dotRadius, 
 //   'rate'  — radius proportional to the meter's onset fraction of the
 //             master tick rate: r = rMainOuter * (N / mainTeeth)
 const NESTED_RADIUS_MODE = 'fixed';
-const NESTED_RING_FRACTIONS = { A: 0.68, B: 0.46 }; // of rMainOuter
+const NESTED_RING_FRACTIONS = { A: 0.68, B: 0.46, beat: 0.30 }; // of rMainOuter
 
 let _nestedSprite = null;
 let _nestedSig = '';
@@ -299,7 +299,7 @@ function masterSpriteSize(rMainInner, rMainOuter) {
  */
 function getNestedCirclesSprite(state, rMainInner, rMainOuter, isMobile) {
     const { size } = masterSpriteSize(rMainInner, rMainOuter);
-    const sig = `${state.A}_${state.B}_${state.mainTeeth}_${rMainInner.toFixed(2)}_${rMainOuter.toFixed(2)}_${isMobile}_${NESTED_RADIUS_MODE}`;
+    const sig = `${state.A}_${state.B}_${state.mainTeeth}_${rMainInner.toFixed(2)}_${rMainOuter.toFixed(2)}_${isMobile}_${NESTED_RADIUS_MODE}_${NESTED_RING_FRACTIONS.A}_${NESTED_RING_FRACTIONS.B}_${NESTED_RING_FRACTIONS.beat}`;
     if (_nestedSig === sig && _nestedSprite) return _nestedSprite;
 
     const off = document.createElement('canvas');
@@ -308,26 +308,29 @@ function getNestedCirclesSprite(state, rMainInner, rMainOuter, isMobile) {
     const g = off.getContext('2d');
     g.translate(size / 2, size / 2);
 
-    const meters = [
-        { N: state.A, color: '#ff3366', isMeterA: true },
-        { N: state.B, color: '#00e5ff', isMeterA: false }
+    // The reference-beat ring (innermost, orange like the beat cues) always
+    // divides the cycle into 4 equal parts — the 4/4 clock face. Together the
+    // rings are a circular representation of the master cycle timeline.
+    const rings = [
+        { N: 4, color: '#ff9100', radius: rMainOuter * NESTED_RING_FRACTIONS.beat },
+        { N: state.B, color: '#00e5ff', radius: nestedMeterRadius(state.B, state, rMainOuter, rMainInner, false) },
+        { N: state.A, color: '#ff3366', radius: nestedMeterRadius(state.A, state, rMainOuter, rMainInner, true) }
     ];
-    for (const { N, color, isMeterA } of meters) {
-        const r = nestedMeterRadius(N, state, rMainOuter, rMainInner, isMeterA);
+    const markR = isMobile ? 3 : 4;
+    for (const { N, color, radius } of rings) {
         g.strokeStyle = color;
         g.globalAlpha = 0.55;
         g.lineWidth = isMobile ? 1.5 : 2;
         g.beginPath();
-        g.arc(0, 0, r, 0, 2 * Math.PI);
+        g.arc(0, 0, radius, 0, 2 * Math.PI);
         g.stroke();
 
         // Pulse marks — equally spaced around the circumference
         g.fillStyle = color;
-        const markR = isMobile ? 2.5 : 3;
         for (let k = 0; k < N; k++) {
             const a = -Math.PI / 2 - (k * 2 * Math.PI) / N;
             g.beginPath();
-            g.arc(r * Math.cos(a), r * Math.sin(a), markR, 0, 2 * Math.PI);
+            g.arc(radius * Math.cos(a), radius * Math.sin(a), markR, 0, 2 * Math.PI);
             g.fill();
         }
         // (downbeat mark at k = 0 doubles as the top reference)
@@ -1031,7 +1034,12 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         ctx.moveTo(0, 0);
         ctx.lineTo(maxNestedR * Math.cos(indicatorAngle), maxNestedR * Math.sin(indicatorAngle));
         ctx.stroke();
-        // Current-pulse dot on each circle rim
+        // Current-pulse dot on each circle rim (reference beat, then meters)
+        const nestedBeatR = rMainOuter * NESTED_RING_FRACTIONS.beat;
+        ctx.fillStyle = '#ff9100';
+        ctx.beginPath();
+        ctx.arc(nestedBeatR * Math.cos(indicatorAngle), nestedBeatR * Math.sin(indicatorAngle), isMobile ? 3 : 4, 0, 2 * Math.PI);
+        ctx.fill();
         ctx.fillStyle = '#ff3366';
         ctx.beginPath();
         ctx.arc(nestedRa * Math.cos(indicatorAngle), nestedRa * Math.sin(indicatorAngle), isMobile ? 3 : 4, 0, 2 * Math.PI);
