@@ -8,6 +8,9 @@
   - The canvas is composited from pre-rendered layers: gear bodies and the A/B pulse spokes+dots are cached sprites, and the timelines (full-pattern, master-cycle) are offscreen layers rebuilt only when the meter/pattern state or playing cycle changes. A frame is now a handful of blits plus the moving playhead.
   - Instruments are pre-rendered once to audio buffers (per A/B variant), so a hit creates two audio nodes instead of three to six, with no per-hit automation; live synthesis remains the fallback.
 
+### Fixed
+- Full Pattern Timeline playhead moves again (it was briefly frozen by the initial layer-caching change).
+
 ## v1.14.0 — 2026-08-18
 
 ### Added
