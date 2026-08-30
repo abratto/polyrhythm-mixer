@@ -668,6 +668,27 @@ async function run() {
             await snapshot()
         );
 
+        // --- Pinned phrase lanes loop their playhead highlight continuously ---
+        // Regression: the pinned highlight only lit while the master playhead
+        // happened to sweep through the pinned cycle, going dark for the rest
+        // of the phrase. It must wrap the global step index modulo the cycle
+        // length so it loops the pinned cycle like the audio gate does.
+        await page.locator('#audioBtn').click();
+        await setSelect('#phraseCyclesA', 2);
+        const aPhrasePinRow = page.locator('.matrix-row', { has: page.locator('#meterAPhraseGrid') });
+        await aPhrasePinRow.locator('.cycle-nav-btn[title="Next cycle"]').click(); // pins + shows cycle 2
+        await page.waitForTimeout(400);
+        const pinnedSamples = [];
+        for (let i = 0; i < 8; i++) {
+            pinnedSamples.push(await page.evaluate(() => {
+                const btns = document.querySelectorAll('#meterAPhraseGrid .voice-row:nth-child(1) .step-btn');
+                return Array.from(btns).findIndex(b => b.classList.contains('current'));
+            }));
+            await page.waitForTimeout(450);
+        }
+        assert(pinnedSamples.every(idx => idx >= 0), 'A pinned phrase lane should keep its playhead highlight lit at every sample, not only while the master playhead sweeps the pinned cycle.', pinnedSamples);
+        assert(new Set(pinnedSamples).size > 1, 'A pinned phrase lane highlight should advance through the pinned cycle over time.', pinnedSamples);
+
         assert(pageErrors.length === 0, 'No page errors should be emitted.', pageErrors);
         assert(consoleErrors.length === 0, 'No console errors should be emitted.', consoleErrors);
 

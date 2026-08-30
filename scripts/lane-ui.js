@@ -1702,13 +1702,18 @@ function markMultiVoiceCurrentButtons(lane, state, previous, next) {
                     revealStepInView(voice.buttons[displayedCurr]);
                 }
             } else {
-                const activeInVisible = currentIndexes[voiceIndex] - cycleStart;
-                if (activeInVisible >= 0 && activeInVisible < stepsPerCycle) {
-                    addCurrentClass(voice.buttons[activeInVisible]);
-                    voice._currentIndex = activeInVisible;
-                    positionPlayhead(lane._playheads?.[voiceIndex], activeInVisible, stepsPerCycle);
-                    revealStepInView(voice.buttons[activeInVisible]);
-                }
+                // Pinned: the highlight loops the pinned cycle continuously,
+                // mirroring the audio gate in scheduleStepAudio (both wrap the
+                // global step index modulo the cycle length). Without the wrap
+                // the highlight only lit while the master playhead happened to
+                // sweep through the pinned cycle, going dark for the rest of the
+                // phrase. Highlighting is position-driven, so it also shows the
+                // frozen position while the transport is stopped.
+                const local = ((currentIndexes[voiceIndex] % stepsPerCycle) + stepsPerCycle) % stepsPerCycle;
+                addCurrentClass(voice.buttons[local]);
+                voice._currentIndex = local;
+                positionPlayhead(lane._playheads?.[voiceIndex], local, stepsPerCycle);
+                revealStepInView(voice.buttons[local]);
             }
         });
 
