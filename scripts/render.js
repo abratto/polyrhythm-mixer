@@ -253,35 +253,20 @@ function getMasterDotsSprite(state, lanes, rMainInner, markerRadius, dotRadius, 
 // each circle's marks in sequence — where the radial line crosses marks from
 // two circles at once, that meter coincidence is visible as radial alignment.
 //
-// NESTED_RADIUS_MODE picks the experiment to try:
-//   'fixed' — rings never change size. Meter A always rides the outer ring,
-//             Meter B the inner, with radii in a 3:2 ratio so mark spacing
-//             is generous and near-equal for 6-against-4. The ratio is read
-//             by counting marks, not comparing circumferences.
-//   'chord' — each circle sized so consecutive marks are one master
-//             tooth-chord apart (same module as the meshed gears):
-//             r = rMainOuter * sin(pi/mainTeeth) / sin(pi/N)
-//   'rate'  — radius proportional to the meter's onset fraction of the
-//             master tick rate: r = rMainOuter * (N / mainTeeth)
-const NESTED_RADIUS_MODE = 'fixed';
+// Nested meter rings inside the master wheel: one ring per meter in the
+// meter gear colors plus an innermost reference-beat ring (the 4/4 clock
+// face), all at fixed radii. Meter A always rides the outer ring, Meter B
+// the inner, in a 3:2 ratio so mark spacing is generous and near-equal for
+// 6-against-4. The ratio is read by counting marks, not comparing
+// circumferences; the rings never resize when the meters change.
 const NESTED_RING_FRACTIONS = { A: 0.68, B: 0.46, beat: 0.30 }; // of rMainOuter
 
 let _nestedSprite = null;
 let _nestedSig = '';
 
 function nestedMeterRadius(N, state, rMainOuter, rMainInner, isMeterA) {
-    let r;
-    if (NESTED_RADIUS_MODE === 'fixed') {
-        // A rides the outer ring, B the inner — stable across meter changes.
-        r = rMainOuter * (isMeterA ? NESTED_RING_FRACTIONS.A : NESTED_RING_FRACTIONS.B);
-    } else if (NESTED_RADIUS_MODE === 'rate') {
-        r = rMainOuter * (N / state.mainTeeth);
-    } else {
-        r = rMainOuter * Math.sin(Math.PI / state.mainTeeth) / Math.sin(Math.PI / N);
-    }
-    // Keep the ring inside the master rim (meters above 12 would otherwise
-    // push the equal-chord circle outside the wheel).
-    return Math.min(r, rMainInner * 0.92);
+    // A rides the outer ring, B the inner — stable across meter changes.
+    return rMainOuter * (isMeterA ? NESTED_RING_FRACTIONS.A : NESTED_RING_FRACTIONS.B);
 }
 
 /** Footprint helper shared by the master-gear sprites. */
@@ -299,7 +284,7 @@ function masterSpriteSize(rMainInner, rMainOuter) {
  */
 function getNestedCirclesSprite(state, rMainInner, rMainOuter, isMobile) {
     const { size } = masterSpriteSize(rMainInner, rMainOuter);
-    const sig = `${state.A}_${state.B}_${state.mainTeeth}_${rMainInner.toFixed(2)}_${rMainOuter.toFixed(2)}_${isMobile}_${NESTED_RADIUS_MODE}_${NESTED_RING_FRACTIONS.A}_${NESTED_RING_FRACTIONS.B}_${NESTED_RING_FRACTIONS.beat}`;
+    const sig = `${state.A}_${state.B}_${state.mainTeeth}_${rMainInner.toFixed(2)}_${rMainOuter.toFixed(2)}_${isMobile}_${NESTED_RING_FRACTIONS.A}_${NESTED_RING_FRACTIONS.B}_${NESTED_RING_FRACTIONS.beat}`;
     if (_nestedSig === sig && _nestedSprite) return _nestedSprite;
 
     const off = document.createElement('canvas');
