@@ -18,6 +18,43 @@ const _gearBodyCache = {};
 let _scratchA = new Uint8Array(0);
 let _scratchB = new Uint8Array(0);
 
+// ── Static layer + sprite caching ───────────────────────────────────────
+// Per-frame canvas work is dominated by redrawing content that only changes
+// when meters, voice patterns, or the visible master cycle change. Gears are
+// pre-rendered to rotating sprites and the timelines to offscreen layers, so
+// a frame is a handful of drawImage blits plus the moving playhead and flash
+// dots instead of hundreds of path fills.
+
+/** Pre-rendered gear sprites, keyed by teeth/radii/color + content signature. */
+const _gearSpriteCache = new Map();
+const GEAR_SPRITE_CACHE_MAX = 24;
+
+/** Checksums of every lane's selection so layer/sprite caches invalidate on edits. */
+function computePatternChecksum(lanes) {
+    let h = 0;
+    const addLane = (voices, mult) => {
+        voices.forEach((voice, vi) => {
+            for (let i = 0; i < voice.selected.length; i++) {
+                if (voice.selected[i]) h = (h + (i + 1) * (vi + 1) * mult) | 0;
+            }
+        });
+    };
+    addLane(lanes.master.voices, 3);
+    addLane(lanes.Aphrase.voices, 5);
+    addLane(lanes.Bphrase.voices, 7);
+    for (let i = 0; i < lanes.Awheel.selected.length; i++) if (lanes.Awheel.selected[i]) h = (h + (i + 1) * 11) | 0;
+    for (let i = 0; i < lanes.Bwheel.selected.length; i++) if (lanes.Bwheel.selected[i]) h = (h + (i + 1) * 13) | 0;
+    return h;
+}
+
+/** Cheap fingerprint of the master-wheel A/B dot pattern (phase included). */
+function computeDotsSignature(state, lanes) {
+    let h = 0;
+    for (let i = 0; i < lanes.Awheel.selected.length; i++) if (lanes.Awheel.selected[i]) h = (h + (i + 1) * 31) | 0;
+    for (let i = 0; i < lanes.Bwheel.selected.length; i++) if (lanes.Bwheel.selected[i]) h = (h + (i + 1) * 37) | 0;
+    return `${h}_${state.phaseA}_${state.phaseB}`;
+}
+
 /**
  * Updates flash counters and lastActive tracking for visual step highlighting.
  * Audio triggers are handled independently by the audio scheduler loop.
@@ -50,19 +87,24 @@ function processTriggers(state, lanes, active, channels) {
 }
 
 /**
- * Draws a single gear (master wheel or meter wheel) on the canvas.
- * The gear is drawn as a polygon with alternating inner/outer radii to create teeth.
- * Includes a center hole, spoke lines, selected-step markers, and a top indicator dot.
+ * Pre-renders a gear body (polygon, center hole, spokes, top indicator) into an
+ * offscreen sprite. The content is static per tooth count + radii + color, so
+ * it is drawn once and blitted with a rotation transform per frame.
  */
-function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop = false, flashIntensity = 0, selectedSteps = null, isMobile = false) {
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate(angle);
-    ctx.fillStyle = color;
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = isMobile ? 1.5 : 2.5;
+function getGearSprite(teeth, rInner, rOuter, color, isMobile) {
+    const key = `${teeth}_${rInner.toFixed(2)}_${rOuter.toFixed(2)}_${color}_${isMobile}`;
+    if (_gearSpriteCache.has(key)) return _gearSpriteCache.get(key);
+    if (_gearSpriteCache.size >= GEAR_SPRITE_CACHE_MAX) _gearSpriteCache.clear();
 
-    // Gear body — use pre-rendered Path2D (shape is static per tooth count + radii)
+    const pad = 20;
+    const size = Math.ceil((rOuter + pad) * 2);
+    const off = document.createElement('canvas');
+    off.width = size;
+    off.height = size;
+    const g = off.getContext('2d');
+    g.translate(size / 2, size / 2);
+
+    // Gear body — pre-rendered Path2D (shape is static per tooth count + radii)
     const bodyKey = `${teeth}_${rInner}_${rOuter}`;
     if (!_gearBodyCache[bodyKey]) {
         const path = new Path2D();
@@ -78,33 +120,151 @@ function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop
         path.closePath();
         _gearBodyCache[bodyKey] = path;
     }
-    ctx.fill(_gearBodyCache[bodyKey]);
-    ctx.stroke(_gearBodyCache[bodyKey]);
+    g.fillStyle = color;
+    g.strokeStyle = '#ffffff';
+    g.lineWidth = isMobile ? 1.5 : 2.5;
+    g.fill(_gearBodyCache[bodyKey]);
+    g.stroke(_gearBodyCache[bodyKey]);
 
     // Center hole
-    ctx.beginPath();
-    ctx.arc(0, 0, rInner * 0.22, 0, 2 * Math.PI);
-    ctx.fillStyle = '#08080c';
-    ctx.fill();
-    ctx.stroke();
+    g.beginPath();
+    g.arc(0, 0, rInner * 0.22, 0, 2 * Math.PI);
+    g.fillStyle = '#08080c';
+    g.fill();
+    g.stroke();
 
     // Spoke lines — always 4 spokes at quarter-turn positions (the master beat)
     if (!isMobile) {
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        g.lineWidth = 4;
+        g.strokeStyle = 'rgba(255,255,255,0.35)';
         for (let q = 0; q < 4; q++) {
             const theta = q * Math.PI / 2 - Math.PI / 2;
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(rInner * Math.cos(theta), rInner * Math.sin(theta));
-            ctx.stroke();
+            g.beginPath();
+            g.moveTo(0, 0);
+            g.lineTo(rInner * Math.cos(theta), rInner * Math.sin(theta));
+            g.stroke();
         }
     }
 
+    // Top position indicator dot — marks the reference tooth (start of rotation)
+    g.fillStyle = '#ffffff';
+    g.shadowBlur = isMobile ? 0 : 6;
+    g.shadowColor = color;
+    g.beginPath();
+    g.arc(0, -rOuter + (rOuter * 0.12), Math.max(3, rOuter * 0.08), 0, 2 * Math.PI);
+    g.fill();
+    g.shadowBlur = 0;
+
+    const sprite = { canvas: off, half: size / 2 };
+    _gearSpriteCache.set(key, sprite);
+    return sprite;
+}
+
+let _masterDotsSprite = null;
+let _masterDotsSig = '';
+
+/**
+ * Pre-renders the A-pulse/B-pulse spokes and dots that decorate the master
+ * wheel into a sprite sharing the master gear's footprint. The pattern only
+ * changes when a wheel selection or phase is edited, so this redraws rarely
+ * instead of stroking up to mainTeeth spokes + dots every frame.
+ */
+function getMasterDotsSprite(state, lanes, rMainInner, markerRadius, dotRadius, isMobile) {
+    if (_scratchA.length < state.mainTeeth) {
+        _scratchA = new Uint8Array(state.mainTeeth);
+        _scratchB = new Uint8Array(state.mainTeeth);
+    }
+    _scratchA.fill(0);
+    _scratchB.fill(0);
+    lanes.Awheel.selected.forEach((on, i) => {
+        if (on) _scratchA[(i + state.phaseA) % state.mainTeeth] = 1;
+    });
+    lanes.Bwheel.selected.forEach((on, i) => {
+        if (on) _scratchB[(i + state.phaseB) % state.mainTeeth] = 1;
+    });
+
+    const sig = `${state.mainTeeth}_${rMainInner.toFixed(2)}_${markerRadius.toFixed(2)}_${dotRadius.toFixed(2)}_${isMobile}_${computeDotsSignature(state, lanes)}`;
+    if (_masterDotsSig === sig && _masterDotsSprite) return _masterDotsSprite;
+
+    const pad = 20;
+    const size = Math.ceil((rMainInner + pad) * 2) + 10;
+    const off = document.createElement('canvas');
+    off.width = size;
+    off.height = size;
+    const g = off.getContext('2d');
+    g.translate(size / 2, size / 2);
+
+    const aDots = _scratchA;
+    const bDots = _scratchB;
+    // Single pass per tooth: draw spokes and dots together
+    for (let t = 0; t < state.mainTeeth; t++) {
+        const aOn = aDots[t];
+        const bOn = bDots[t];
+        if (!aOn && !bOn) continue;
+        const theta = (t / state.mainTeeth) * Math.PI * 2 - Math.PI / 2;
+        const cosT = Math.cos(theta);
+        const sinT = Math.sin(theta);
+
+        // Spoke from centre
+        g.lineWidth = 4;
+        g.shadowBlur = 0;
+        if (aOn && bOn) g.strokeStyle = '#c07ae6';
+        else if (aOn) g.strokeStyle = '#ff6b8f';
+        else g.strokeStyle = '#6ef2ff';
+        g.beginPath();
+        g.moveTo(0, 0);
+        g.lineTo(rMainInner * cosT, rMainInner * sinT);
+        g.stroke();
+
+        // Dot(s) at the tooth — offset when both land on same tooth
+        g.lineWidth = isMobile ? 1 : 2;
+        g.shadowBlur = isMobile ? 0 : 10;
+        g.strokeStyle = '#ffffff';
+        if (aOn) {
+            g.fillStyle = '#ff6b8f';
+            g.shadowColor = '#ff6b8f';
+            const rA = markerRadius + (aOn && bOn ? -5 : 0);
+            g.beginPath();
+            g.arc(rA * cosT, rA * sinT, dotRadius, 0, 2 * Math.PI);
+            g.fill();
+            g.stroke();
+        }
+        if (bOn) {
+            g.fillStyle = '#6ef2ff';
+            g.shadowColor = '#6ef2ff';
+            const rB = markerRadius + (aOn && bOn ? 5 : 0);
+            g.beginPath();
+            g.arc(rB * cosT, rB * sinT, dotRadius, 0, 2 * Math.PI);
+            g.fill();
+            g.stroke();
+        }
+    }
+
+    _masterDotsSprite = { canvas: off, half: size / 2 };
+    _masterDotsSig = sig;
+    return _masterDotsSprite;
+}
+
+/**
+ * Draws a single gear (master wheel or meter wheel) on the canvas.
+ * The static gear body is blitted from a pre-rendered sprite with a rotation
+ * transform; only the flashing reference dot above the gear is drawn live,
+ * since its color tracks the flash counters.
+ */
+function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop = false, flashIntensity = 0, selectedSteps = null, isMobile = false) {
+    const sprite = getGearSprite(teeth, rInner, rOuter, color, isMobile);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    ctx.drawImage(sprite.canvas, -sprite.half, -sprite.half);
+    ctx.restore();
+
     // Orange markers for selected steps on the master wheel
     if (selectedSteps && selectedSteps.some(Boolean)) {
-        const markerRadius = rInner + ((rOuter - rInner) * 0.45);
         ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+        const markerRadius = rInner + ((rOuter - rInner) * 0.45);
         ctx.fillStyle = '#ff9100';
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = isMobile ? 1 : 2;
@@ -122,16 +282,6 @@ function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop
         }
         ctx.restore();
     }
-
-    // Top position indicator dot — marks the reference tooth (start of rotation)
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowBlur = isMobile ? 0 : 6;
-    ctx.shadowColor = color;
-    ctx.beginPath();
-    ctx.arc(0, -rOuter + (rOuter * 0.12), Math.max(3, rOuter * 0.08), 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.restore();
 
     // Reference dot above the gear — always visible in the gear's color
     if (highlightTop) {
@@ -193,7 +343,7 @@ function drawTimelineMarker(ctx, x, y, color, shape = 'dot', size = 4) {
  * rotation of the master wheel. Displays selected steps from all lanes
  * as colored markers, plus a playhead showing the current position.
  */
-function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width, cycleProgress, currentStep, stepSize) {
+function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width, cycleProgress, currentStep, stepSize, includePlayhead = true) {
     ctx.fillStyle = '#a1a1aa';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'left';
@@ -220,9 +370,6 @@ function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width, cycleProgr
         ctx.lineTo(x, y + 18);
         ctx.stroke();
     }
-
-    // Playhead line
-    const playheadX = startX + cycleProgress * width;
 
     // Master wheel selected steps (orange dots, one row per voice)
     const masterCurrentCycle = state.masterPhraseCycles > 1
@@ -271,13 +418,16 @@ function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width, cycleProgr
         });
     });
 
-    // Playhead line
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(playheadX, y - 34);
-    ctx.lineTo(playheadX, y + 34);
-    ctx.stroke();
+    // Playhead line — drawn live per frame (it moves continuously)
+    if (includePlayhead) {
+        const playheadX = startX + cycleProgress * width;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(playheadX, y - 34);
+        ctx.lineTo(playheadX, y + 34);
+        ctx.stroke();
+    }
 }
 
 /**
@@ -463,6 +613,15 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         if (!_laneRebuildQueue.includes(lane)) _laneRebuildQueue.push(lane);
     }
 
+    // Offscreen static layers. Layer A holds everything that only changes when
+    // meters, voice patterns, or the canvas size change (background, header,
+    // gear labels, full pattern timeline). Layer B holds the master-cycle
+    // timeline, which additionally changes once per playing master cycle.
+    let _layerA = null;
+    let _layerASig = null;
+    let _layerB = null;
+    let _layerBSig = null;
+
     // Reused buffer for merging master voice selections.
     // Grow it on demand so higher meter pairs such as 17 against 18 still render correctly.
 
@@ -510,8 +669,8 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         const deltaTime = Math.min((timestamp - lastTime) / 1000, 0.1);
         lastTime = timestamp;
 
-        ctx.fillStyle = '#08080c';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // No per-frame clear: the opaque static layer (blitted below) covers
+        // the whole canvas, replacing the old full-canvas fillRect.
 
         // 1 beat = 1/4 master cycle (quarter note = BPM)
         // radians per second = BPM × (π/2) / 60
@@ -556,13 +715,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             if (_lastMiniPct !== pct) { ui.miniPlayhead.style.left = `${pct}%`; _lastMiniPct = pct; }
         }
 
-        // Header: current polyrhythm displayed above the gears
-        ctx.save();
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 16px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(`${state.A} against ${state.B} Polyrhythm`, canvas.width / 2, 12);
-        ctx.restore();
+        // (Header text moved into the cached static layer — see ensureStaticLayers.)
 
           // Calculate gear geometry
           // All gears share the same module (tooth size) so teeth mesh properly.
@@ -693,102 +846,15 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         if (f.A > 0) f.A--;
         if (f.B > 0) f.B--;
 
-        // Draw gears — the master wheel now shows the A-pulse and B-pulse patterns
-        // (pink and cyan dots) instead of the Master voice selected steps.
-        drawGear(ctx, cx, cy, rMainInner, rMainOuter, state.mainTeeth, angles.main, '#7a8a9e', true, state.flash.driver, null, isMobile);
-
-        // A-pulse and B-pulse dots on the master wheel, color-coded pink and cyan
-        // Grow scratch buffers on demand (e.g. 17:18 → 306 teeth)
-        if (_scratchA.length < state.mainTeeth) {
-            _scratchA = new Uint8Array(state.mainTeeth);
-            _scratchB = new Uint8Array(state.mainTeeth);
-        }
-        _scratchA.fill(0);
-        _scratchB.fill(0);
-        lanes.Awheel.selected.forEach((on, i) => {
-            if (on) _scratchA[(i + state.phaseA) % state.mainTeeth] = 1;
-        });
-        lanes.Bwheel.selected.forEach((on, i) => {
-            if (on) _scratchB[(i + state.phaseB) % state.mainTeeth] = 1;
-        });
-        const aDots = _scratchA;
-        const bDots = _scratchB;
-        const markerRadius = rMainInner + ((rMainOuter - rMainInner) * 0.45);
-        const dotRadius = Math.max(4, rMainOuter * 0.035);
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(angles.main);
-        // Single pass per tooth: draw spokes and dots together
-        for (let t = 0; t < state.mainTeeth; t++) {
-            const aOn = aDots[t];
-            const bOn = bDots[t];
-            if (!aOn && !bOn) continue;
-            const theta = (t / state.mainTeeth) * Math.PI * 2 - Math.PI / 2;
-            const cosT = Math.cos(theta);
-            const sinT = Math.sin(theta);
-
-            // Spoke from centre
-            ctx.lineWidth = 4;
-            ctx.shadowBlur = 0;
-            if (aOn && bOn) ctx.strokeStyle = '#c07ae6';
-            else if (aOn) ctx.strokeStyle = '#ff6b8f';
-            else ctx.strokeStyle = '#6ef2ff';
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(rMainInner * cosT, rMainInner * sinT);
-            ctx.stroke();
-
-            // Dot(s) at the tooth — offset when both land on same tooth
-            ctx.lineWidth = isMobile ? 1 : 2;
-            ctx.shadowBlur = isMobile ? 0 : 10;
-            ctx.strokeStyle = '#ffffff';
-            if (aOn) {
-                ctx.fillStyle = '#ff6b8f';
-                ctx.shadowColor = '#ff6b8f';
-                const rA = markerRadius + (aOn && bOn ? -5 : 0);
-                ctx.beginPath();
-                ctx.arc(rA * cosT, rA * sinT, dotRadius, 0, 2 * Math.PI);
-                ctx.fill();
-                ctx.stroke();
-            }
-            if (bOn) {
-                ctx.fillStyle = '#6ef2ff';
-                ctx.shadowColor = '#6ef2ff';
-                const rB = markerRadius + (aOn && bOn ? 5 : 0);
-                ctx.beginPath();
-                ctx.arc(rB * cosT, rB * sinT, dotRadius, 0, 2 * Math.PI);
-                ctx.fill();
-                ctx.stroke();
-            }
-        }
-        ctx.restore();
-
-        drawGear(ctx, cxA, cy, rAInner, rAOuter, state.teethA, angles.A, '#ff3366', true, state.flash.A, null, isMobile);
-        drawGear(ctx, cxB, cy, rBInner, rBOuter, state.teethB, angles.B, '#00e5ff', true, state.flash.B, null, isMobile);
-
-        // Labels
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 13px sans-serif';
-        ctx.textAlign = 'center';
-        const currentCycle = state.masterPhraseCycles > 1
+        // ── Static layers ──
+        // Signature covers every input the layers depend on; a rebuild only
+        // happens when one of them actually changes.
+        const patternChecksum = computePatternChecksum(lanes);
+        const voiceCounts = `${lanes.master.voices.length}_${lanes.Aphrase.voices.length}_${lanes.Bphrase.voices.length}`;
+        const masterCurrentCycle = state.masterPhraseCycles > 1
             ? Math.floor(currentStep / state.mainTeeth) % state.masterPhraseCycles
             : 0;
-        ctx.fillText(`Master Cycle (${state.mainTeeth} pulses per cycle)`, cx, cy - rMainOuter - 32);
-        if (state.masterPhraseCycles > 1) {
-            ctx.font = '11px sans-serif';
-            ctx.fillStyle = '#ff9100';
-            ctx.fillText(`C${currentCycle + 1} of ${state.masterPhraseCycles}`, cx, cy - rMainOuter - 50);
-        }
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 13px sans-serif';
-        ctx.fillText(`Meter A (${state.A} beats per cycle)`, cxA, cy + rAOuter + 48);
-        ctx.font = '12px sans-serif';
-        ctx.fillText(`${state.A} groups of ${state.teethA} beats`, cxA, cy + rAOuter + 66);
-        ctx.font = 'bold 13px sans-serif';
-        ctx.fillText(`Meter B (${state.B} beats per cycle)`, cxB, cy + rBOuter + 48);
-        ctx.font = '12px sans-serif';
-        ctx.fillText(`${state.B} groups of ${state.teethB} beats`, cxB, cy + rBOuter + 66);
-        ctx.font = 'bold 13px sans-serif';
+        const baseSig = [state.A, state.B, state.mainTeeth, state.teethA, state.teethB, state.masterPhraseCycles, state.phraseCyclesA, state.phraseCyclesB, state.masterPhraseSteps, state.phraseStepsA, state.phraseStepsB, state.fullPatternCycles, canvas.width, canvas.height, isMobile, voiceCounts, patternChecksum].join('|');
 
         // Timelines — push down when many master voices to avoid overlapping the gear
         const timelineX = (canvas.width - 700) / 2;
@@ -798,8 +864,90 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         const minTimelineY = gearBottom + 10 + (masterVoiceCount - 1) * 10;
         const timelineY = Math.max(395, minTimelineY);
 
-        drawMasterCycleTimeline(ctx, state, lanes, timelineX, timelineY, timelineWidth, cycleProgress, currentStep, stepSize);
-        drawFullPatternTimeline(ctx, state, lanes, timelineX, timelineY + 55, timelineWidth);
+        if (baseSig !== _layerASig || !_layerA) {
+            _layerA = document.createElement('canvas');
+            _layerA.width = canvas.width;
+            _layerA.height = canvas.height;
+            const o = _layerA.getContext('2d');
+            o.fillStyle = '#08080c';
+            o.fillRect(0, 0, _layerA.width, _layerA.height);
+
+            // Header: current polyrhythm displayed above the gears
+            o.save();
+            o.fillStyle = '#ffffff';
+            o.font = 'bold 16px sans-serif';
+            o.textAlign = 'center';
+            o.fillText(`${state.A} against ${state.B} Polyrhythm`, canvas.width / 2, 12);
+            o.restore();
+
+            // Gear labels (positions mirror the live drawing they replace)
+            o.fillStyle = '#ffffff';
+            o.font = 'bold 13px sans-serif';
+            o.textAlign = 'center';
+            o.fillText(`Master Cycle (${state.mainTeeth} pulses per cycle)`, cx, cy - rMainOuter - 32);
+            o.fillStyle = '#ffffff';
+            o.font = 'bold 13px sans-serif';
+            o.fillText(`Meter A (${state.A} beats per cycle)`, cxA, cy + rAOuter + 48);
+            o.font = '12px sans-serif';
+            o.fillText(`${state.A} groups of ${state.teethA} beats`, cxA, cy + rAOuter + 66);
+            o.font = 'bold 13px sans-serif';
+            o.fillText(`Meter B (${state.B} beats per cycle)`, cxB, cy + rBOuter + 48);
+            o.font = '12px sans-serif';
+            o.fillText(`${state.B} groups of ${state.teethB} beats`, cxB, cy + rBOuter + 66);
+            o.font = 'bold 13px sans-serif';
+
+            drawFullPatternTimeline(o, state, lanes, timelineX, timelineY + 55, timelineWidth);
+            _layerASig = baseSig;
+        }
+        ctx.drawImage(_layerA, 0, 0);
+
+        // Draw gears — the master wheel now shows the A-pulse and B-pulse patterns
+        // (pink and cyan dots) instead of the Master voice selected steps.
+        drawGear(ctx, cx, cy, rMainInner, rMainOuter, state.mainTeeth, angles.main, '#7a8a9e', true, state.flash.driver, null, isMobile);
+
+        // A-pulse and B-pulse dots on the master wheel, color-coded pink and cyan.
+        // The dot pattern only changes when a wheel pattern or phase is edited,
+        // so it is baked into a sprite and blitted in the wheel's rotated frame.
+        const markerRadius = rMainInner + ((rMainOuter - rMainInner) * 0.45);
+        const dotRadius = Math.max(4, rMainOuter * 0.035);
+        const dotsSprite = getMasterDotsSprite(state, lanes, rMainInner, markerRadius, dotRadius, isMobile);
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angles.main);
+        ctx.drawImage(dotsSprite.canvas, -dotsSprite.half, -dotsSprite.half);
+        ctx.restore();
+
+        drawGear(ctx, cxA, cy, rAInner, rAOuter, state.teethA, angles.A, '#ff3366', true, state.flash.A, null, isMobile);
+        drawGear(ctx, cxB, cy, rBInner, rBOuter, state.teethB, angles.B, '#00e5ff', true, state.flash.B, null, isMobile);
+
+        // Master-cycle timeline layer: rebuilt only when the playing master
+        // cycle (or meter/pattern state) changes, then blitted. The playhead
+        // is drawn live on top every frame.
+        const sigB = `${baseSig}_${masterCurrentCycle}_${state.phaseA}_${state.phaseB}`;
+        if (sigB !== _layerBSig || !_layerB) {
+            _layerB = document.createElement('canvas');
+            _layerB.width = canvas.width;
+            _layerB.height = canvas.height;
+            const o = _layerB.getContext('2d');
+            if (state.masterPhraseCycles > 1) {
+                o.font = '11px sans-serif';
+                o.fillStyle = '#ff9100';
+                o.textAlign = 'center';
+                o.fillText(`C${masterCurrentCycle + 1} of ${state.masterPhraseCycles}`, cx, cy - rMainOuter - 50);
+            }
+            drawMasterCycleTimeline(o, state, lanes, timelineX, timelineY, timelineWidth, 0, currentStep, stepSize, false);
+            _layerBSig = sigB;
+        }
+        ctx.drawImage(_layerB, 0, 0);
+
+        // Master-cycle playhead line — the only per-frame timeline element
+        const playheadX = timelineX + cycleProgress * timelineWidth;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(playheadX, timelineY - 34);
+        ctx.lineTo(playheadX, timelineY + 34);
+        ctx.stroke();
 
         requestAnimationFrame(animate);
         } catch (err) { console.error('Animation error:', err); requestAnimationFrame(animate); }
