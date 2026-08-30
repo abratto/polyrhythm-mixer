@@ -245,6 +245,88 @@ function getMasterDotsSprite(state, lanes, rMainInner, markerRadius, dotRadius, 
     return _masterDotsSprite;
 }
 
+// ── Nested meter circles ────────────────────────────────────────────────
+// An experimental addition to the gear visualization: inside the master
+// wheel, each meter renders as a concentric circle in its meter color,
+// carrying N equally-spaced dot marks (one per pulse). A single radial
+// indicator rotates once per measure (locked to the master angle), crossing
+// each circle's marks in sequence — where the radial line crosses marks from
+// two circles at once, that meter coincidence is visible as radial alignment.
+//
+// Nested meter rings inside the master wheel: one ring per meter in the
+// meter gear colors plus an innermost reference-beat ring (the 4/4 clock
+// face), all at fixed radii. Meter A always rides the outer ring, Meter B
+// the inner, in a 3:2 ratio so mark spacing is generous and near-equal for
+// 6-against-4. The ratio is read by counting marks, not comparing
+// circumferences; the rings never resize when the meters change.
+const NESTED_RING_FRACTIONS = { A: 0.68, B: 0.46, beat: 0.30 }; // of rMainOuter
+
+let _nestedSprite = null;
+let _nestedSig = '';
+
+function nestedMeterRadius(N, state, rMainOuter, rMainInner, isMeterA) {
+    // A rides the outer ring, B the inner — stable across meter changes.
+    return rMainOuter * (isMeterA ? NESTED_RING_FRACTIONS.A : NESTED_RING_FRACTIONS.B);
+}
+
+/** Footprint helper shared by the master-gear sprites. */
+function masterSpriteSize(rMainInner, rMainOuter) {
+    const pad = 20;
+    return { pad, size: Math.ceil((rMainInner + pad) * 2) + 10 };
+}
+
+/**
+ * Pre-renders the nested meter circles and their pulse marks. Screen-static
+ * (they do not rotate with the wheel); rebuilt only when the meters change.
+ * Mark k of a meter with N pulses sits at -pi/2 - k*2pi/N, so the radial
+ * indicator (which rotates at -mainAngle, same direction as the master wheel)
+ * crosses mark k exactly when that meter's pulse k fires.
+ */
+function getNestedCirclesSprite(state, rMainInner, rMainOuter, isMobile) {
+    const { size } = masterSpriteSize(rMainInner, rMainOuter);
+    const sig = `${state.A}_${state.B}_${state.mainTeeth}_${rMainInner.toFixed(2)}_${rMainOuter.toFixed(2)}_${isMobile}_${NESTED_RING_FRACTIONS.A}_${NESTED_RING_FRACTIONS.B}_${NESTED_RING_FRACTIONS.beat}`;
+    if (_nestedSig === sig && _nestedSprite) return _nestedSprite;
+
+    const off = document.createElement('canvas');
+    off.width = size;
+    off.height = size;
+    const g = off.getContext('2d');
+    g.translate(size / 2, size / 2);
+
+    // The reference-beat ring (innermost, orange like the beat cues) always
+    // divides the cycle into 4 equal parts — the 4/4 clock face. Together the
+    // rings are a circular representation of the master cycle timeline.
+    const rings = [
+        { N: 4, color: '#ff9100', radius: rMainOuter * NESTED_RING_FRACTIONS.beat },
+        { N: state.B, color: '#00e5ff', radius: nestedMeterRadius(state.B, state, rMainOuter, rMainInner, false) },
+        { N: state.A, color: '#ff3366', radius: nestedMeterRadius(state.A, state, rMainOuter, rMainInner, true) }
+    ];
+    const markR = isMobile ? 3 : 4;
+    for (const { N, color, radius } of rings) {
+        g.strokeStyle = color;
+        g.globalAlpha = 0.55;
+        g.lineWidth = isMobile ? 1.5 : 2;
+        g.beginPath();
+        g.arc(0, 0, radius, 0, 2 * Math.PI);
+        g.stroke();
+
+        // Pulse marks — equally spaced around the circumference
+        g.fillStyle = color;
+        for (let k = 0; k < N; k++) {
+            const a = -Math.PI / 2 - (k * 2 * Math.PI) / N;
+            g.beginPath();
+            g.arc(radius * Math.cos(a), radius * Math.sin(a), markR, 0, 2 * Math.PI);
+            g.fill();
+        }
+        // (downbeat mark at k = 0 doubles as the top reference)
+    }
+    g.globalAlpha = 1;
+
+    _nestedSprite = { canvas: off, half: size / 2 };
+    _nestedSig = sig;
+    return _nestedSprite;
+}
+
 /**
  * Draws a single gear (master wheel or meter wheel) on the canvas.
  * The static gear body is blitted from a pre-rendered sprite with a rotation
@@ -920,6 +1002,37 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         ctx.translate(cx, cy);
         ctx.rotate(angles.main);
         ctx.drawImage(dotsSprite.canvas, -dotsSprite.half, -dotsSprite.half);
+        ctx.restore();
+
+        // Nested meter circles (screen-static) + live radial indicator
+        const nestedSprite = getNestedCirclesSprite(state, rMainInner, rMainOuter, isMobile);
+        ctx.drawImage(nestedSprite.canvas, cx - nestedSprite.half, cy - nestedSprite.half);
+        const nestedRa = nestedMeterRadius(state.A, state, rMainOuter, rMainInner, true);
+        const nestedRb = nestedMeterRadius(state.B, state, rMainOuter, rMainInner, false);
+        const maxNestedR = Math.max(nestedRa, nestedRb);
+        const indicatorAngle = -Math.PI / 2 - state.mainAngle;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = isMobile ? 1 : 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(maxNestedR * Math.cos(indicatorAngle), maxNestedR * Math.sin(indicatorAngle));
+        ctx.stroke();
+        // Current-pulse dot on each circle rim (reference beat, then meters)
+        const nestedBeatR = rMainOuter * NESTED_RING_FRACTIONS.beat;
+        ctx.fillStyle = '#ff9100';
+        ctx.beginPath();
+        ctx.arc(nestedBeatR * Math.cos(indicatorAngle), nestedBeatR * Math.sin(indicatorAngle), isMobile ? 3 : 4, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillStyle = '#ff3366';
+        ctx.beginPath();
+        ctx.arc(nestedRa * Math.cos(indicatorAngle), nestedRa * Math.sin(indicatorAngle), isMobile ? 3 : 4, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillStyle = '#00e5ff';
+        ctx.beginPath();
+        ctx.arc(nestedRb * Math.cos(indicatorAngle), nestedRb * Math.sin(indicatorAngle), isMobile ? 3 : 4, 0, 2 * Math.PI);
+        ctx.fill();
         ctx.restore();
 
         drawGear(ctx, cxA, cy, rAInner, rAOuter, state.teethA, angles.A, '#ff3366', true, state.flash.A, null, isMobile);
