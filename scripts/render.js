@@ -671,6 +671,15 @@ function getShapesSprite(state, dialR, isMobile) {
     ring(rA, 'rgba(255,51,102,0.35)');
     ring(rB, 'rgba(0,229,255,0.35)');
 
+    // Master pulse grid dots on the outer circle (like the rings view)
+    g.fillStyle = 'rgba(255,255,255,0.85)';
+    for (let t = 0; t < state.mainTeeth; t++) {
+        const a = markAngle(t, state.mainTeeth);
+        g.beginPath();
+        g.arc(rMaster * Math.cos(a), rMaster * Math.sin(a), 3.5, 0, 2 * Math.PI);
+        g.fill();
+    }
+
     const polygon = (N, r, color) => {
         g.strokeStyle = color;
         g.lineWidth = isMobile ? 1.5 : 2;
@@ -724,8 +733,9 @@ function drawShapesView(ctx, state, cx, cy, dialR, isMobile) {
     ctx.stroke();
     ctx.restore();
 
-    // Polygon vertices flash as the hand crosses them (like the rings view);
-    // the reference beat rides the outermost circle.
+    // Marks flash as the hand crosses them (like the rings view): the pulse
+    // grid on the outer circle, then the polygons — reference beat outermost.
+    drawRingFlash(ctx, state.mainTeeth, sprite.rTicks, cx, cy, 'rgba(255,255,255,0.95)', 3.5, state.mainAngle, isMobile);
     drawRingFlash(ctx, state.B, dialR * DIAL_RING_FRACTIONS.B, cx, cy, '#6ef2ff', 8.5, state.mainAngle, isMobile);
     drawRingFlash(ctx, state.A, dialR * DIAL_RING_FRACTIONS.A, cx, cy, '#ff6b8f', 8.5, state.mainAngle, isMobile);
     drawRingFlash(ctx, 4, dialR * DIAL_RING_FRACTIONS.master, cx, cy, '#ff9100', 8.5, state.mainAngle, isMobile);
