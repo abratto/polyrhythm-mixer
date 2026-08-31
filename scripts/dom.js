@@ -38,7 +38,7 @@ export function getDomRefs() {
         vizModeGearsBtn: document.getElementById('vizModeGears'),
         vizModeRingsBtn: document.getElementById('vizModeRings'),
         vizModeAlignBtn: document.getElementById('vizModeAlign'),
-        vizModePhaseBtn: document.getElementById('vizModePhase'),
+        vizModeVoiceBtn: document.getElementById('vizModeVoice'),
         vizModeShapesBtn: document.getElementById('vizModeShapes'),
 
         // Action buttons

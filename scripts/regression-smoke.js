@@ -703,7 +703,7 @@ async function run() {
 
         // --- Visualization mode switcher ---
         // --- Visualization mode switcher (five views) ---
-        const vizModes = ['gears', 'rings', 'align', 'phase', 'shapes'];
+        const vizModes = ['gears', 'rings', 'align', 'voice', 'shapes'];
         for (const mode of vizModes) {
             await page.locator(`#vizMode${mode[0].toUpperCase()}${mode.slice(1)}`).click();
             for (const m of vizModes) {

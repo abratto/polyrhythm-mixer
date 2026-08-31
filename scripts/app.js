@@ -547,7 +547,7 @@ if (ui.vizModeGearsBtn && ui.vizModeRingsBtn) {
         { btn: ui.vizModeGearsBtn, mode: 'gears' },
         { btn: ui.vizModeRingsBtn, mode: 'rings' },
         { btn: ui.vizModeAlignBtn, mode: 'align' },
-        { btn: ui.vizModePhaseBtn, mode: 'phase' },
+        { btn: ui.vizModeVoiceBtn, mode: 'voice' },
         { btn: ui.vizModeShapesBtn, mode: 'shapes' }
     ];
     const syncVizMode = (mode) => {

@@ -389,6 +389,87 @@ function drawRingFlash(ctx, N, r, cx, cy, color, dotR, mainAngle, isMobile) {
     ctx.restore();
 }
 
+
+// ── Voice view: Anlo Ewe verbalization (Kpla / Ka / Tu) ─────────────────
+// For one master measure, every tick that fires a meter pulse becomes a
+// spoken syllable: 'Kpla' when both meters strike together (both hands),
+// 'Ka' for each lone Meter A pulse (strong hand), 'Tu' for each lone Meter
+// B pulse (weak hand). Speaking the strip in time with the playhead taps
+// and verbalizes the polyrhythm — C. K. Ladzekpo's hand-rhythm method.
+const VERBAL_COLORS = { Kpla: '#d8b4fe', Ka: '#ff6b8f', Tu: '#6ef2ff' };
+
+function buildVerbalSequence(state) {
+    const seq = [];
+    for (let t = 0; t < state.mainTeeth; t++) {
+        const aOn = t % state.teethA === 0;
+        const bOn = t % state.teethB === 0;
+        if (!aOn && !bOn) continue;
+        seq.push({
+            word: aOn && bOn ? 'Kpla' : aOn ? 'Ka' : 'Tu',
+            kind: aOn && bOn ? 'Kpla' : aOn ? 'Ka' : 'Tu',
+            tick: t
+        });
+    }
+    return seq;
+}
+
+function drawVerbalizationView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile) {
+    const stepSize = (2 * Math.PI) / state.mainTeeth;
+    const masterTick = ((Math.floor(state.mainAngle / stepSize) % state.mainTeeth) + state.mainTeeth) % state.mainTeeth;
+    const seq = buildVerbalSequence(state);
+    const colors = { Kpla: '#d8b4fe', Ka: '#ff6b8f', Tu: '#6ef2ff' };
+
+    // The syllable to say right now: the last one whose tick has been reached
+    let active = seq[seq.length - 1];
+    for (const s of seq) {
+        if (s.tick <= masterTick) active = s;
+        else break;
+    }
+
+    // Big current syllable — what to say now
+    ctx.font = `bold ${isMobile ? 44 : 60}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = colors[active.kind];
+    ctx.fillText(active.word, cx, cy - 20);
+
+    // Full spoken sequence for the measure, wrapped like a lyric line; the
+    // syllable being spoken is lit, past ones dim, upcoming ones bright.
+    ctx.font = `bold ${isMobile ? 15 : 18}px sans-serif`;
+    const stripWidth = timelineWidth + 120;
+    const stripX = cx - stripWidth / 2;
+    let x = stripX;
+    let y = cy + 70;
+    const lineHeight = 34;
+    for (const s of seq) {
+        const isNow = s === active;
+        const isPast = s.tick < masterTick && !isNow;
+        const w = ctx.measureText(s.word).width;
+        if (x + w > stripX + stripWidth) {
+            x = stripX;
+            y += lineHeight;
+        }
+        ctx.globalAlpha = isNow ? 1 : isPast ? 0.35 : 0.8;
+        ctx.fillStyle = colors[s.kind];
+        ctx.fillText(s.word, x, y);
+        if (isNow) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(x - 4, y + 8);
+            ctx.lineTo(x + w + 4, y + 8);
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+        x += w + 16;
+    }
+
+    // Syllable key
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = '#8a8a9c';
+    ctx.textAlign = 'center';
+    ctx.fillText('Kpla = both meters together (both hands) · Ka = Meter A (strong hand) · Tu = Meter B (weak hand)', cx, y + lineHeight + 12);
+}
+
 // ── Align view: coincidence map + countdown ─────────────────────────────
 // Three lanes (4/4 beat, Meter A, Meter B) share one measure laid out left
 // to right. Vertical connectors mark every tick where meter pulses coincide,
@@ -509,151 +590,6 @@ function drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, mast
 
 
 
-
-// ── Phase view: cosine-Lissajous with firing walls ──────────────────────
-// The curve is x = -half*cos(A*theta), y = -half*cos(B*theta): it starts at
-// the top-left corner (the downbeat, both meters striking together), touches
-// the LEFT wall once per Meter A pulse and the TOP wall once per Meter B
-// pulse, and rides the opposite walls between beats (maximum tension). The
-// left wall is painted pink and the top wall cyan — the two firing lines.
-let _phaseSprite = null;
-let _phaseSig = '';
-
-function getPhaseSprite(state, half, isMobile) {
-    const sig = `${state.A}_${state.B}_${state.mainTeeth}_${half.toFixed(2)}_${isMobile}`;
-    if (_phaseSig === sig && _phaseSprite) return _phaseSprite;
-
-    const size = Math.ceil(half * 2 + 24);
-    const off = document.createElement('canvas');
-    off.width = size;
-    off.height = size;
-    const g = off.getContext('2d');
-    g.translate(size / 2, size / 2);
-
-    // Faint graph-paper grid inside the box
-    g.lineWidth = 1;
-    g.strokeStyle = 'rgba(255,255,255,0.07)';
-    for (let i = 1; i < 4; i++) {
-        const p = -half + (i * 2 * half) / 4;
-        g.beginPath();
-        g.moveTo(p, -half);
-        g.lineTo(p, half);
-        g.moveTo(-half, p);
-        g.lineTo(half, p);
-        g.stroke();
-    }
-
-    // Firing walls: left = Meter A (pink), top = Meter B (cyan)
-    g.lineWidth = isMobile ? 2 : 3;
-    g.strokeStyle = 'rgba(255,51,102,0.65)';
-    g.beginPath();
-    g.moveTo(-half, -half);
-    g.lineTo(-half, half);
-    g.stroke();
-    g.strokeStyle = 'rgba(0,229,255,0.65)';
-    g.beginPath();
-    g.moveTo(-half, -half);
-    g.lineTo(half, -half);
-    g.stroke();
-    // Tension walls (between beats)
-    g.strokeStyle = 'rgba(255,255,255,0.30)';
-    g.lineWidth = 2;
-    g.beginPath();
-    g.moveTo(half, -half);
-    g.lineTo(half, half);
-    g.moveTo(-half, half);
-    g.lineTo(half, half);
-    g.stroke();
-
-    // The closed curve: one full sweep per measure
-    const drawPt = (phaseA, phaseB) => [-half * Math.cos(state.A * phaseA), -half * Math.cos(state.B * phaseB)];
-    g.strokeStyle = 'rgba(255,255,255,0.32)';
-    g.lineWidth = 1.5;
-    g.beginPath();
-    const steps = 720;
-    for (let i = 0; i <= steps; i++) {
-        const th = (i / steps) * 2 * Math.PI;
-        const [x, y] = drawPt(th, th);
-        if (i === 0) g.moveTo(x, y);
-        else g.lineTo(x, y);
-    }
-    g.stroke();
-
-    // One dot per master tick, colored by which meters fire
-    for (let t = 0; t < state.mainTeeth; t++) {
-        const a = t * (2 * Math.PI) / state.mainTeeth;
-        const [x, y] = drawPt(a, a);
-        const aOn = t % state.teethA === 0;
-        const bOn = t % state.teethB === 0;
-        g.fillStyle = aOn && bOn ? '#c07ae6' : aOn ? '#ff6b8f' : bOn ? '#6ef2ff' : 'rgba(255,255,255,0.30)';
-        g.beginPath();
-        g.arc(x, y, aOn && bOn ? 6.5 : aOn || bOn ? 5 : 2.5, 0, 2 * Math.PI);
-        g.fill();
-    }
-
-    // Resolution corner: both meters strike together here at the downbeat
-    g.strokeStyle = '#ffffff';
-    g.lineWidth = 2;
-    g.beginPath();
-    g.arc(-half, -half, 6, 0, 2 * Math.PI);
-    g.stroke();
-
-    return { canvas: off, half: size / 2 };
-}
-
-function drawPhaseView(ctx, state, cx, cy, dialR, isMobile) {
-    const half = dialR * 0.95;
-    const sprite = getPhaseSprite(state, half, isMobile);
-    ctx.drawImage(sprite.canvas, cx - sprite.half, cy - sprite.half);
-
-    // Live trace point; its halo grows with the tension (distance from the
-    // firing walls — the "rub" between beats).
-    const x = cx - half * Math.cos(state.A * state.mainAngle);
-    const y = cy - half * Math.cos(state.B * state.mainAngle);
-    const tension = Math.min((1 - Math.cos(state.A * state.mainAngle)) / 2, (1 - Math.cos(state.B * state.mainAngle)) / 2);
-
-    ctx.save();
-    ctx.globalAlpha = 0.25 + 0.35 * tension;
-    ctx.fillStyle = '#c07ae6';
-    ctx.beginPath();
-    ctx.arc(x, y, 7 + 5 * tension, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = '#c07ae6';
-    ctx.beginPath();
-    ctx.arc(x, y, 6, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(x, y, 2.5, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.restore();
-
-    // Wall labels: firing lines on the left/top, lobe counts on the
-    // tension walls (right/bottom).
-    ctx.font = 'bold 12px sans-serif';
-    ctx.fillStyle = '#ff6b8f';
-    ctx.textAlign = 'left';
-    ctx.save();
-    ctx.translate(cx - half - 10, cy);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText(`Meter A — ${state.A} pulses`, 0, 0);
-    ctx.restore();
-    ctx.fillStyle = '#6ef2ff';
-    ctx.textAlign = 'center';
-    ctx.fillText(`Meter B — ${state.B} pulses`, cx, cy - half - 10);
-    ctx.fillStyle = '#8a8a9c';
-    ctx.font = '11px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.save();
-    ctx.translate(cx + half + 10, cy);
-    ctx.rotate(Math.PI / 2);
-    ctx.fillText(`${state.A} lobes · max tension`, 0, 0);
-    ctx.restore();
-    ctx.fillStyle = '#8a8a9c';
-    ctx.textAlign = 'center';
-    ctx.fillText(`${state.B} lobes · max tension`, cx, cy + half + 18);
-}
 
 // ── Shapes view: star polygons ──────────────────────────────────────────
 // Each meter's N marks joined into a closed N-gon on its ring — hexagon for
@@ -1438,8 +1374,8 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             drawRingFlash(ctx, 4, dial.rBeat, cx, cy, '#ff9100', 8.5, state.mainAngle, isMobile);
         } else if (state.vizMode === 'align') {
             drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile);
-        } else if (state.vizMode === 'phase') {
-            drawPhaseView(ctx, state, cx, cy, dialR, isMobile);
+        } else if (state.vizMode === 'voice') {
+            drawVerbalizationView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile);
         } else if (state.vizMode === 'shapes') {
             drawShapesView(ctx, state, cx, cy, dialR, isMobile);
         } else {
