@@ -334,6 +334,20 @@ function getDialSprite(state, dialR, isMobile) {
  * cycle counter when the phrase spans multiple cycles) and the two meter
  * descriptors. Drawn once per frame so it is identical across views.
  */
+// measureText forces font layout work, so widths are cached per font+text —
+// the Voice view measures its syllables every frame, and words repeat.
+const _textWidthCache = new Map();
+
+function textWidth(ctx, text) {
+    const key = ctx.font + '|' + text;
+    let w = _textWidthCache.get(key);
+    if (w === undefined) {
+        w = ctx.measureText(text).width;
+        _textWidthCache.set(key, w);
+    }
+    return w;
+}
+
 function drawMeterLegend(ctx, state, cx, masterCurrentCycle) {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ffffff';
@@ -341,7 +355,7 @@ function drawMeterLegend(ctx, state, cx, masterCurrentCycle) {
     const title = `Master Cycle (${state.mainTeeth} pulses per cycle)`;
     ctx.fillText(title, cx, 30);
     if (state.masterPhraseCycles > 1) {
-        const wTitle = ctx.measureText(title).width;
+        const wTitle = textWidth(ctx, title);
         ctx.font = '11px sans-serif';
         ctx.fillStyle = '#ff9100';
         ctx.textAlign = 'left';
@@ -442,7 +456,7 @@ function drawVerbalizationView(ctx, state, cx, cy, dialR, timelineX, timelineWid
     const rows = [];
     let cur = { items: [], width: 0 };
     for (const s of seq) {
-        const w = ctx.measureText(s.word).width;
+        const w = textWidth(ctx, s.word);
         const add = cur.items.length ? wordGap + w : w;
         if (cur.items.length && cur.width + add > stripMax) {
             rows.push(cur);
@@ -482,7 +496,7 @@ function drawVerbalizationView(ctx, state, cx, cy, dialR, timelineX, timelineWid
     ctx.font = '12px sans-serif';
     ctx.fillStyle = '#8a8a9c';
     ctx.textAlign = 'center';
-    ctx.fillText('Kpla = both meters together (both hands) · Ka = Meter A (strong hand) · Tu = Meter B (weak hand)', cx, y + lineHeight + 12);
+    ctx.fillText('Kpla = both meters together (both hands) — sounds like "Pla" · Ka = Meter A (strong hand) · Tu = Meter B (weak hand)', cx, y + lineHeight + 12);
 }
 
 // ── Align view: coincidence map + countdown ─────────────────────────────
