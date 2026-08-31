@@ -701,6 +701,23 @@ async function run() {
         });
         assert(recoveredHighlight, 'After a main-thread stall, the step highlight should recover on the next frame.');
 
+        // --- Visualization mode switcher ---
+        // --- Visualization mode switcher (five views) ---
+        const vizModes = ['gears', 'rings', 'align', 'voice', 'shapes'];
+        for (const mode of vizModes) {
+            await page.locator(`#vizMode${mode[0].toUpperCase()}${mode.slice(1)}`).click();
+            for (const m of vizModes) {
+                const expected = m === mode ? 'true' : 'false';
+                const actual = await page.locator(`#vizMode${m[0].toUpperCase()}${m.slice(1)}`).getAttribute('aria-pressed');
+                assert(actual === expected, `Visualization mode "${mode}" should be active and "${m}" inactive.`, { mode, m, actual });
+            }
+        }
+        await page.locator('#vizModeGears').click();
+        assert(
+            await page.locator('#vizModeGears').getAttribute('aria-pressed') === 'true',
+            'Switching back to gears should restore the default view.'
+        );
+
         assert(pageErrors.length === 0, 'No page errors should be emitted.', pageErrors);
         assert(consoleErrors.length === 0, 'No console errors should be emitted.', consoleErrors);
 

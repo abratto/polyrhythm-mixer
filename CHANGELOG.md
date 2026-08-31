@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.16.0 — 2026-08-18
+
+### Added
+- A gallery of five toggleable round visualizations (Gears | Rings | Align | Voice | Shapes), each built on the cached-sprite architecture:
+  - **Rings**: clock-face dial — outer pulse grid, numbered meter rings, innermost 4/4 beat ring, sweeping hand, and marks that flash as the hand crosses them.
+  - **Align**: coincidence map — three lanes (4/4 beat, Meter A, Meter B) with connectors at every tick where meter pulses coincide, and crisp flashes as the playhead crosses each mark.
+  - **Voice**: the Anlo Ewe verbalization (C. K. Ladzekpo) — the measure spoken as syllables: **Kpla** (both meters, both hands), **Ka** (Meter A, strong hand), **Tu** (Meter B, weak hand); the current syllable is shown large with the full spoken sequence lit underneath.
+  - **Phase**: a cosine-Lissajous curve in its bounding box — the downbeat at the resolution corner, wall touches firing each meter's pulses, lobe counts on the walls, and a tension halo on the trace point.
+  - **Shapes**: each meter's pulses joined into a numbered polygon (hexagon, square, star) with sweep flashes.
+- A shared meter-descriptor legend (master-cycle line + "Meter A (n beats per cycle) · n groups of n beats") drawn identically above the timelines in every view.
+- Text-measurement caching so the text-based views add no per-frame layout cost.
+
+### Changed
+- The visualization "?" help text rewritten for the five views in plain language.
+
 ## v1.15.0 — 2026-08-18
 
 ### Added

@@ -539,6 +539,32 @@ if (stickyBarToggle && stickyBar) {
         syncStickyToggle(!stickyBar.classList.contains('collapsed'));
     });
 }
+
+// Visualization mode switcher: gears (mechanical), rings (clock face),
+// align (coincidence map), phase (Lissajous), shapes (star polygons).
+if (ui.vizModeGearsBtn && ui.vizModeRingsBtn) {
+    const vizModeButtons = [
+        { btn: ui.vizModeGearsBtn, mode: 'gears' },
+        { btn: ui.vizModeRingsBtn, mode: 'rings' },
+        { btn: ui.vizModeAlignBtn, mode: 'align' },
+        { btn: ui.vizModeVoiceBtn, mode: 'voice' },
+        { btn: ui.vizModeShapesBtn, mode: 'shapes' }
+    ];
+    const syncVizMode = (mode) => {
+        vizModeButtons.forEach(({ btn, mode: m }) => {
+            const active = m === mode;
+            btn.classList.toggle('active', active);
+            btn.setAttribute('aria-pressed', String(active));
+        });
+    };
+    const setVizMode = (mode) => {
+        state.vizMode = mode;
+        syncVizMode(mode);
+    };
+    vizModeButtons.forEach(({ btn, mode }) => {
+        btn.addEventListener('click', () => setVizMode(mode));
+    });
+}
 // Mount Solo/Mute inside the lanes (single-channel + master wheel) now that the
 // lane toolbars exist; per-voice Solo/Mute are created in each voice row above.
 // Add per-lane editing controls (randomize / reverse) before wireLaneMixButtons

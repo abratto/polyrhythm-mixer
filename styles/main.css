@@ -1116,6 +1116,33 @@
         .visual-guide:not([open]) summary {
             margin-bottom: 0;
         }
+        /* Gears / Rings visualization mode switcher. */
+        .viz-mode-toggle {
+            display: inline-flex;
+            border: 1px solid #3a3a4c;
+            border-radius: 6px;
+            margin: 0 10px 10px 14px;
+            overflow: hidden;
+            vertical-align: middle;
+        }
+        .viz-mode-btn {
+            background: #20202c;
+            border: none;
+            color: #a1a1aa;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            padding: 6px 14px;
+            text-transform: uppercase;
+        }
+        .viz-mode-btn + .viz-mode-btn {
+            border-left: 1px solid #3a3a4c;
+        }
+        .viz-mode-btn.active {
+            background: #ff9100;
+            color: #000;
+        }
         canvas {
             display: block;
             width: 100%;
