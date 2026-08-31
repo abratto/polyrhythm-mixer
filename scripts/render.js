@@ -448,7 +448,7 @@ function drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, mast
         ctx.globalAlpha = 0.85;
         ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.arc(sprite.x0 + (t / state.mainTeeth) * sprite.laneWidth, y, dotR + 2, 0, 2 * Math.PI);
+        ctx.arc(originX + sprite.x0 + (t / state.mainTeeth) * sprite.laneWidth, y, dotR + 2, 0, 2 * Math.PI);
         ctx.fill();
         ctx.restore();
     };
