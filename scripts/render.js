@@ -542,11 +542,18 @@ function getAlignSprite(state, isMobile) {
     laneAxis(yB, '#00e5ff', 'Meter B');
 
     const tickX = (t) => x0 + (t / state.mainTeeth) * laneWidth;
-    const mark = (t, y, color) => {
+    const mark = (t, y, color, number) => {
         g.fillStyle = color;
         g.beginPath();
-        g.arc(tickX(t), y, isMobile ? 4.5 : 5.5, 0, 2 * Math.PI);
+        g.arc(tickX(t), y, isMobile ? 7 : 8.5, 0, 2 * Math.PI);
         g.fill();
+        if (number !== undefined) {
+            g.fillStyle = '#0a0a10';
+            g.font = `bold ${isMobile ? 9 : 10}px sans-serif`;
+            g.textAlign = 'center';
+            g.textBaseline = 'middle';
+            g.fillText(String(number), tickX(t), y + 0.5);
+        }
     };
 
     // Coincidence connectors first (under the marks)
@@ -563,12 +570,18 @@ function getAlignSprite(state, isMobile) {
         g.stroke();
     });
 
-    for (let q = 0; q < 4; q++) mark((q * state.mainTeeth) / 4, yBeat, '#ff9100');
-    for (let k = 0; k < state.A; k++) mark(k * state.teethA, yA, '#ff3366');
-    for (let k = 0; k < state.B; k++) mark(k * state.teethB, yB, '#00e5ff');
+    for (let q = 0; q < 4; q++) mark((q * state.mainTeeth) / 4, yBeat, '#ff9100', q + 1);
+    for (let k = 0; k < state.A; k++) mark(k * state.teethA, yA, '#ff3366', k + 1);
+    for (let k = 0; k < state.B; k++) mark(k * state.teethB, yB, '#00e5ff', k + 1);
     coincideTicks.forEach(t => {
-        mark(t, yA, '#c07ae6');
-        mark(t, yB, '#c07ae6');
+        g.strokeStyle = '#c07ae6';
+        g.lineWidth = 2;
+        g.beginPath();
+        g.arc(tickX(t), yA, isMobile ? 9 : 11, 0, 2 * Math.PI);
+        g.stroke();
+        g.beginPath();
+        g.arc(tickX(t), yB, isMobile ? 9 : 11, 0, 2 * Math.PI);
+        g.stroke();
     });
 
     return { canvas: off, width: w, height: h, labelW, x0, laneWidth, laneSpan, yBeat, yA, yB, coincideTicks };
@@ -611,9 +624,9 @@ function drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, mast
         ctx.fill();
         ctx.restore();
     };
-    flashLane(4, originY + sprite.yBeat, '#ff9100', 5.5);
-    flashLane(state.A, originY + sprite.yA, '#ff6b8f', 5.5);
-    flashLane(state.B, originY + sprite.yB, '#6ef2ff', 5.5);
+    flashLane(4, originY + sprite.yBeat, '#ff9100', 8.5);
+    flashLane(state.A, originY + sprite.yA, '#ff6b8f', 8.5);
+    flashLane(state.B, originY + sprite.yB, '#6ef2ff', 8.5);
 
 }
 
