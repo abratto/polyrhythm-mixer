@@ -364,6 +364,31 @@ function drawMeterLegend(ctx, state, cx, masterCurrentCycle) {
     ctx.fillText(bText, x, 46);
 }
 
+/** Shared sweep flash: lights the nearest mark of a ring as the hand crosses it. */
+function drawRingFlash(ctx, N, r, cx, cy, color, dotR, mainAngle, isMobile) {
+    const period = (2 * Math.PI) / N;
+    const pos = (((mainAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI));
+    const pNorm = pos / period;
+    const k = Math.floor(pNorm) % N;
+    const intensity = 1 - (pNorm - Math.floor(pNorm));
+    if (intensity <= 0.03) return;
+    const a = -Math.PI / 2 - k * period;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.globalAlpha = 0.35 + 0.45 * intensity;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(r * Math.cos(a), r * Math.sin(a), dotR + 2.5, 0, 2 * Math.PI);
+    ctx.fill();
+    if (intensity > 0.55) {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(r * Math.cos(a), r * Math.sin(a), dotR * 0.75, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+    ctx.restore();
+}
+
 // ── Align view: coincidence map + countdown ─────────────────────────────
 // Three lanes (4/4 beat, Meter A, Meter B) share one measure laid out left
 // to right. Vertical connectors mark every tick where meter pulses coincide,
@@ -626,13 +651,20 @@ function getShapesSprite(state, dialR, isMobile) {
             else g.lineTo(x, y);
         }
         g.stroke();
-        // Vertex dots
-        g.fillStyle = color;
+        // Numbered vertex dots (matching the rings-view marks)
+        g.font = `bold ${isMobile ? 9 : 10}px sans-serif`;
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
         for (let k = 0; k < N; k++) {
             const a = markAngle(k, N);
+            const x = r * Math.cos(a);
+            const y = r * Math.sin(a);
+            g.fillStyle = color;
             g.beginPath();
-            g.arc(r * Math.cos(a), r * Math.sin(a), 4.5, 0, 2 * Math.PI);
+            g.arc(x, y, 8.5, 0, 2 * Math.PI);
             g.fill();
+            g.fillStyle = '#0a0a10';
+            g.fillText(String(k + 1), x, y + 0.5);
         }
     };
     polygon(4, rBeat, '#ff9100');
@@ -659,6 +691,11 @@ function drawShapesView(ctx, state, cx, cy, dialR, isMobile) {
     ctx.lineTo(sprite.rTicks * Math.cos(handAngle), sprite.rTicks * Math.sin(handAngle));
     ctx.stroke();
     ctx.restore();
+
+    // Polygon vertices flash as the hand crosses them (like the rings view)
+    drawRingFlash(ctx, 4, dialR * DIAL_RING_FRACTIONS.beat, cx, cy, '#ff9100', 8.5, state.mainAngle, isMobile);
+    drawRingFlash(ctx, state.B, dialR * DIAL_RING_FRACTIONS.B, cx, cy, '#6ef2ff', 8.5, state.mainAngle, isMobile);
+    drawRingFlash(ctx, state.A, dialR * DIAL_RING_FRACTIONS.A, cx, cy, '#ff6b8f', 8.5, state.mainAngle, isMobile);
 }
 
 
@@ -1340,32 +1377,9 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             // Sweep flashes: each mark lights briefly as the hand crosses it.
             // Only the master tick, Meter A, and Meter B rings flash (the beat
             // ring already carries the orange current-dot on the hand).
-            const flashRing = (N, r, color, dotR) => {
-                const period = (2 * Math.PI) / N;
-                const pos = ((state.mainAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-                const pNorm = pos / period;
-                const k = Math.floor(pNorm) % N;
-                const intensity = 1 - (pNorm - Math.floor(pNorm));
-                if (intensity <= 0.03) return;
-                const a = -Math.PI / 2 - k * period;
-                ctx.save();
-                ctx.translate(cx, cy);
-                ctx.globalAlpha = 0.35 + 0.45 * intensity;
-                ctx.fillStyle = color;
-                ctx.beginPath();
-                ctx.arc(r * Math.cos(a), r * Math.sin(a), dotR + 2.5, 0, 2 * Math.PI);
-                ctx.fill();
-                if (intensity > 0.55) {
-                    ctx.fillStyle = '#ffffff';
-                    ctx.beginPath();
-                    ctx.arc(r * Math.cos(a), r * Math.sin(a), dotR * 0.75, 0, 2 * Math.PI);
-                    ctx.fill();
-                }
-                ctx.restore();
-            };
-            flashRing(state.mainTeeth, dial.rTicks, 'rgba(255,255,255,0.95)', 3.5);
-            flashRing(state.A, dial.rMeterA, '#ff6b8f', 8.5);
-            flashRing(state.B, dial.rMeterB, '#6ef2ff', 8.5);
+            drawRingFlash(ctx, state.mainTeeth, dial.rTicks, cx, cy, 'rgba(255,255,255,0.95)', 3.5, state.mainAngle, isMobile);
+            drawRingFlash(ctx, state.A, dial.rMeterA, cx, cy, '#ff6b8f', 8.5, state.mainAngle, isMobile);
+            drawRingFlash(ctx, state.B, dial.rMeterB, cx, cy, '#6ef2ff', 8.5, state.mainAngle, isMobile);
         } else if (state.vizMode === 'align') {
             drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile);
         } else if (state.vizMode === 'phase') {
