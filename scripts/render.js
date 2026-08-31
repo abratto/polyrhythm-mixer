@@ -253,86 +253,99 @@ function getMasterDotsSprite(state, lanes, rMainInner, markerRadius, dotRadius, 
 // each circle's marks in sequence — where the radial line crosses marks from
 // two circles at once, that meter coincidence is visible as radial alignment.
 //
-// Nested meter rings inside the master wheel: one ring per meter in the
-// meter gear colors plus an innermost reference-beat ring (the 4/4 clock
-// face), all at fixed radii. Meter A always rides the outer ring, Meter B
-// the inner, in a 3:2 ratio so mark spacing is generous and near-equal for
-// 6-against-4. The ratio is read by counting marks, not comparing
-// circumferences; the rings never resize when the meters change.
-const NESTED_RING_FRACTIONS = { A: 0.68, B: 0.46, beat: 0.30 }; // of rMainOuter
+// ── Rings view dial ─────────────────────────────────────────────────────
+// A standalone clock-face visualization: the outermost ring carries one dot
+// per master tick (the full polyrhythm grid, like a clock), the pink/cyan
+// rings carry each meter's numbered pulses, and the innermost orange ring
+// numbers the four quarter beats. A radial hand locked to the master angle
+// sweeps once per measure, crossing mark k of each ring when pulse k fires.
+const DIAL_RING_FRACTIONS = { master: 0.96, A: 0.66, B: 0.44, beat: 0.27 };
 
-let _nestedSprite = null;
-let _nestedSig = '';
+let _dialSprite = null;
+let _dialSig = '';
 
-function nestedMeterRadius(N, state, rMainOuter, rMainInner, isMeterA) {
-    // A rides the outer ring, B the inner — stable across meter changes.
-    return rMainOuter * (isMeterA ? NESTED_RING_FRACTIONS.A : NESTED_RING_FRACTIONS.B);
-}
+function getDialSprite(state, dialR, isMobile) {
+    const sig = `${state.A}_${state.B}_${state.mainTeeth}_${dialR.toFixed(2)}_${isMobile}`;
+    if (_dialSig === sig && _dialSprite) return _dialSprite;
 
-/** Footprint helper shared by the master-gear sprites. */
-function masterSpriteSize(rMainInner, rMainOuter) {
-    const pad = 20;
-    return { pad, size: Math.ceil((rMainInner + pad) * 2) + 10 };
-}
-
-/**
- * Pre-renders the nested meter circles and their pulse marks. Screen-static
- * (they do not rotate with the wheel); rebuilt only when the meters change.
- * Mark k of a meter with N pulses sits at -pi/2 - k*2pi/N, so the radial
- * indicator (which rotates at -mainAngle, same direction as the master wheel)
- * crosses mark k exactly when that meter's pulse k fires.
- */
-function getNestedCirclesSprite(state, rMainInner, rMainOuter, isMobile) {
-    const { size } = masterSpriteSize(rMainInner, rMainOuter);
-    const sig = `${state.A}_${state.B}_${state.mainTeeth}_${rMainInner.toFixed(2)}_${rMainOuter.toFixed(2)}_${isMobile}_${NESTED_RING_FRACTIONS.A}_${NESTED_RING_FRACTIONS.B}_${NESTED_RING_FRACTIONS.beat}`;
-    if (_nestedSig === sig && _nestedSprite) return _nestedSprite;
-
+    const pad = 28;
+    const size = Math.ceil((dialR + pad) * 2);
     const off = document.createElement('canvas');
     off.width = size;
     off.height = size;
     const g = off.getContext('2d');
     g.translate(size / 2, size / 2);
 
-    // The reference-beat ring (innermost, orange like the beat cues) always
-    // divides the cycle into 4 equal parts — the 4/4 clock face. Together the
-    // rings are a circular representation of the master cycle timeline.
-    const rings = [
-        { N: 4, color: '#ff9100', radius: rMainOuter * NESTED_RING_FRACTIONS.beat },
-        { N: state.B, color: '#00e5ff', radius: nestedMeterRadius(state.B, state, rMainOuter, rMainInner, false) },
-        { N: state.A, color: '#ff3366', radius: nestedMeterRadius(state.A, state, rMainOuter, rMainInner, true) }
-    ];
-    const markR = isMobile ? 3 : 4;
-    for (const { N, color, radius } of rings) {
+    const rMaster = dialR * DIAL_RING_FRACTIONS.master;
+    const rA = dialR * DIAL_RING_FRACTIONS.A;
+    const rB = dialR * DIAL_RING_FRACTIONS.B;
+    const rBeat = dialR * DIAL_RING_FRACTIONS.beat;
+
+    const drawRing = (r, color) => {
         g.strokeStyle = color;
-        g.globalAlpha = 0.55;
         g.lineWidth = isMobile ? 1.5 : 2;
         g.beginPath();
-        g.arc(0, 0, radius, 0, 2 * Math.PI);
+        g.arc(0, 0, r, 0, 2 * Math.PI);
         g.stroke();
+    };
+    drawRing(rMaster, 'rgba(255,255,255,0.30)');
+    drawRing(rA, 'rgba(255,51,102,0.55)');
+    drawRing(rB, 'rgba(0,229,255,0.55)');
+    drawRing(rBeat, 'rgba(255,145,0,0.60)');
 
-        // Pulse marks — equally spaced around the circumference
-        g.fillStyle = color;
+    // Outermost ring: one dot per master tick — the full polyrhythm grid
+    g.fillStyle = 'rgba(255,255,255,0.85)';
+    for (let t = 0; t < state.mainTeeth; t++) {
+        const a = -Math.PI / 2 - (t * 2 * Math.PI) / state.mainTeeth;
+        g.beginPath();
+        g.arc(rMaster * Math.cos(a), rMaster * Math.sin(a), 3.5, 0, 2 * Math.PI);
+        g.fill();
+    }
+
+    // Meter rings: numbered pulse marks (mark k = pulse k+1)
+    const markRing = (N, r, color, dotR, fontPx) => {
+        g.font = `bold ${fontPx}px sans-serif`;
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
         for (let k = 0; k < N; k++) {
             const a = -Math.PI / 2 - (k * 2 * Math.PI) / N;
+            const x = r * Math.cos(a);
+            const y = r * Math.sin(a);
+            g.fillStyle = color;
             g.beginPath();
-            g.arc(radius * Math.cos(a), radius * Math.sin(a), markR, 0, 2 * Math.PI);
+            g.arc(x, y, dotR, 0, 2 * Math.PI);
             g.fill();
+            g.fillStyle = '#0a0a10';
+            g.fillText(String(k + 1), x, y + 0.5);
         }
-        // (downbeat mark at k = 0 doubles as the top reference)
-    }
-    g.globalAlpha = 1;
+    };
+    markRing(state.A, rA, '#ff3366', 6.5, 8);
+    markRing(state.B, rB, '#00e5ff', 6.5, 8);
+    markRing(4, rBeat, '#ff9100', 8.5, 10);
 
-    _nestedSprite = { canvas: off, half: size / 2 };
-    _nestedSig = sig;
-    return _nestedSprite;
+    _dialSprite = { canvas: off, half: size / 2, rTicks: rMaster, rMeterA: rA, rMeterB: rB, rBeat };
+    _dialSig = sig;
+    return _dialSprite;
 }
 
-/**
- * Draws a single gear (master wheel or meter wheel) on the canvas.
- * The static gear body is blitted from a pre-rendered sprite with a rotation
- * transform; only the flashing reference dot above the gear is drawn live,
- * since its color tracks the flash counters.
- */
+/** Labels for the rings dial (positions differ from the gear view). */
+function drawDialLabels(ctx, state, cx, cy, dialR, masterCurrentCycle) {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(`Master Cycle (${state.mainTeeth} pulses per cycle)`, cx, cy - dialR - 26);
+    if (state.masterPhraseCycles > 1) {
+        ctx.font = '11px sans-serif';
+        ctx.fillStyle = '#ff9100';
+        ctx.fillText(`C${masterCurrentCycle + 1} of ${state.masterPhraseCycles}`, cx, cy - dialR - 44);
+    }
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillStyle = '#ff3366';
+    ctx.fillText(`Meter A (${state.A} beats per cycle)`, cx, cy + dialR + 20);
+    ctx.fillStyle = '#00e5ff';
+    ctx.fillText(`Meter B (${state.B} beats per cycle)`, cx, cy + dialR + 38);
+}
+
 function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop = false, flashIntensity = 0, selectedSteps = null, isMobile = false) {
     const sprite = getGearSprite(teeth, rInner, rOuter, color, isMobile);
     ctx.save();
@@ -967,76 +980,79 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             o.fillText(`${state.A} against ${state.B} Polyrhythm`, canvas.width / 2, 12);
             o.restore();
 
-            // Gear labels (positions mirror the live drawing they replace)
-            o.fillStyle = '#ffffff';
-            o.font = 'bold 13px sans-serif';
-            o.textAlign = 'center';
-            o.fillText(`Master Cycle (${state.mainTeeth} pulses per cycle)`, cx, cy - rMainOuter - 32);
-            o.fillStyle = '#ffffff';
-            o.font = 'bold 13px sans-serif';
-            o.fillText(`Meter A (${state.A} beats per cycle)`, cxA, cy + rAOuter + 48);
-            o.font = '12px sans-serif';
-            o.fillText(`${state.A} groups of ${state.teethA} beats`, cxA, cy + rAOuter + 66);
-            o.font = 'bold 13px sans-serif';
-            o.fillText(`Meter B (${state.B} beats per cycle)`, cxB, cy + rBOuter + 48);
-            o.font = '12px sans-serif';
-            o.fillText(`${state.B} groups of ${state.teethB} beats`, cxB, cy + rBOuter + 66);
-            o.font = 'bold 13px sans-serif';
+            // (Gear/meter labels are drawn live per mode — they move between
+            // the gears and rings views, and text fills are cheap.)
 
             _fullPatternBottom = drawFullPatternTimeline(o, state, lanes, timelineX, timelineY + 55, timelineWidth, false);
             _layerASig = baseSig;
         }
         ctx.drawImage(_layerA, 0, 0);
 
-        // Draw gears — the master wheel now shows the A-pulse and B-pulse patterns
-        // (pink and cyan dots) instead of the Master voice selected steps.
-        drawGear(ctx, cx, cy, rMainInner, rMainOuter, state.mainTeeth, angles.main, '#7a8a9e', true, state.flash.driver, null, isMobile);
+        if (state.vizMode === 'rings') {
+            // ── Rings view: the standalone clock-face dial ──
+            const dialR = Math.min(170, cy - 24, timelineY - 12 - cy);
+            const dial = getDialSprite(state, dialR, isMobile);
+            ctx.drawImage(dial.canvas, cx - dial.half, cy - dial.half);
+            drawDialLabels(ctx, state, cx, cy, dialR, masterCurrentCycle);
 
-        // A-pulse and B-pulse dots on the master wheel, color-coded pink and cyan.
-        // The dot pattern only changes when a wheel pattern or phase is edited,
-        // so it is baked into a sprite and blitted in the wheel's rotated frame.
-        const markerRadius = rMainInner + ((rMainOuter - rMainInner) * 0.45);
-        const dotRadius = Math.max(4, rMainOuter * 0.035);
-        const dotsSprite = getMasterDotsSprite(state, lanes, rMainInner, markerRadius, dotRadius, isMobile);
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(angles.main);
-        ctx.drawImage(dotsSprite.canvas, -dotsSprite.half, -dotsSprite.half);
-        ctx.restore();
+            // Sweeping hand + current-pulse dots, locked to the master angle
+            const handAngle = -Math.PI / 2 - state.mainAngle;
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+            ctx.lineWidth = isMobile ? 1 : 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(dial.rTicks * Math.cos(handAngle), dial.rTicks * Math.sin(handAngle));
+            ctx.stroke();
+            ctx.fillStyle = '#ff9100';
+            ctx.beginPath();
+            ctx.arc(dial.rBeat * Math.cos(handAngle), dial.rBeat * Math.sin(handAngle), isMobile ? 3.5 : 4.5, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.fillStyle = '#00e5ff';
+            ctx.beginPath();
+            ctx.arc(dial.rMeterB * Math.cos(handAngle), dial.rMeterB * Math.sin(handAngle), isMobile ? 3.5 : 4.5, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.fillStyle = '#ff3366';
+            ctx.beginPath();
+            ctx.arc(dial.rMeterA * Math.cos(handAngle), dial.rMeterA * Math.sin(handAngle), isMobile ? 3.5 : 4.5, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.restore();
+        } else {
+            // ── Gears view: the mechanical construction ──
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 13px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`Master Cycle (${state.mainTeeth} pulses per cycle)`, cx, cy - rMainOuter - 32);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 13px sans-serif';
+            ctx.fillText(`Meter A (${state.A} beats per cycle)`, cxA, cy + rAOuter + 48);
+            ctx.font = '12px sans-serif';
+            ctx.fillText(`${state.A} groups of ${state.teethA} beats`, cxA, cy + rAOuter + 66);
+            ctx.font = 'bold 13px sans-serif';
+            ctx.fillText(`Meter B (${state.B} beats per cycle)`, cxB, cy + rBOuter + 48);
+            ctx.font = '12px sans-serif';
+            ctx.fillText(`${state.B} groups of ${state.teethB} beats`, cxB, cy + rBOuter + 66);
+            if (state.masterPhraseCycles > 1) {
+                ctx.font = '11px sans-serif';
+                ctx.fillStyle = '#ff9100';
+                ctx.fillText(`C${masterCurrentCycle + 1} of ${state.masterPhraseCycles}`, cx, cy - rMainOuter - 50);
+            }
 
-        // Nested meter circles (screen-static) + live radial indicator
-        const nestedSprite = getNestedCirclesSprite(state, rMainInner, rMainOuter, isMobile);
-        ctx.drawImage(nestedSprite.canvas, cx - nestedSprite.half, cy - nestedSprite.half);
-        const nestedRa = nestedMeterRadius(state.A, state, rMainOuter, rMainInner, true);
-        const nestedRb = nestedMeterRadius(state.B, state, rMainOuter, rMainInner, false);
-        const maxNestedR = Math.max(nestedRa, nestedRb);
-        const indicatorAngle = -Math.PI / 2 - state.mainAngle;
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-        ctx.lineWidth = isMobile ? 1 : 1.5;
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(maxNestedR * Math.cos(indicatorAngle), maxNestedR * Math.sin(indicatorAngle));
-        ctx.stroke();
-        // Current-pulse dot on each circle rim (reference beat, then meters)
-        const nestedBeatR = rMainOuter * NESTED_RING_FRACTIONS.beat;
-        ctx.fillStyle = '#ff9100';
-        ctx.beginPath();
-        ctx.arc(nestedBeatR * Math.cos(indicatorAngle), nestedBeatR * Math.sin(indicatorAngle), isMobile ? 3 : 4, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.fillStyle = '#ff3366';
-        ctx.beginPath();
-        ctx.arc(nestedRa * Math.cos(indicatorAngle), nestedRa * Math.sin(indicatorAngle), isMobile ? 3 : 4, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.fillStyle = '#00e5ff';
-        ctx.beginPath();
-        ctx.arc(nestedRb * Math.cos(indicatorAngle), nestedRb * Math.sin(indicatorAngle), isMobile ? 3 : 4, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.restore();
+            // Master wheel + A/B pulse dots (pink/cyan, magenta on coincidence)
+            drawGear(ctx, cx, cy, rMainInner, rMainOuter, state.mainTeeth, angles.main, '#7a8a9e', true, state.flash.driver, null, isMobile);
+            const markerRadius = rMainInner + ((rMainOuter - rMainInner) * 0.45);
+            const dotRadius = Math.max(4, rMainOuter * 0.035);
+            const dotsSprite = getMasterDotsSprite(state, lanes, rMainInner, markerRadius, dotRadius, isMobile);
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(angles.main);
+            ctx.drawImage(dotsSprite.canvas, -dotsSprite.half, -dotsSprite.half);
+            ctx.restore();
 
-        drawGear(ctx, cxA, cy, rAInner, rAOuter, state.teethA, angles.A, '#ff3366', true, state.flash.A, null, isMobile);
-        drawGear(ctx, cxB, cy, rBInner, rBOuter, state.teethB, angles.B, '#00e5ff', true, state.flash.B, null, isMobile);
+            drawGear(ctx, cxA, cy, rAInner, rAOuter, state.teethA, angles.A, '#ff3366', true, state.flash.A, null, isMobile);
+            drawGear(ctx, cxB, cy, rBInner, rBOuter, state.teethB, angles.B, '#00e5ff', true, state.flash.B, null, isMobile);
+        }
 
         // Master-cycle timeline layer: rebuilt only when the playing master
         // cycle (or meter/pattern state) changes, then blitted. The playhead
@@ -1047,12 +1063,8 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             _layerB.width = canvas.width;
             _layerB.height = canvas.height;
             const o = _layerB.getContext('2d');
-            if (state.masterPhraseCycles > 1) {
-                o.font = '11px sans-serif';
-                o.fillStyle = '#ff9100';
-                o.textAlign = 'center';
-                o.fillText(`C${masterCurrentCycle + 1} of ${state.masterPhraseCycles}`, cx, cy - rMainOuter - 50);
-            }
+            // (The "C x of N" label is drawn live per mode — its position
+            // differs between the gears and rings views.)
             drawMasterCycleTimeline(o, state, lanes, timelineX, timelineY, timelineWidth, 0, currentStep, stepSize, false);
             _layerBSig = sigB;
         }

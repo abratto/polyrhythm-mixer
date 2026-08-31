@@ -33,6 +33,11 @@ export function getDomRefs() {
 
         // Follow-playhead toggle for scrollable sequence lanes
         followScrollBtn: document.getElementById('followScrollBtn'),
+
+        // Visualization mode switcher (gears vs rings dial)
+        vizModeGearsBtn: document.getElementById('vizModeGears'),
+        vizModeRingsBtn: document.getElementById('vizModeRings'),
+
         // Action buttons
         resetBtn: document.getElementById('resetBtn'),
         audioBtn: document.getElementById('audioBtn'),

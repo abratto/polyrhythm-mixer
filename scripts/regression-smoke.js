@@ -701,6 +701,25 @@ async function run() {
         });
         assert(recoveredHighlight, 'After a main-thread stall, the step highlight should recover on the next frame.');
 
+        // --- Visualization mode switcher ---
+        // --- Visualization mode switcher ---
+        assert(
+            await page.locator('#vizModeGears').getAttribute('aria-pressed') === 'true' &&
+            await page.locator('#vizModeRings').getAttribute('aria-pressed') === 'false',
+            'Visualization should default to the gears view.'
+        );
+        await page.locator('#vizModeRings').click();
+        assert(
+            await page.locator('#vizModeRings').getAttribute('aria-pressed') === 'true' &&
+            await page.locator('#vizModeGears').getAttribute('aria-pressed') === 'false',
+            'The rings view should activate when its switch is pressed.'
+        );
+        await page.locator('#vizModeGears').click();
+        assert(
+            await page.locator('#vizModeGears').getAttribute('aria-pressed') === 'true',
+            'Switching back to gears should restore the default view.'
+        );
+
         assert(pageErrors.length === 0, 'No page errors should be emitted.', pageErrors);
         assert(consoleErrors.length === 0, 'No console errors should be emitted.', consoleErrors);
 
