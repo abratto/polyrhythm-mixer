@@ -622,7 +622,6 @@ function getShapesSprite(state, dialR, isMobile) {
     const rMaster = dialR * DIAL_RING_FRACTIONS.master;
     const rA = dialR * DIAL_RING_FRACTIONS.A;
     const rB = dialR * DIAL_RING_FRACTIONS.B;
-    const rBeat = dialR * DIAL_RING_FRACTIONS.beat;
 
     const markAngle = (k, N) => -Math.PI / 2 - (k * 2 * Math.PI) / N;
 
@@ -633,11 +632,11 @@ function getShapesSprite(state, dialR, isMobile) {
         g.arc(0, 0, r, 0, 2 * Math.PI);
         g.stroke();
     };
-    // Faint rings under the polygons
-    ring(rMaster, 'rgba(255,255,255,0.25)');
+    // Faint rings under the polygons — the reference beat (4/4) rides the
+    // outermost circle, matching the rings view's outer pulse grid.
+    ring(rMaster, 'rgba(255,145,0,0.35)');
     ring(rA, 'rgba(255,51,102,0.35)');
     ring(rB, 'rgba(0,229,255,0.35)');
-    ring(rBeat, 'rgba(255,145,0,0.35)');
 
     const polygon = (N, r, color) => {
         g.strokeStyle = color;
@@ -667,9 +666,9 @@ function getShapesSprite(state, dialR, isMobile) {
             g.fillText(String(k + 1), x, y + 0.5);
         }
     };
-    polygon(4, rBeat, '#ff9100');
-    polygon(state.B, rB, '#00e5ff');
     polygon(state.A, rA, '#ff3366');
+    polygon(state.B, rB, '#00e5ff');
+    polygon(4, rMaster, '#ff9100');
 
     _shapesSprite = { canvas: off, half: size / 2, rTicks: rMaster };
     _shapesSig = sig;
@@ -692,10 +691,11 @@ function drawShapesView(ctx, state, cx, cy, dialR, isMobile) {
     ctx.stroke();
     ctx.restore();
 
-    // Polygon vertices flash as the hand crosses them (like the rings view)
-    drawRingFlash(ctx, 4, dialR * DIAL_RING_FRACTIONS.beat, cx, cy, '#ff9100', 8.5, state.mainAngle, isMobile);
+    // Polygon vertices flash as the hand crosses them (like the rings view);
+    // the reference beat rides the outermost circle.
     drawRingFlash(ctx, state.B, dialR * DIAL_RING_FRACTIONS.B, cx, cy, '#6ef2ff', 8.5, state.mainAngle, isMobile);
     drawRingFlash(ctx, state.A, dialR * DIAL_RING_FRACTIONS.A, cx, cy, '#ff6b8f', 8.5, state.mainAngle, isMobile);
+    drawRingFlash(ctx, 4, dialR * DIAL_RING_FRACTIONS.master, cx, cy, '#ff9100', 8.5, state.mainAngle, isMobile);
 }
 
 
@@ -1380,6 +1380,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             drawRingFlash(ctx, state.mainTeeth, dial.rTicks, cx, cy, 'rgba(255,255,255,0.95)', 3.5, state.mainAngle, isMobile);
             drawRingFlash(ctx, state.A, dial.rMeterA, cx, cy, '#ff6b8f', 8.5, state.mainAngle, isMobile);
             drawRingFlash(ctx, state.B, dial.rMeterB, cx, cy, '#6ef2ff', 8.5, state.mainAngle, isMobile);
+            drawRingFlash(ctx, 4, dial.rBeat, cx, cy, '#ff9100', 8.5, state.mainAngle, isMobile);
         } else if (state.vizMode === 'align') {
             drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile);
         } else if (state.vizMode === 'phase') {
