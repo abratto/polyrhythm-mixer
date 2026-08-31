@@ -343,7 +343,7 @@ function getAlignSprite(state, isMobile) {
     if (_alignSig === sig && _alignSprite) return _alignSprite;
 
     const labelW = 90;
-    const laneSpan = 100;
+    const laneSpan = 75;
     const w = laneWidth + labelW + 20;
     const h = laneSpan * 2 + 90;
     const off = document.createElement('canvas');
@@ -407,8 +407,10 @@ function getAlignSprite(state, isMobile) {
 function drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile) {
     const stepSize = (2 * Math.PI) / state.mainTeeth;
     const sprite = getAlignSprite(state, isMobile);
+    // Shifted up so the lanes and countdown sit clear of the master cycle
+    // timeline below (which starts around y = 395 with its markers).
+    const originY = cy - sprite.laneSpan - 55;
     const originX = timelineX - (sprite.width - timelineWidth) / 2;
-    const originY = cy - sprite.laneSpan;
     ctx.drawImage(sprite.canvas, originX, originY);
 
     // Labels
@@ -432,20 +434,21 @@ function drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, mast
     ctx.lineTo(px, originY + sprite.yB + 26);
     ctx.stroke();
 
-    // Sweep flashes on the lane marks
+    // Sweep flashes: a mark lights crisply as the playhead crosses it —
+    // full brightness for a short window after the crossing, no decay trail.
     const flashLane = (N, y, color, dotR) => {
         const period = (2 * Math.PI) / N;
         const pos = (((state.mainAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI));
         const pNorm = pos / period;
         const k = Math.floor(pNorm) % N;
-        const intensity = 1 - (pNorm - Math.floor(pNorm));
-        if (intensity <= 0.03) return;
-        const t = (k * 2 * Math.PI) / N * (state.mainTeeth / (2 * Math.PI));
+        const sinceCrossing = pNorm - Math.floor(pNorm);
+        if (sinceCrossing >= 0.22) return;
+        const t = k * (state.mainTeeth / N);
         ctx.save();
-        ctx.globalAlpha = 0.4 + 0.45 * intensity;
+        ctx.globalAlpha = 0.85;
         ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.arc(sprite.x0 + (t / state.mainTeeth) * sprite.laneWidth, y, dotR + 2.5, 0, 2 * Math.PI);
+        ctx.arc(sprite.x0 + (t / state.mainTeeth) * sprite.laneWidth, y, dotR + 2, 0, 2 * Math.PI);
         ctx.fill();
         ctx.restore();
     };
@@ -471,7 +474,6 @@ function drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, mast
 // dots along the curve, magenta where the meters fire together.
 let _phaseSprite = null;
 let _phaseSig = '';
-let _phaseTrail = [];
 
 function getPhaseSprite(state, half, isMobile) {
     const sig = `${state.A}_${state.B}_${state.mainTeeth}_${half.toFixed(2)}_${isMobile}`;
@@ -522,7 +524,6 @@ function getPhaseSprite(state, half, isMobile) {
 
     _phaseSprite = { canvas: off, half: size / 2 };
     _phaseSig = sig;
-    _phaseTrail.length = 0;
     return { canvas: off, half: size / 2, fresh: true };
 }
 
@@ -531,20 +532,9 @@ function drawPhaseView(ctx, state, cx, cy, dialR, isMobile) {
     const sprite = getPhaseSprite(state, half, isMobile);
     ctx.drawImage(sprite.canvas, cx - sprite.half, cy - sprite.half);
 
-    // Trace point + fading trail
+    // Trace point (no trail — a single glowing dot following the curve)
     const px = Math.sin(state.A * state.mainAngle) * half;
     const py = -Math.sin(state.B * state.mainAngle) * half;
-    _phaseTrail.push({ x: cx + px, y: cy + py });
-    if (_phaseTrail.length > 36) _phaseTrail.shift();
-    _phaseTrail.forEach((pt, i) => {
-        const age = (i + 1) / _phaseTrail.length;
-        ctx.globalAlpha = 0.08 + 0.4 * age;
-        ctx.fillStyle = '#c07ae6';
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, 2 + 3 * age, 0, 2 * Math.PI);
-        ctx.fill();
-    });
-    ctx.globalAlpha = 1;
     ctx.save();
     ctx.translate(cx, cy);
     const x = Math.sin(state.A * state.mainAngle) * half;
