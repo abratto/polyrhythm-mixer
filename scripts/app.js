@@ -540,20 +540,30 @@ if (stickyBarToggle && stickyBar) {
     });
 }
 
-// Visualization mode switcher: gears (mechanical) vs rings (clock face).
+// Visualization mode switcher: gears (mechanical), rings (clock face),
+// align (coincidence map), phase (Lissajous), shapes (star polygons).
 if (ui.vizModeGearsBtn && ui.vizModeRingsBtn) {
+    const vizModeButtons = [
+        { btn: ui.vizModeGearsBtn, mode: 'gears' },
+        { btn: ui.vizModeRingsBtn, mode: 'rings' },
+        { btn: ui.vizModeAlignBtn, mode: 'align' },
+        { btn: ui.vizModePhaseBtn, mode: 'phase' },
+        { btn: ui.vizModeShapesBtn, mode: 'shapes' }
+    ];
     const syncVizMode = (mode) => {
-        ui.vizModeGearsBtn.classList.toggle('active', mode === 'gears');
-        ui.vizModeGearsBtn.setAttribute('aria-pressed', String(mode === 'gears'));
-        ui.vizModeRingsBtn.classList.toggle('active', mode === 'rings');
-        ui.vizModeRingsBtn.setAttribute('aria-pressed', String(mode === 'rings'));
+        vizModeButtons.forEach(({ btn, mode: m }) => {
+            const active = m === mode;
+            btn.classList.toggle('active', active);
+            btn.setAttribute('aria-pressed', String(active));
+        });
     };
     const setVizMode = (mode) => {
         state.vizMode = mode;
         syncVizMode(mode);
     };
-    ui.vizModeGearsBtn.addEventListener('click', () => setVizMode('gears'));
-    ui.vizModeRingsBtn.addEventListener('click', () => setVizMode('rings'));
+    vizModeButtons.forEach(({ btn, mode }) => {
+        btn.addEventListener('click', () => setVizMode(mode));
+    });
 }
 // Mount Solo/Mute inside the lanes (single-channel + master wheel) now that the
 // lane toolbars exist; per-voice Solo/Mute are created in each voice row above.

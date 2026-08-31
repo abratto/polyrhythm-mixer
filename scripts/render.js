@@ -8,7 +8,7 @@
  * The master wheel completes one full rotation every 4 beats (one "measure"),
  * so the visual speed is: radiansPerSecond = BPM × π/2 / 60.
  */
-import { getActivePhraseStep, getActiveWheelStep, getMeshedWheelAngle } from './math.js';
+import { getActivePhraseStep, getActiveWheelStep, getMeshedWheelAngle, lcm } from './math.js';
 import { updateVoiceStepsForCycle } from './lanes.js';
 
 /** Cache for pre-rendered gear body Path2D objects, keyed by tooth count + radii. */
@@ -319,14 +319,353 @@ function getDialSprite(state, dialR, isMobile) {
             g.fillText(String(k + 1), x, y + 0.5);
         }
     };
-    markRing(state.A, rA, '#ff3366', 6.5, 8);
-    markRing(state.B, rB, '#00e5ff', 6.5, 8);
+    markRing(state.A, rA, '#ff3366', 8.5, 10);
+    markRing(state.B, rB, '#00e5ff', 8.5, 10);
     markRing(4, rBeat, '#ff9100', 8.5, 10);
 
     _dialSprite = { canvas: off, half: size / 2, rTicks: rMaster, rMeterA: rA, rMeterB: rB, rBeat };
     _dialSig = sig;
     return _dialSprite;
 }
+
+
+// ── Align view: coincidence map + countdown ─────────────────────────────
+// Three lanes (4/4 beat, Meter A, Meter B) share one measure laid out left
+// to right. Vertical connectors mark every tick where meter pulses coincide,
+// and a countdown states how many pulses remain until the next alignment —
+// the question an ensemble player actually counts.
+let _alignSprite = null;
+let _alignSig = '';
+
+function getAlignSprite(state, isMobile) {
+    const laneWidth = 700;
+    const sig = `${state.A}_${state.B}_${state.mainTeeth}_${isMobile}`;
+    if (_alignSig === sig && _alignSprite) return _alignSprite;
+
+    const labelW = 90;
+    const laneSpan = 100;
+    const w = laneWidth + labelW + 20;
+    const h = laneSpan * 2 + 90;
+    const off = document.createElement('canvas');
+    off.width = w;
+    off.height = h;
+    const g = off.getContext('2d');
+    const x0 = labelW + 10;
+    const yBeat = 55;
+    const yA = yBeat + laneSpan;
+    const yB = yBeat + laneSpan * 2;
+
+    const laneAxis = (y, color, label) => {
+        g.strokeStyle = '#2d2d3d';
+        g.lineWidth = 2;
+        g.beginPath();
+        g.moveTo(x0, y);
+        g.lineTo(x0 + laneWidth, y);
+        g.stroke();
+        g.fillStyle = color;
+        g.font = 'bold 11px sans-serif';
+        g.textAlign = 'right';
+        g.fillText(label, x0 - 10, y + 4);
+    };
+    laneAxis(yBeat, '#ff9100', '4/4 beat');
+    laneAxis(yA, '#ff3366', 'Meter A');
+    laneAxis(yB, '#00e5ff', 'Meter B');
+
+    const tickX = (t) => x0 + (t / state.mainTeeth) * laneWidth;
+    const mark = (t, y, color) => {
+        g.fillStyle = color;
+        g.beginPath();
+        g.arc(tickX(t), y, isMobile ? 4.5 : 5.5, 0, 2 * Math.PI);
+        g.fill();
+    };
+
+    // Coincidence connectors first (under the marks)
+    const coincideTicks = [];
+    for (let t = 0; t < state.mainTeeth; t++) {
+        if (t % state.teethA === 0 && t % state.teethB === 0) coincideTicks.push(t);
+    }
+    g.strokeStyle = 'rgba(255,255,255,0.35)';
+    g.lineWidth = 2;
+    coincideTicks.forEach(t => {
+        g.beginPath();
+        g.moveTo(tickX(t), yBeat - 18);
+        g.lineTo(tickX(t), yB + 18);
+        g.stroke();
+    });
+
+    for (let q = 0; q < 4; q++) mark((q * state.mainTeeth) / 4, yBeat, '#ff9100');
+    for (let k = 0; k < state.A; k++) mark(k * state.teethA, yA, '#ff3366');
+    for (let k = 0; k < state.B; k++) mark(k * state.teethB, yB, '#00e5ff');
+    coincideTicks.forEach(t => {
+        mark(t, yA, '#c07ae6');
+        mark(t, yB, '#c07ae6');
+    });
+
+    return { canvas: off, width: w, height: h, labelW, x0, laneWidth, laneSpan, yBeat, yA, yB, coincideTicks };
+}
+
+function drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile) {
+    const stepSize = (2 * Math.PI) / state.mainTeeth;
+    const sprite = getAlignSprite(state, isMobile);
+    const originX = timelineX - (sprite.width - timelineWidth) / 2;
+    const originY = cy - sprite.laneSpan;
+    ctx.drawImage(sprite.canvas, originX, originY);
+
+    // Labels
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(`Master Cycle (${state.mainTeeth} pulses per cycle)`, cx, cy - dialR - 26);
+    if (state.masterPhraseCycles > 1) {
+        ctx.font = '11px sans-serif';
+        ctx.fillStyle = '#ff9100';
+        ctx.fillText(`C${masterCurrentCycle + 1} of ${state.masterPhraseCycles}`, cx, cy - dialR - 12);
+    }
+
+    // Live playhead sweeping all three lanes
+    const measureProgress = (((state.mainAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) / (2 * Math.PI);
+    const px = originX + sprite.x0 + measureProgress * sprite.laneWidth;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px, originY + sprite.yBeat - 26);
+    ctx.lineTo(px, originY + sprite.yB + 26);
+    ctx.stroke();
+
+    // Sweep flashes on the lane marks
+    const flashLane = (N, y, color, dotR) => {
+        const period = (2 * Math.PI) / N;
+        const pos = (((state.mainAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI));
+        const pNorm = pos / period;
+        const k = Math.floor(pNorm) % N;
+        const intensity = 1 - (pNorm - Math.floor(pNorm));
+        if (intensity <= 0.03) return;
+        const t = (k * 2 * Math.PI) / N * (state.mainTeeth / (2 * Math.PI));
+        ctx.save();
+        ctx.globalAlpha = 0.4 + 0.45 * intensity;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(sprite.x0 + (t / state.mainTeeth) * sprite.laneWidth, y, dotR + 2.5, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.restore();
+    };
+    flashLane(4, originY + sprite.yBeat, '#ff9100', 5.5);
+    flashLane(state.A, originY + sprite.yA, '#ff6b8f', 5.5);
+    flashLane(state.B, originY + sprite.yB, '#6ef2ff', 5.5);
+
+    // Countdown to the next coincidence
+    const lcmTicks = lcm(state.teethA, state.teethB);
+    const inMeasure = ((Math.floor(state.mainAngle / stepSize) % state.mainTeeth) + state.mainTeeth) % state.mainTeeth;
+    const remaining = lcmTicks - (inMeasure % lcmTicks);
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillStyle = '#ff9100';
+    ctx.fillText(`Next alignment in ${remaining} pulse${remaining === 1 ? '' : 's'}`, cx, originY + sprite.yB + 56);
+}
+
+
+// ── Phase view: Lissajous curve ─────────────────────────────────────────
+// X = Meter A's position within its pulse cycle, Y = Meter B's. The closed
+// parametric curve is unique to each ratio — 6 against 4 draws the classic
+// 3:2 Lissajous figure. A glowing point traces it; master ticks plot as
+// dots along the curve, magenta where the meters fire together.
+let _phaseSprite = null;
+let _phaseSig = '';
+let _phaseTrail = [];
+
+function getPhaseSprite(state, half, isMobile) {
+    const sig = `${state.A}_${state.B}_${state.mainTeeth}_${half.toFixed(2)}_${isMobile}`;
+    if (_phaseSig === sig && _phaseSprite) return _phaseSprite;
+
+    const size = Math.ceil(half * 2 + 40);
+    const off = document.createElement('canvas');
+    off.width = size;
+    off.height = size;
+    const g = off.getContext('2d');
+    g.translate(size / 2, size / 2);
+
+    // Faint axes
+    g.strokeStyle = 'rgba(255,255,255,0.12)';
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(-half, 0);
+    g.lineTo(half, 0);
+    g.moveTo(0, -half);
+    g.lineTo(0, half);
+    g.stroke();
+
+    // Closed Lissajous curve: x = sin(A*theta), y = -sin(B*theta)
+    const drawPt = (phaseA, phaseB) => [Math.sin(state.A * phaseA) * half, -Math.sin(state.B * phaseB) * half];
+    g.strokeStyle = 'rgba(255,255,255,0.30)';
+    g.lineWidth = 1.5;
+    g.beginPath();
+    const steps = 720;
+    for (let i = 0; i <= steps; i++) {
+        const th = (i / steps) * 2 * Math.PI;
+        const [x, y] = drawPt(th, th);
+        if (i === 0) g.moveTo(x, y);
+        else g.lineTo(x, y);
+    }
+    g.stroke();
+
+    // One dot per master tick along the curve, colored by which meters fire
+    for (let t = 0; t < state.mainTeeth; t++) {
+        const a = t * (2 * Math.PI) / state.mainTeeth;
+        const [x, y] = drawPt(a, a);
+        const aOn = t % state.teethA === 0;
+        const bOn = t % state.teethB === 0;
+        g.fillStyle = aOn && bOn ? '#c07ae6' : aOn ? '#ff6b8f' : bOn ? '#6ef2ff' : 'rgba(255,255,255,0.35)';
+        g.beginPath();
+        g.arc(x, y, aOn || bOn ? 5 : 2.5, 0, 2 * Math.PI);
+        g.fill();
+    }
+
+    _phaseSprite = { canvas: off, half: size / 2 };
+    _phaseSig = sig;
+    _phaseTrail.length = 0;
+    return { canvas: off, half: size / 2, fresh: true };
+}
+
+function drawPhaseView(ctx, state, cx, cy, dialR, isMobile) {
+    const half = dialR * 0.95;
+    const sprite = getPhaseSprite(state, half, isMobile);
+    ctx.drawImage(sprite.canvas, cx - sprite.half, cy - sprite.half);
+
+    // Trace point + fading trail
+    const px = Math.sin(state.A * state.mainAngle) * half;
+    const py = -Math.sin(state.B * state.mainAngle) * half;
+    _phaseTrail.push({ x: cx + px, y: cy + py });
+    if (_phaseTrail.length > 36) _phaseTrail.shift();
+    _phaseTrail.forEach((pt, i) => {
+        const age = (i + 1) / _phaseTrail.length;
+        ctx.globalAlpha = 0.08 + 0.4 * age;
+        ctx.fillStyle = '#c07ae6';
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 2 + 3 * age, 0, 2 * Math.PI);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    ctx.save();
+    ctx.translate(cx, cy);
+    const x = Math.sin(state.A * state.mainAngle) * half;
+    const y = -Math.sin(state.B * state.mainAngle) * half;
+    ctx.fillStyle = '#c07ae6';
+    ctx.beginPath();
+    ctx.arc(x, y, 7, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.restore();
+
+    // Labels
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(`Phase Plot — Meter A × Meter B`, cx, cy - dialR - 26);
+    if (state.masterPhraseCycles > 1) {
+        ctx.font = '11px sans-serif';
+        ctx.fillStyle = '#ff9100';
+        ctx.fillText(`C${1 + (((Math.floor(state.mainAngle / (2 * Math.PI))) % state.masterPhraseCycles) + state.masterPhraseCycles) % state.masterPhraseCycles}`, cx, cy - dialR - 12);
+    }
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = '#ff6b8f';
+    ctx.textAlign = 'left';
+    ctx.fillText('Meter A →', cx - dialR - 24, cy + dialR - 8);
+    ctx.fillStyle = '#6ef2ff';
+    ctx.textAlign = 'right';
+    ctx.fillText('↑ Meter B', cx + dialR + 24 - 12, cy - dialR + 34);
+}
+
+
+// ── Shapes view: star polygons ──────────────────────────────────────────
+// Each meter's N marks joined into a closed N-gon on its ring — hexagon for
+// 6, square for 4, star polygons for odd meters. Both polygons stacked in
+// one dial show the structural geometry of the ratio; the hand keeps it live.
+let _shapesSprite = null;
+let _shapesSig = '';
+
+function getShapesSprite(state, dialR, isMobile) {
+    const sig = `${state.A}_${state.B}_${state.mainTeeth}_${dialR.toFixed(2)}_${isMobile}`;
+    if (_shapesSig === sig && _shapesSprite) return _shapesSprite;
+
+    const pad = 28;
+    const size = Math.ceil((dialR + pad) * 2);
+    const off = document.createElement('canvas');
+    off.width = size;
+    off.height = size;
+    const g = off.getContext('2d');
+    g.translate(size / 2, size / 2);
+
+    const rMaster = dialR * DIAL_RING_FRACTIONS.master;
+    const rA = dialR * DIAL_RING_FRACTIONS.A;
+    const rB = dialR * DIAL_RING_FRACTIONS.B;
+    const rBeat = dialR * DIAL_RING_FRACTIONS.beat;
+
+    const markAngle = (k, N) => -Math.PI / 2 - (k * 2 * Math.PI) / N;
+
+    const ring = (r, color) => {
+        g.strokeStyle = color;
+        g.lineWidth = isMobile ? 1.5 : 2;
+        g.beginPath();
+        g.arc(0, 0, r, 0, 2 * Math.PI);
+        g.stroke();
+    };
+    // Faint rings under the polygons
+    ring(rMaster, 'rgba(255,255,255,0.25)');
+    ring(rA, 'rgba(255,51,102,0.35)');
+    ring(rB, 'rgba(0,229,255,0.35)');
+    ring(rBeat, 'rgba(255,145,0,0.35)');
+
+    const polygon = (N, r, color) => {
+        g.strokeStyle = color;
+        g.lineWidth = isMobile ? 1.5 : 2;
+        g.beginPath();
+        for (let k = 0; k <= N; k++) {
+            const a = markAngle(k % N, N);
+            const x = r * Math.cos(a);
+            const y = r * Math.sin(a);
+            if (k === 0) g.moveTo(x, y);
+            else g.lineTo(x, y);
+        }
+        g.stroke();
+        // Vertex dots
+        g.fillStyle = color;
+        for (let k = 0; k < N; k++) {
+            const a = markAngle(k, N);
+            g.beginPath();
+            g.arc(r * Math.cos(a), r * Math.sin(a), 4.5, 0, 2 * Math.PI);
+            g.fill();
+        }
+    };
+    polygon(4, rBeat, '#ff9100');
+    polygon(state.B, rB, '#00e5ff');
+    polygon(state.A, rA, '#ff3366');
+
+    _shapesSprite = { canvas: off, half: size / 2, rTicks: rMaster };
+    _shapesSig = sig;
+    return _shapesSprite;
+}
+
+function drawShapesView(ctx, state, cx, cy, dialR, isMobile) {
+    const sprite = getShapesSprite(state, dialR, isMobile);
+    ctx.drawImage(sprite.canvas, cx - sprite.half, cy - sprite.half);
+    drawDialLabels(ctx, state, cx, cy, dialR, 0);
+
+    // Sweeping hand keeps the view live
+    const handAngle = -Math.PI / 2 - state.mainAngle;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = isMobile ? 1 : 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(sprite.rTicks * Math.cos(handAngle), sprite.rTicks * Math.sin(handAngle));
+    ctx.stroke();
+    ctx.restore();
+}
+
 
 /** Labels for the rings dial (positions differ from the gear view). */
 function drawDialLabels(ctx, state, cx, cy, dialR, masterCurrentCycle) {
@@ -1000,9 +1339,9 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         }
         ctx.drawImage(_layerA, 0, 0);
 
+        const dialR = Math.min(170, cy - 24, timelineY - 12 - cy);
         if (state.vizMode === 'rings') {
             // ── Rings view: the standalone clock-face dial ──
-            const dialR = Math.min(170, cy - 24, timelineY - 12 - cy);
             const dial = getDialSprite(state, dialR, isMobile);
             ctx.drawImage(dial.canvas, cx - dial.half, cy - dial.half);
             drawDialLabels(ctx, state, cx, cy, dialR, masterCurrentCycle);
@@ -1058,8 +1397,14 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
                 ctx.restore();
             };
             flashRing(state.mainTeeth, dial.rTicks, 'rgba(255,255,255,0.95)', 3.5);
-            flashRing(state.A, dial.rMeterA, '#ff6b8f', 6.5);
-            flashRing(state.B, dial.rMeterB, '#6ef2ff', 6.5);
+            flashRing(state.A, dial.rMeterA, '#ff6b8f', 8.5);
+            flashRing(state.B, dial.rMeterB, '#6ef2ff', 8.5);
+        } else if (state.vizMode === 'align') {
+            drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile);
+        } else if (state.vizMode === 'phase') {
+            drawPhaseView(ctx, state, cx, cy, dialR, isMobile);
+        } else if (state.vizMode === 'shapes') {
+            drawShapesView(ctx, state, cx, cy, dialR, isMobile);
         } else {
             // ── Gears view: the mechanical construction ──
             ctx.fillStyle = '#ffffff';
