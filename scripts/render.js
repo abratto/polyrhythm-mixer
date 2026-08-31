@@ -509,15 +509,13 @@ function drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, mast
 
 
 
-// ── Phase view: grid-based phase plot ───────────────────────────────────
-// A 2D phase plane: X = Meter A's position within its cycle, Y = Meter B's.
-// The graph paper divides the plane into Meter A columns (vertical lines)
-// and Meter B rows (horizontal lines). The trace is a polyline through the
-// grid: every vertical-line crossing fires a Meter A pulse, every
-// horizontal-line crossing a Meter B pulse, and the trace passing through a
-// grid intersection means both meters strike together (coincidence). The
-// bottom-left corner is the downbeat — the start and resolution of the
-// master cycle. Distance from the grid intersections is the tension.
+
+// ── Phase view: cosine-Lissajous with firing walls ──────────────────────
+// The curve is x = -half*cos(A*theta), y = -half*cos(B*theta): it starts at
+// the top-left corner (the downbeat, both meters striking together), touches
+// the LEFT wall once per Meter A pulse and the TOP wall once per Meter B
+// pulse, and rides the opposite walls between beats (maximum tension). The
+// left wall is painted pink and the top wall cyan — the two firing lines.
 let _phaseSprite = null;
 let _phaseSig = '';
 
@@ -532,47 +530,68 @@ function getPhaseSprite(state, half, isMobile) {
     const g = off.getContext('2d');
     g.translate(size / 2, size / 2);
 
-    const colX = (k) => -half + (k * 2 * half) / state.A;   // Meter A grid columns
-    const rowY = (k) => -half + (k * 2 * half) / state.B;   // Meter B grid rows
-
-    // Graph paper: pink columns = Meter A subdivisions, cyan rows = Meter B
-    g.lineWidth = isMobile ? 1 : 1.5;
-    for (let k = 0; k <= state.A; k++) {
-        g.strokeStyle = 'rgba(255,51,102,0.30)';
+    // Faint graph-paper grid inside the box
+    g.lineWidth = 1;
+    g.strokeStyle = 'rgba(255,255,255,0.07)';
+    for (let i = 1; i < 4; i++) {
+        const p = -half + (i * 2 * half) / 4;
         g.beginPath();
-        g.moveTo(colX(k), -half);
-        g.lineTo(colX(k), half);
-        g.stroke();
-    }
-    for (let k = 0; k <= state.B; k++) {
-        g.strokeStyle = 'rgba(0,229,255,0.30)';
-        g.beginPath();
-        g.moveTo(-half, rowY(k));
-        g.lineTo(half, rowY(k));
+        g.moveTo(p, -half);
+        g.lineTo(p, half);
+        g.moveTo(-half, p);
+        g.lineTo(half, p);
         g.stroke();
     }
 
-    // Border
-    g.strokeStyle = 'rgba(255,255,255,0.35)';
+    // Firing walls: left = Meter A (pink), top = Meter B (cyan)
+    g.lineWidth = isMobile ? 2 : 3;
+    g.strokeStyle = 'rgba(255,51,102,0.65)';
+    g.beginPath();
+    g.moveTo(-half, -half);
+    g.lineTo(-half, half);
+    g.stroke();
+    g.strokeStyle = 'rgba(0,229,255,0.65)';
+    g.beginPath();
+    g.moveTo(-half, -half);
+    g.lineTo(half, -half);
+    g.stroke();
+    // Tension walls (between beats)
+    g.strokeStyle = 'rgba(255,255,255,0.30)';
     g.lineWidth = 2;
-    g.strokeRect(-half, -half, half * 2, half * 2);
+    g.beginPath();
+    g.moveTo(half, -half);
+    g.lineTo(half, half);
+    g.moveTo(-half, half);
+    g.lineTo(half, half);
+    g.stroke();
 
-    // One dot per master tick along the trace, colored by which meters fire
+    // The closed curve: one full sweep per measure
+    const drawPt = (phaseA, phaseB) => [-half * Math.cos(state.A * phaseA), -half * Math.cos(state.B * phaseB)];
+    g.strokeStyle = 'rgba(255,255,255,0.32)';
+    g.lineWidth = 1.5;
+    g.beginPath();
+    const steps = 720;
+    for (let i = 0; i <= steps; i++) {
+        const th = (i / steps) * 2 * Math.PI;
+        const [x, y] = drawPt(th, th);
+        if (i === 0) g.moveTo(x, y);
+        else g.lineTo(x, y);
+    }
+    g.stroke();
+
+    // One dot per master tick, colored by which meters fire
     for (let t = 0; t < state.mainTeeth; t++) {
-        const pA = (((t / state.teethA) % state.A) + state.A) % state.A;
-        const pB = (((t / state.teethB) % state.B) + state.B) % state.B;
-        const x = colX(pA);
-        const y = rowY(pB);
+        const a = t * (2 * Math.PI) / state.mainTeeth;
+        const [x, y] = drawPt(a, a);
         const aOn = t % state.teethA === 0;
         const bOn = t % state.teethB === 0;
-        g.fillStyle = aOn && bOn ? '#c07ae6' : aOn ? '#ff6b8f' : bOn ? '#6ef2ff' : 'rgba(255,255,255,0.35)';
+        g.fillStyle = aOn && bOn ? '#c07ae6' : aOn ? '#ff6b8f' : bOn ? '#6ef2ff' : 'rgba(255,255,255,0.30)';
         g.beginPath();
-        g.arc(x, y, aOn || bOn ? 5 : 2.5, 0, 2 * Math.PI);
+        g.arc(x, y, aOn && bOn ? 6.5 : aOn || bOn ? 5 : 2.5, 0, 2 * Math.PI);
         g.fill();
     }
 
-    // Downbeat / resolution marker at the bottom-left corner: both meters
-    // strike together here at the start of the master cycle.
+    // Resolution corner: both meters strike together here at the downbeat
     g.strokeStyle = '#ffffff';
     g.lineWidth = 2;
     g.beginPath();
@@ -583,19 +602,15 @@ function getPhaseSprite(state, half, isMobile) {
 }
 
 function drawPhaseView(ctx, state, cx, cy, dialR, isMobile) {
-    const stepSize = (2 * Math.PI) / state.mainTeeth;
     const half = dialR * 0.95;
     const sprite = getPhaseSprite(state, half, isMobile);
     ctx.drawImage(sprite.canvas, cx - sprite.half, cy - sprite.half);
 
-    // Live trace point, moving through the grid; its halo grows with the
-    // tension (distance from the next pulse of either meter).
-    const tickF = state.mainAngle / stepSize;
-    const fA = ((((tickF / state.teethA) % state.A) + state.A) % state.A) / state.A;
-    const fB = ((((tickF / state.teethB) % state.B) + state.B) % state.B) / state.B;
-    const x = cx - half + 2 * half * fA;
-    const y = cy - half + 2 * half * fB;
-    const tension = 1 - Math.min(fA, fB) * 2;
+    // Live trace point; its halo grows with the tension (distance from the
+    // firing walls — the "rub" between beats).
+    const x = cx - half * Math.cos(state.A * state.mainAngle);
+    const y = cy - half * Math.cos(state.B * state.mainAngle);
+    const tension = Math.min((1 - Math.cos(state.A * state.mainAngle)) / 2, (1 - Math.cos(state.B * state.mainAngle)) / 2);
 
     ctx.save();
     ctx.globalAlpha = 0.25 + 0.35 * tension;
@@ -614,14 +629,30 @@ function drawPhaseView(ctx, state, cx, cy, dialR, isMobile) {
     ctx.fill();
     ctx.restore();
 
-    // Axis hints
+    // Wall labels: firing lines on the left/top, lobe counts on the
+    // tension walls (right/bottom).
     ctx.font = 'bold 12px sans-serif';
     ctx.fillStyle = '#ff6b8f';
-    ctx.textAlign = 'center';
-    ctx.fillText('Meter A →', cx, cy + half + 18);
-    ctx.fillStyle = '#6ef2ff';
     ctx.textAlign = 'left';
-    ctx.fillText('↑ Meter B', cx - half - 14, cy - half + 14);
+    ctx.save();
+    ctx.translate(cx - half - 10, cy);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(`Meter A — ${state.A} pulses`, 0, 0);
+    ctx.restore();
+    ctx.fillStyle = '#6ef2ff';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Meter B — ${state.B} pulses`, cx, cy - half - 10);
+    ctx.fillStyle = '#8a8a9c';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.save();
+    ctx.translate(cx + half + 10, cy);
+    ctx.rotate(Math.PI / 2);
+    ctx.fillText(`${state.A} lobes · max tension`, 0, 0);
+    ctx.restore();
+    ctx.fillStyle = '#8a8a9c';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${state.B} lobes · max tension`, cx, cy + half + 18);
 }
 
 // ── Shapes view: star polygons ──────────────────────────────────────────
