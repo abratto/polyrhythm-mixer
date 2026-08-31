@@ -329,6 +329,41 @@ function getDialSprite(state, dialR, isMobile) {
 }
 
 
+/**
+ * Shared top block for every round view: the master-cycle line (with the
+ * cycle counter when the phrase spans multiple cycles) and the two meter
+ * descriptors. Drawn once per frame so it is identical across views.
+ */
+function drawMeterLegend(ctx, state, cx, masterCurrentCycle) {
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 13px sans-serif';
+    const title = `Master Cycle (${state.mainTeeth} pulses per cycle)`;
+    ctx.fillText(title, cx, 30);
+    if (state.masterPhraseCycles > 1) {
+        const wTitle = ctx.measureText(title).width;
+        ctx.font = '11px sans-serif';
+        ctx.fillStyle = '#ff9100';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Cycle ${masterCurrentCycle + 1} of ${state.masterPhraseCycles}`, cx + wTitle / 2 + 6, 31);
+    }
+
+    // Meter descriptors on a single legend line, color-coded per meter
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'left';
+    const aText = `Meter A (${state.A} beats per cycle) · ${state.A} groups of ${state.teethA} beats`;
+    const bText = `Meter B (${state.B} beats per cycle) · ${state.B} groups of ${state.teethB} beats`;
+    const gap = 48;
+    const wA = ctx.measureText(aText).width;
+    const wB = ctx.measureText(bText).width;
+    let x = cx - (wA + gap + wB) / 2;
+    ctx.fillStyle = '#ff6b8f';
+    ctx.fillText(aText, x, 46);
+    x += wA + gap;
+    ctx.fillStyle = '#6ef2ff';
+    ctx.fillText(bText, x, 46);
+}
+
 // ── Align view: coincidence map + countdown ─────────────────────────────
 // Three lanes (4/4 beat, Meter A, Meter B) share one measure laid out left
 // to right. Vertical connectors mark every tick where meter pulses coincide,
@@ -413,17 +448,6 @@ function drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, mast
     const originX = timelineX - (sprite.width - timelineWidth) / 2;
     ctx.drawImage(sprite.canvas, originX, originY);
 
-    // Labels
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.fillText(`Master Cycle (${state.mainTeeth} pulses per cycle)`, cx, cy - dialR - 26);
-    if (state.masterPhraseCycles > 1) {
-        ctx.font = '11px sans-serif';
-        ctx.fillStyle = '#ff9100';
-        ctx.fillText(`C${masterCurrentCycle + 1} of ${state.masterPhraseCycles}`, cx, cy - dialR - 12);
-    }
-
     // Live playhead sweeping all three lanes
     const measureProgress = (((state.mainAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) / (2 * Math.PI);
     const px = originX + sprite.x0 + measureProgress * sprite.laneWidth;
@@ -456,14 +480,6 @@ function drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, mast
     flashLane(state.A, originY + sprite.yA, '#ff6b8f', 5.5);
     flashLane(state.B, originY + sprite.yB, '#6ef2ff', 5.5);
 
-    // Countdown to the next coincidence
-    const lcmTicks = lcm(state.teethA, state.teethB);
-    const inMeasure = ((Math.floor(state.mainAngle / stepSize) % state.mainTeeth) + state.mainTeeth) % state.mainTeeth;
-    const remaining = lcmTicks - (inMeasure % lcmTicks);
-    ctx.textAlign = 'center';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.fillStyle = '#ff9100';
-    ctx.fillText(`Next alignment in ${remaining} pulse${remaining === 1 ? '' : 's'}`, cx, originY + sprite.yB + 56);
 }
 
 
@@ -549,16 +565,6 @@ function drawPhaseView(ctx, state, cx, cy, dialR, isMobile) {
     ctx.fill();
     ctx.restore();
 
-    // Labels
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.fillText(`Phase Plot — Meter A × Meter B`, cx, cy - dialR - 26);
-    if (state.masterPhraseCycles > 1) {
-        ctx.font = '11px sans-serif';
-        ctx.fillStyle = '#ff9100';
-        ctx.fillText(`C${1 + (((Math.floor(state.mainAngle / (2 * Math.PI))) % state.masterPhraseCycles) + state.masterPhraseCycles) % state.masterPhraseCycles}`, cx, cy - dialR - 12);
-    }
     ctx.font = 'bold 12px sans-serif';
     ctx.fillStyle = '#ff6b8f';
     ctx.textAlign = 'left';
@@ -641,7 +647,6 @@ function getShapesSprite(state, dialR, isMobile) {
 function drawShapesView(ctx, state, cx, cy, dialR, isMobile) {
     const sprite = getShapesSprite(state, dialR, isMobile);
     ctx.drawImage(sprite.canvas, cx - sprite.half, cy - sprite.half);
-    drawDialLabels(ctx, state, cx, cy, dialR, 0);
 
     // Sweeping hand keeps the view live
     const handAngle = -Math.PI / 2 - state.mainAngle;
@@ -656,36 +661,6 @@ function drawShapesView(ctx, state, cx, cy, dialR, isMobile) {
     ctx.restore();
 }
 
-
-/** Labels for the rings dial (positions differ from the gear view). */
-function drawDialLabels(ctx, state, cx, cy, dialR, masterCurrentCycle) {
-    // Title and cycle counter above the dial
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.fillText(`Master Cycle (${state.mainTeeth} pulses per cycle)`, cx, cy - dialR - 26);
-    if (state.masterPhraseCycles > 1) {
-        ctx.font = '11px sans-serif';
-        ctx.fillStyle = '#ff9100';
-        ctx.fillText(`C${masterCurrentCycle + 1} of ${state.masterPhraseCycles}`, cx, cy - dialR - 12);
-    }
-    // Meter labels flank the dial (mirroring the side gears: A left, B right),
-    // clear of the master cycle timeline below.
-    ctx.textAlign = 'right';
-    ctx.fillStyle = '#ff3366';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.fillText(`Meter A (${state.A} beats per cycle)`, cx - dialR - 14, cy - 4);
-    ctx.fillStyle = '#8a8a9c';
-    ctx.font = '12px sans-serif';
-    ctx.fillText(`${state.A} groups of ${state.teethA} beats`, cx - dialR - 14, cy + 14);
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#00e5ff';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.fillText(`Meter B (${state.B} beats per cycle)`, cx + dialR + 14, cy - 4);
-    ctx.fillStyle = '#8a8a9c';
-    ctx.font = '12px sans-serif';
-    ctx.fillText(`${state.B} groups of ${state.teethB} beats`, cx + dialR + 14, cy + 20);
-}
 
 function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop = false, flashIntensity = 0, selectedSteps = null, isMobile = false) {
     const sprite = getGearSprite(teeth, rInner, rOuter, color, isMobile);
@@ -1330,11 +1305,13 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         ctx.drawImage(_layerA, 0, 0);
 
         const dialR = Math.min(170, cy - 24, timelineY - 12 - cy);
+        // Shared top block: master-cycle line + meter descriptors
+        drawMeterLegend(ctx, state, cx, masterCurrentCycle);
+
         if (state.vizMode === 'rings') {
             // ── Rings view: the standalone clock-face dial ──
             const dial = getDialSprite(state, dialR, isMobile);
             ctx.drawImage(dial.canvas, cx - dial.half, cy - dial.half);
-            drawDialLabels(ctx, state, cx, cy, dialR, masterCurrentCycle);
 
             // Sweeping hand + current-pulse dots, locked to the master angle
             const handAngle = -Math.PI / 2 - state.mainAngle;
@@ -1397,24 +1374,6 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             drawShapesView(ctx, state, cx, cy, dialR, isMobile);
         } else {
             // ── Gears view: the mechanical construction ──
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 13px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(`Master Cycle (${state.mainTeeth} pulses per cycle)`, cx, cy - rMainOuter - 32);
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 13px sans-serif';
-            ctx.fillText(`Meter A (${state.A} beats per cycle)`, cxA, cy + rAOuter + 48);
-            ctx.font = '12px sans-serif';
-            ctx.fillText(`${state.A} groups of ${state.teethA} beats`, cxA, cy + rAOuter + 66);
-            ctx.font = 'bold 13px sans-serif';
-            ctx.fillText(`Meter B (${state.B} beats per cycle)`, cxB, cy + rBOuter + 48);
-            ctx.font = '12px sans-serif';
-            ctx.fillText(`${state.B} groups of ${state.teethB} beats`, cxB, cy + rBOuter + 66);
-            if (state.masterPhraseCycles > 1) {
-                ctx.font = '11px sans-serif';
-                ctx.fillStyle = '#ff9100';
-                ctx.fillText(`C${masterCurrentCycle + 1} of ${state.masterPhraseCycles}`, cx, cy - rMainOuter - 50);
-            }
 
             // Master wheel + A/B pulse dots (pink/cyan, magenta on coincidence)
             drawGear(ctx, cx, cy, rMainInner, rMainOuter, state.mainTeeth, angles.main, '#7a8a9e', true, state.flash.driver, null, isMobile);
