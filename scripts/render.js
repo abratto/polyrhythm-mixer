@@ -432,36 +432,51 @@ function drawVerbalizationView(ctx, state, cx, cy, dialR, timelineX, timelineWid
     ctx.fillStyle = colors[active.kind];
     ctx.fillText(active.word, cx, cy - 20);
 
-    // Full spoken sequence for the measure, wrapped like a lyric line; the
-    // syllable being spoken is lit, past ones dim, upcoming ones bright.
+    // Full spoken sequence for the measure, wrapped like lyrics and centered
+    // as a block: pass 1 breaks the syllables into rows and measures each
+    // row's width, pass 2 draws every row centered on the dial axis.
     ctx.font = `bold ${isMobile ? 15 : 18}px sans-serif`;
-    const stripWidth = timelineWidth + 120;
-    const stripX = cx - stripWidth / 2;
-    let x = stripX;
-    let y = cy + 70;
+    const stripMax = timelineWidth + 120;
+    const wordGap = 16;
     const lineHeight = 34;
+    const rows = [];
+    let cur = { items: [], width: 0 };
     for (const s of seq) {
-        const isNow = s === active;
-        const isPast = s.tick < masterTick && !isNow;
         const w = ctx.measureText(s.word).width;
-        if (x + w > stripX + stripWidth) {
-            x = stripX;
-            y += lineHeight;
+        const add = cur.items.length ? wordGap + w : w;
+        if (cur.items.length && cur.width + add > stripMax) {
+            rows.push(cur);
+            cur = { items: [], width: 0 };
         }
-        ctx.globalAlpha = isNow ? 1 : isPast ? 0.35 : 0.8;
-        ctx.fillStyle = colors[s.kind];
-        ctx.fillText(s.word, x, y);
-        if (isNow) {
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.moveTo(x - 4, y + 8);
-            ctx.lineTo(x + w + 4, y + 8);
-            ctx.stroke();
-        }
-        ctx.globalAlpha = 1;
-        x += w + 16;
+        cur.items.push({ s, w });
+        cur.width += add;
     }
+    if (cur.items.length) rows.push(cur);
+
+    let y = cy + 70;
+    for (const row of rows) {
+        let x = cx - row.width / 2;
+        for (const item of row.items) {
+            const s = item.s;
+            const isNow = s === active;
+            const isPast = s.tick < masterTick && !isNow;
+            ctx.globalAlpha = isNow ? 1 : isPast ? 0.35 : 0.8;
+            ctx.fillStyle = colors[s.kind];
+            ctx.fillText(s.word, x, y);
+            if (isNow) {
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(x - 4, y + 8);
+                ctx.lineTo(x + item.w + 4, y + 8);
+                ctx.stroke();
+            }
+            ctx.globalAlpha = 1;
+            x += item.w + wordGap;
+        }
+        y += lineHeight;
+    }
+    y -= lineHeight;
 
     // Syllable key
     ctx.font = '12px sans-serif';
