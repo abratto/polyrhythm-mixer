@@ -330,6 +330,7 @@ function getDialSprite(state, dialR, isMobile) {
 
 /** Labels for the rings dial (positions differ from the gear view). */
 function drawDialLabels(ctx, state, cx, cy, dialR, masterCurrentCycle) {
+    // Title and cycle counter above the dial
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 13px sans-serif';
@@ -337,13 +338,24 @@ function drawDialLabels(ctx, state, cx, cy, dialR, masterCurrentCycle) {
     if (state.masterPhraseCycles > 1) {
         ctx.font = '11px sans-serif';
         ctx.fillStyle = '#ff9100';
-        ctx.fillText(`C${masterCurrentCycle + 1} of ${state.masterPhraseCycles}`, cx, cy - dialR - 44);
+        ctx.fillText(`C${masterCurrentCycle + 1} of ${state.masterPhraseCycles}`, cx, cy - dialR - 12);
     }
-    ctx.font = 'bold 13px sans-serif';
+    // Meter labels flank the dial (mirroring the side gears: A left, B right),
+    // clear of the master cycle timeline below.
+    ctx.textAlign = 'right';
     ctx.fillStyle = '#ff3366';
-    ctx.fillText(`Meter A (${state.A} beats per cycle)`, cx, cy + dialR + 20);
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(`Meter A (${state.A} beats per cycle)`, cx - dialR - 14, cy - 4);
+    ctx.fillStyle = '#8a8a9c';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(`${state.A} groups of ${state.teethA} beats`, cx - dialR - 14, cy + 14);
+    ctx.textAlign = 'left';
     ctx.fillStyle = '#00e5ff';
-    ctx.fillText(`Meter B (${state.B} beats per cycle)`, cx, cy + dialR + 38);
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(`Meter B (${state.B} beats per cycle)`, cx + dialR + 14, cy - 4);
+    ctx.fillStyle = '#8a8a9c';
+    ctx.font = '12px sans-serif';
+    ctx.fillText(`${state.B} groups of ${state.teethB} beats`, cx + dialR + 14, cy + 20);
 }
 
 function drawGear(ctx, cx, cy, rInner, rOuter, teeth, angle, color, highlightTop = false, flashIntensity = 0, selectedSteps = null, isMobile = false) {
@@ -1018,6 +1030,36 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             ctx.arc(dial.rMeterA * Math.cos(handAngle), dial.rMeterA * Math.sin(handAngle), isMobile ? 3.5 : 4.5, 0, 2 * Math.PI);
             ctx.fill();
             ctx.restore();
+
+            // Sweep flashes: each mark lights briefly as the hand crosses it.
+            // Only the master tick, Meter A, and Meter B rings flash (the beat
+            // ring already carries the orange current-dot on the hand).
+            const flashRing = (N, r, color, dotR) => {
+                const period = (2 * Math.PI) / N;
+                const pos = ((state.mainAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+                const pNorm = pos / period;
+                const k = Math.floor(pNorm) % N;
+                const intensity = 1 - (pNorm - Math.floor(pNorm));
+                if (intensity <= 0.03) return;
+                const a = -Math.PI / 2 - k * period;
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.globalAlpha = 0.35 + 0.45 * intensity;
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(r * Math.cos(a), r * Math.sin(a), dotR + 2.5, 0, 2 * Math.PI);
+                ctx.fill();
+                if (intensity > 0.55) {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(r * Math.cos(a), r * Math.sin(a), dotR * 0.75, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+                ctx.restore();
+            };
+            flashRing(state.mainTeeth, dial.rTicks, 'rgba(255,255,255,0.95)', 3.5);
+            flashRing(state.A, dial.rMeterA, '#ff6b8f', 6.5);
+            flashRing(state.B, dial.rMeterB, '#6ef2ff', 6.5);
         } else {
             // ── Gears view: the mechanical construction ──
             ctx.fillStyle = '#ffffff';
