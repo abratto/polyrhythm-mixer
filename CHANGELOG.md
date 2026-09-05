@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.16.1 — 2026-09-05
+
+### Fixed (performance)
+- The visualization gallery had reintroduced per-frame work that the v1.13.9 layer-caching pass had removed, bringing audio/visual jitter back on low-end tablets. Output is pixel-identical; the frame budget is restored:
+  - The Voice view's lyric strip is pre-rendered to a sprite once per meter/font — a frame is one blit plus the active syllable (full alpha, underline) and the spoken-prefix dim, instead of re-flowing and re-rasterizing every syllable at the draw rate.
+  - The meter legend (title + descriptors) is baked into the cached static layer, and the "Cycle X of N" counter into the per-cycle layer — previously drawn live (3 text fills + 2 measurements) on every frame of every view.
+  - The static layers reuse persistent offscreen buffers instead of allocating a fresh full-canvas layer once per master cycle (the allocation + GC of the old buffer was a periodic hitch).
+  - The Master Beat 1-2-3-4 flash loop resolves its bands once per strip build and idles at 250ms while the transport is stopped, instead of re-querying the DOM at display refresh rate.
+  - Pattern/dots cache signatures are refreshed on a 4-frame stride, and the per-frame flash check no longer allocates.
+- Added `npm run test:frames` (scripts/frame-probe.js): a CPU-throttled per-view frame-delta profiler for tracking render-cost regressions.
+
 ## v1.16.0 — 2026-08-18
 
 ### Added
