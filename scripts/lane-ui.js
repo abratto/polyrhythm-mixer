@@ -1000,6 +1000,7 @@ function buildMultiVoiceLane(lane, state) {
 let _mbQuarterObserver = null;
 let _mbBeatRAF = null;
 let _mbBeatTimer = null;
+let _mbWakeTimer = null;
 let _mbLastQuarter = null;
 let _mbLastHit = null;
 
@@ -1065,11 +1066,17 @@ function buildMasterBeatReference(lane, state) {
     // the exact audio click fired by the scheduler's driver channel.
     if (_mbBeatRAF) cancelAnimationFrame(_mbBeatRAF);
     if (_mbBeatTimer) clearTimeout(_mbBeatTimer);
+    if (_mbWakeTimer) clearTimeout(_mbWakeTimer);
     _mbBeatRAF = null;
     _mbBeatTimer = null;
+    _mbWakeTimer = null;
     _mbLastQuarter = null;
     _mbLastHit = null;
-    _mbBeatRAF = requestAnimationFrame(() => animateMasterBeatQuarters(state, steps));
+    // Resolve the bands and cycle count once: the strip is static between
+    // rebuilds, so the animation loop must not re-query the DOM every frame.
+    const bands = steps.querySelectorAll('.mb-quarter');
+    const totalCycleCount = Number(steps.dataset.totalCycles) || 1;
+    _mbBeatRAF = requestAnimationFrame(() => animateMasterBeatQuarters(state, bands, totalCycleCount));
 
     return stepsColumn;
 }
@@ -1112,35 +1119,41 @@ function layoutMasterBeatQuarters(steps) {
  * hit fired by the scheduler. The beat's band index is (cycle·4 + beat), where
  * beat = q mod 4 and cycle = floor(q/4) mod totalCycles — so multi-cycle phrases
  * light the band in whichever cycle is currently playing.
+ *
+ * The bands NodeList is resolved once per strip build (see buildMasterBeatReference),
+ * and while the transport is stopped the loop idles on a 250ms wake instead of
+ * spinning at display refresh rate — mirroring the canvas loop's idle pattern.
  */
-function animateMasterBeatQuarters(state, steps) {
-    const bands = steps.querySelectorAll('.mb-quarter');
-    if (bands.length) {
+function animateMasterBeatQuarters(state, bands, totalCycles) {
+    if (bands.length && state.playing) {
         const currentQuarter = Math.floor((state.mainAngle || 0) / (Math.PI / 2));
-        const totalCycles = Number(steps.dataset.totalCycles) || 1;
-        if (state.playing) {
-            if (currentQuarter !== _mbLastQuarter) {
-                _mbLastQuarter = currentQuarter;
-                const beat = ((currentQuarter % 4) + 4) % 4;
-                const cycle = (((Math.floor(currentQuarter / 4)) % totalCycles) + totalCycles) % totalCycles;
-                const band = bands[cycle * 4 + beat];
-                if (band) {
-                    if (_mbLastHit && _mbLastHit !== band) _mbLastHit.classList.remove('is-hit');
-                    band.classList.remove('is-hit');
-                    band.classList.add('is-hit');
-                    _mbLastHit = band;
-                    if (_mbBeatTimer) clearTimeout(_mbBeatTimer);
-                    _mbBeatTimer = setTimeout(() => {
-                        band.classList.remove('is-hit');
-                        if (_mbLastHit === band) _mbLastHit = null;
-                    }, 160);
-                }
-            }
-        } else {
+        if (currentQuarter !== _mbLastQuarter) {
             _mbLastQuarter = currentQuarter;
+            const beat = ((currentQuarter % 4) + 4) % 4;
+            const cycle = (((Math.floor(currentQuarter / 4)) % totalCycles) + totalCycles) % totalCycles;
+            const band = bands[cycle * 4 + beat];
+            if (band) {
+                if (_mbLastHit && _mbLastHit !== band) _mbLastHit.classList.remove('is-hit');
+                band.classList.remove('is-hit');
+                band.classList.add('is-hit');
+                _mbLastHit = band;
+                if (_mbBeatTimer) clearTimeout(_mbBeatTimer);
+                _mbBeatTimer = setTimeout(() => {
+                    band.classList.remove('is-hit');
+                    if (_mbLastHit === band) _mbLastHit = null;
+                }, 160);
+            }
         }
+        _mbBeatRAF = requestAnimationFrame(() => animateMasterBeatQuarters(state, bands, totalCycles));
+    } else {
+        // Stopped (or no bands): track the frozen quarter, then idle — the
+        // wake re-enters at display rate as soon as playback resumes.
+        if (bands.length) _mbLastQuarter = Math.floor((state.mainAngle || 0) / (Math.PI / 2));
+        _mbWakeTimer = setTimeout(() => {
+            _mbWakeTimer = null;
+            _mbBeatRAF = requestAnimationFrame(() => animateMasterBeatQuarters(state, bands, totalCycles));
+        }, 250);
     }
-    _mbBeatRAF = requestAnimationFrame(() => animateMasterBeatQuarters(state, steps));
 }
 
 /** Builds a single-voice lane. */

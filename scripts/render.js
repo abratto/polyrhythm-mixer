@@ -169,7 +169,7 @@ let _masterDotsSig = '';
  * changes when a wheel selection or phase is edited, so this redraws rarely
  * instead of stroking up to mainTeeth spokes + dots every frame.
  */
-function getMasterDotsSprite(state, lanes, rMainInner, markerRadius, dotRadius, isMobile) {
+function getMasterDotsSprite(state, lanes, rMainInner, markerRadius, dotRadius, isMobile, dotsSig) {
     if (_scratchA.length < state.mainTeeth) {
         _scratchA = new Uint8Array(state.mainTeeth);
         _scratchB = new Uint8Array(state.mainTeeth);
@@ -183,7 +183,7 @@ function getMasterDotsSprite(state, lanes, rMainInner, markerRadius, dotRadius, 
         if (on) _scratchB[(i + state.phaseB) % state.mainTeeth] = 1;
     });
 
-    const sig = `${state.mainTeeth}_${rMainInner.toFixed(2)}_${markerRadius.toFixed(2)}_${dotRadius.toFixed(2)}_${isMobile}_${computeDotsSignature(state, lanes)}`;
+    const sig = `${state.mainTeeth}_${rMainInner.toFixed(2)}_${markerRadius.toFixed(2)}_${dotRadius.toFixed(2)}_${isMobile}_${dotsSig}`;
     if (_masterDotsSig === sig && _masterDotsSprite) return _masterDotsSprite;
 
     const pad = 20;
@@ -348,36 +348,6 @@ function textWidth(ctx, text) {
     return w;
 }
 
-function drawMeterLegend(ctx, state, cx, masterCurrentCycle) {
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 13px sans-serif';
-    const title = `Master Cycle (${state.mainTeeth} pulses per cycle)`;
-    ctx.fillText(title, cx, 30);
-    if (state.masterPhraseCycles > 1) {
-        const wTitle = textWidth(ctx, title);
-        ctx.font = '11px sans-serif';
-        ctx.fillStyle = '#ff9100';
-        ctx.textAlign = 'left';
-        ctx.fillText(`Cycle ${masterCurrentCycle + 1} of ${state.masterPhraseCycles}`, cx + wTitle / 2 + 6, 31);
-    }
-
-    // Meter descriptors on a single legend line, color-coded per meter
-    ctx.font = 'bold 12px sans-serif';
-    ctx.textAlign = 'left';
-    const aText = `Meter A (${state.A} beats per cycle) · ${state.A} groups of ${state.teethA} beats`;
-    const bText = `Meter B (${state.B} beats per cycle) · ${state.B} groups of ${state.teethB} beats`;
-    const gap = 48;
-    const wA = ctx.measureText(aText).width;
-    const wB = ctx.measureText(bText).width;
-    let x = cx - (wA + gap + wB) / 2;
-    ctx.fillStyle = '#ff6b8f';
-    ctx.fillText(aText, x, 46);
-    x += wA + gap;
-    ctx.fillStyle = '#6ef2ff';
-    ctx.fillText(bText, x, 46);
-}
-
 /** Shared sweep flash: lights the nearest mark of a ring as the hand crosses it. */
 function drawRingFlash(ctx, N, r, cx, cy, color, dotR, mainAngle, isMobile) {
     const period = (2 * Math.PI) / N;
@@ -410,6 +380,11 @@ function drawRingFlash(ctx, N, r, cx, cy, color, dotR, mainAngle, isMobile) {
 // 'Ka' for each lone Meter A pulse (strong hand), 'Tu' for each lone Meter
 // B pulse (weak hand). Speaking the strip in time with the playhead taps
 // and verbalizes the polyrhythm — C. K. Ladzekpo's hand-rhythm method.
+//
+// The strip (all syllables at rest alpha + the key line) only changes when
+// the meters or font change, so it is pre-rendered to a sprite. A frame is
+// a blit plus the active syllable, instead of re-flowing and re-rasterizing
+// every syllable at the draw rate.
 const VERBAL_COLORS = { Kpla: '#d8b4fe', Ka: '#ff6b8f', Tu: '#6ef2ff' };
 
 function buildVerbalSequence(state) {
@@ -427,36 +402,33 @@ function buildVerbalSequence(state) {
     return seq;
 }
 
-function drawVerbalizationView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile) {
-    const stepSize = (2 * Math.PI) / state.mainTeeth;
-    const masterTick = ((Math.floor(state.mainAngle / stepSize) % state.mainTeeth) + state.mainTeeth) % state.mainTeeth;
+/** Offscreen context for cached width measurement (shared with textWidth). */
+let _measureCtx = null;
+
+let _verbalCache = null;
+
+/**
+ * Builds (once per meter/font signature) the verbal sequence, the wrapped
+ * lyric-row layout, and a sprite holding every syllable at rest alpha plus
+ * the key line. items[] runs parallel to seq[] and stores sprite-space
+ * positions, so the live pass only has to look up the active word.
+ */
+function getVerbalView(state, stripMax, isMobile) {
+    const sig = `${state.mainTeeth}_${state.teethA}_${state.teethB}_${stripMax}_${isMobile}`;
+    if (_verbalCache && _verbalCache.sig === sig) return _verbalCache;
+
     const seq = buildVerbalSequence(state);
-    const colors = { Kpla: '#d8b4fe', Ka: '#ff6b8f', Tu: '#6ef2ff' };
-
-    // The syllable to say right now: the last one whose tick has been reached
-    let active = seq[seq.length - 1];
-    for (const s of seq) {
-        if (s.tick <= masterTick) active = s;
-        else break;
-    }
-
-    // Big current syllable — what to say now
-    ctx.font = `bold ${isMobile ? 44 : 60}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.fillStyle = colors[active.kind];
-    ctx.fillText(active.word, cx, cy - 20);
-
-    // Full spoken sequence for the measure, wrapped like lyrics and centered
-    // as a block: pass 1 breaks the syllables into rows and measures each
-    // row's width, pass 2 draws every row centered on the dial axis.
-    ctx.font = `bold ${isMobile ? 15 : 18}px sans-serif`;
-    const stripMax = timelineWidth + 120;
+    const stripFont = `bold ${isMobile ? 15 : 18}px sans-serif`;
     const wordGap = 16;
     const lineHeight = 34;
+
+    // Pass 1: break the syllables into rows (same wrapping as the lyrics).
+    if (!_measureCtx) _measureCtx = document.createElement('canvas').getContext('2d');
+    _measureCtx.font = stripFont;
     const rows = [];
     let cur = { items: [], width: 0 };
     for (const s of seq) {
-        const w = textWidth(ctx, s.word);
+        const w = textWidth(_measureCtx, s.word);
         const add = cur.items.length ? wordGap + w : w;
         if (cur.items.length && cur.width + add > stripMax) {
             rows.push(cur);
@@ -467,36 +439,94 @@ function drawVerbalizationView(ctx, state, cx, cy, dialR, timelineX, timelineWid
     }
     if (cur.items.length) rows.push(cur);
 
-    let y = cy + 70;
-    for (const row of rows) {
-        let x = cx - row.width / 2;
+    // Pass 2: pre-render the strip sprite. Words keep the exact positions of
+    // the old live pass (center-aligned at x, advancing x by width + gap).
+    const padX = 40;
+    const topPad = 26;            // first baseline, room for ascenders above
+    const spriteW = stripMax + padX * 2;
+    const nRows = rows.length;
+    const spriteH = topPad + nRows * lineHeight + 12 + 22;
+    const off = document.createElement('canvas');
+    off.width = spriteW;
+    off.height = spriteH;
+    const g = off.getContext('2d');
+    g.textAlign = 'center';
+    g.font = stripFont;
+
+    const items = [];
+    const rowHalf = [];
+    for (let ri = 0; ri < nRows; ri++) {
+        const row = rows[ri];
+        rowHalf.push(row.width / 2);
+        const y = topPad + ri * lineHeight;
+        let x = spriteW / 2 - row.width / 2;
         for (const item of row.items) {
-            const s = item.s;
-            const isNow = s === active;
-            const isPast = s.tick < masterTick && !isNow;
-            ctx.globalAlpha = isNow ? 1 : isPast ? 0.35 : 0.8;
-            ctx.fillStyle = colors[s.kind];
-            ctx.fillText(s.word, x, y);
-            if (isNow) {
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.moveTo(x - 4, y + 8);
-                ctx.lineTo(x + item.w + 4, y + 8);
-                ctx.stroke();
-            }
-            ctx.globalAlpha = 1;
+            g.globalAlpha = 0.8;
+            g.fillStyle = VERBAL_COLORS[item.s.kind];
+            g.fillText(item.s.word, x, y);
+            // x is stored relative to the sprite center so the live pass can
+            // position straight onto the main canvas as cx + item.x.
+            items.push({ s: item.s, w: item.w, x: x - spriteW / 2, y, row: ri });
             x += item.w + wordGap;
         }
-        y += lineHeight;
     }
-    y -= lineHeight;
+    g.globalAlpha = 1;
+    g.font = '12px sans-serif';
+    g.fillStyle = '#8a8a9c';
+    g.fillText('Kpla = both meters together (both hands) — sounds like "Pla" · Ka = Meter A (strong hand) · Tu = Meter B (weak hand)', spriteW / 2, topPad + nRows * lineHeight + 12);
 
-    // Syllable key
-    ctx.font = '12px sans-serif';
-    ctx.fillStyle = '#8a8a9c';
+    _verbalCache = { sig, seq, items, rowHalf, sprite: off, spriteW, stripFont, topPad, lineHeight };
+    return _verbalCache;
+}
+
+function drawVerbalizationView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile) {
+    const stepSize = (2 * Math.PI) / state.mainTeeth;
+    const masterTick = ((Math.floor(state.mainAngle / stepSize) % state.mainTeeth) + state.mainTeeth) % state.mainTeeth;
+    const v = getVerbalView(state, timelineWidth + 120, isMobile);
+    const seq = v.seq;
+
+    // The syllable to say right now: the last one whose tick has been reached
+    let activeIdx = seq.length - 1;
+    for (let i = 0; i < seq.length; i++) {
+        if (seq[i].tick <= masterTick) activeIdx = i;
+        else break;
+    }
+    const active = seq[activeIdx];
+    const it = v.items[activeIdx];
+
+    // Cached strip: every syllable at rest alpha + the key line, one blit.
+    const stripTopY = cy + 70 - v.topPad;
+    const stripLeftX = cx - v.spriteW / 2;
+    ctx.drawImage(v.sprite, stripLeftX, stripTopY);
+
+    // Dim the already-spoken prefix: one band per full row above the active
+    // row, plus a partial band up to the active word on its own row.
+    const rowBandTop = v.topPad + it.row * v.lineHeight - 22;
+    const partialW = it.x - it.w / 2 + v.rowHalf[it.row];
+    if (it.row > 0 || partialW > 0.5) {
+        ctx.fillStyle = 'rgba(8,8,12,0.6)';
+        if (it.row > 0) ctx.fillRect(stripLeftX, stripTopY + v.topPad - 22, v.spriteW, it.row * v.lineHeight);
+        if (partialW > 0.5) ctx.fillRect(cx - v.rowHalf[it.row], stripTopY + rowBandTop, partialW, 32);
+    }
+
+    // Active syllable at full alpha with its white underline (redrawn live)
+    ctx.font = v.stripFont;
     ctx.textAlign = 'center';
-    ctx.fillText('Kpla = both meters together (both hands) — sounds like "Pla" · Ka = Meter A (strong hand) · Tu = Meter B (weak hand)', cx, y + lineHeight + 12);
+    ctx.fillStyle = VERBAL_COLORS[active.kind];
+    const wordX = cx + it.x;
+    const wordY = stripTopY + it.y;
+    ctx.fillText(active.word, wordX, wordY);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(wordX - 4, wordY + 8);
+    ctx.lineTo(wordX + it.w + 4, wordY + 8);
+    ctx.stroke();
+
+    // Big current syllable — what to say now
+    ctx.font = `bold ${isMobile ? 44 : 60}px sans-serif`;
+    ctx.fillStyle = VERBAL_COLORS[active.kind];
+    ctx.fillText(active.word, cx, cy - 20);
 }
 
 // ── Align view: coincidence map + countdown ─────────────────────────────
@@ -1110,8 +1140,9 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
 
     // Offscreen static layers. Layer A holds everything that only changes when
     // meters, voice patterns, or the canvas size change (background, header,
-    // gear labels, full pattern timeline). Layer B holds the master-cycle
-    // timeline, which additionally changes once per playing master cycle.
+    // meter legend, gear labels, full pattern timeline). Layer B holds the
+    // master-cycle timeline, which additionally changes once per playing
+    // master cycle.
     let _layerA = null;
     let _layerASig = null;
     let _layerB = null;
@@ -1121,10 +1152,35 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
     // Reused buffer for merging master voice selections.
     // Grow it on demand so higher meter pairs such as 17 against 18 still render correctly.
 
+    /**
+     * Returns a scratch canvas with the requested size, reusing the existing
+     * buffer when the dimensions already match. Assigning width/height resets
+     * a canvas and reallocates its bitmap, so recreating a full-canvas layer
+     * every master cycle (plus GC of the old buffer) caused periodic hitches
+     * on low-end devices; in-place redraw avoids the churn entirely.
+     */
+    function _ensureScratchLayer(existing, w, h) {
+        if (existing && existing.width === w && existing.height === h) return existing;
+        const c = existing || document.createElement('canvas');
+        if (!existing || c.width !== w) c.width = w;
+        if (c.height !== h) c.height = h;
+        return c;
+    }
+
+    // Cheap-dirty sensors for the cache signatures, refreshed on a stride
+    // instead of every frame: the pattern checksum walks every lane's
+    // selection array, and the dots signature walks both wheel lanes. An edit
+    // is picked up within 4 frames (≈33-130ms), which is imperceptible, and
+    // the per-frame cost drops to a couple of integer comparisons.
+    let _frameNo = 0;
+    let _cachedPatternChecksum = 0;
+    let _cachedDotsSig = '';
+
     function animate(timestamp) {
         try {
         const totalVoices = lanes.master.voices.length + lanes.Aphrase.voices.length + lanes.Bphrase.voices.length;
-        const hasActiveFlash = Object.values(state.flash).some(value => value > 0);
+        const f = state.flash;
+        const hasActiveFlash = f.driver > 0 || f.custom > 0 || f.A > 0 || f.B > 0;
 
         // Keep a stopped transport visually current without redrawing the full
         // canvas at display refresh rate. Audio has its own scheduler.
@@ -1335,8 +1391,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             }
         }
 
-        // Decay flash counters
-        const f = state.flash;
+        // Decay flash counters (f is bound at the top of the frame)
         if (f.driver > 0) f.driver--;
         if (f.custom > 0) f.custom--;
         if (f.A > 0) f.A--;
@@ -1345,7 +1400,12 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         // ── Static layers ──
         // Signature covers every input the layers depend on; a rebuild only
         // happens when one of them actually changes.
-        const patternChecksum = computePatternChecksum(lanes);
+        if (_frameNo % 4 === 0) {
+            _cachedPatternChecksum = computePatternChecksum(lanes);
+            _cachedDotsSig = computeDotsSignature(state, lanes);
+        }
+        _frameNo++;
+        const patternChecksum = _cachedPatternChecksum;
         const voiceCounts = `${lanes.master.voices.length}_${lanes.Aphrase.voices.length}_${lanes.Bphrase.voices.length}`;
         const masterCurrentCycle = state.masterPhraseCycles > 1
             ? Math.floor(currentStep / state.mainTeeth) % state.masterPhraseCycles
@@ -1361,9 +1421,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         const timelineY = Math.max(395, minTimelineY);
 
         if (baseSig !== _layerASig || !_layerA) {
-            _layerA = document.createElement('canvas');
-            _layerA.width = canvas.width;
-            _layerA.height = canvas.height;
+            _layerA = _ensureScratchLayer(_layerA, canvas.width, canvas.height);
             const o = _layerA.getContext('2d');
             o.fillStyle = '#08080c';
             o.fillRect(0, 0, _layerA.width, _layerA.height);
@@ -1376,6 +1434,27 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             o.fillText(`${state.A} against ${state.B} Polyrhythm`, canvas.width / 2, 12);
             o.restore();
 
+            // Shared meter-descriptor legend, identical across views (the
+            // per-cycle counter moves with layer B below). Baked into the
+            // static layer so text is rasterized on meter change, not per frame.
+            o.font = 'bold 13px sans-serif';
+            o.textAlign = 'center';
+            o.fillStyle = '#ffffff';
+            o.fillText(`Master Cycle (${state.mainTeeth} pulses per cycle)`, canvas.width / 2, 30);
+            o.font = 'bold 12px sans-serif';
+            o.textAlign = 'left';
+            const aText = `Meter A (${state.A} beats per cycle) · ${state.A} groups of ${state.teethA} beats`;
+            const bText = `Meter B (${state.B} beats per cycle) · ${state.B} groups of ${state.teethB} beats`;
+            const legendGap = 48;
+            const wA = textWidth(o, aText);
+            const wB = textWidth(o, bText);
+            let legendX = canvas.width / 2 - (wA + legendGap + wB) / 2;
+            o.fillStyle = '#ff6b8f';
+            o.fillText(aText, legendX, 46);
+            legendX += wA + legendGap;
+            o.fillStyle = '#6ef2ff';
+            o.fillText(bText, legendX, 46);
+
             // (Gear/meter labels are drawn live per mode — they move between
             // the gears and rings views, and text fills are cheap.)
 
@@ -1384,9 +1463,10 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         }
         ctx.drawImage(_layerA, 0, 0);
 
+        // (The meter legend now lives in the cached static layers above —
+        // see the layer A/Layer B rebuild blocks.)
+
         const dialR = Math.min(170, cy - 24, timelineY - 12 - cy);
-        // Shared top block: master-cycle line + meter descriptors
-        drawMeterLegend(ctx, state, cx, masterCurrentCycle);
 
         if (state.vizMode === 'rings') {
             // ── Rings view: the standalone clock-face dial ──
@@ -1437,7 +1517,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             drawGear(ctx, cx, cy, rMainInner, rMainOuter, state.mainTeeth, angles.main, '#7a8a9e', true, state.flash.driver, null, isMobile);
             const markerRadius = rMainInner + ((rMainOuter - rMainInner) * 0.45);
             const dotRadius = Math.max(4, rMainOuter * 0.035);
-            const dotsSprite = getMasterDotsSprite(state, lanes, rMainInner, markerRadius, dotRadius, isMobile);
+            const dotsSprite = getMasterDotsSprite(state, lanes, rMainInner, markerRadius, dotRadius, isMobile, _cachedDotsSig);
             ctx.save();
             ctx.translate(cx, cy);
             ctx.rotate(angles.main);
@@ -1453,12 +1533,21 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         // is drawn live on top every frame.
         const sigB = `${baseSig}_${masterCurrentCycle}_${state.phaseA}_${state.phaseB}`;
         if (sigB !== _layerBSig || !_layerB) {
-            _layerB = document.createElement('canvas');
-            _layerB.width = canvas.width;
-            _layerB.height = canvas.height;
+            _layerB = _ensureScratchLayer(_layerB, canvas.width, canvas.height);
             const o = _layerB.getContext('2d');
-            // (The "C x of N" label is drawn live per mode — its position
-            // differs between the gears and rings views.)
+            // Layer B is transparent (blitted over opaque layer A), so a
+            // reused buffer must be cleared before the redraw.
+            o.clearRect(0, 0, _layerB.width, _layerB.height);
+            // Per-cycle counter of the meter legend: drawn here because it
+            // changes once per playing master cycle, like the timeline.
+            if (state.masterPhraseCycles > 1) {
+                o.font = 'bold 13px sans-serif';
+                const wTitle = textWidth(o, `Master Cycle (${state.mainTeeth} pulses per cycle)`);
+                o.font = '11px sans-serif';
+                o.fillStyle = '#ff9100';
+                o.textAlign = 'left';
+                o.fillText(`Cycle ${masterCurrentCycle + 1} of ${state.masterPhraseCycles}`, canvas.width / 2 + wTitle / 2 + 6, 31);
+            }
             drawMasterCycleTimeline(o, state, lanes, timelineX, timelineY, timelineWidth, 0, currentStep, stepSize, false);
             _layerBSig = sigB;
         }
