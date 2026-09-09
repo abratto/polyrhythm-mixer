@@ -380,7 +380,7 @@ function applyFixedChannelState(channel, channelState) {
  * Applies meter settings, phrase patterns, lane patterns, and channel audio settings.
  */
 function restoreFromPayload(payload, deps) {
-    const { state, ui, lanes, channels, updateDerivedState, updatePhaseUI, resetPatterns, buildAllLanes, resetFlashState, syncAudioStartTime, resetAudioScheduler } = deps;
+    const { state, ui, lanes, channels, updateDerivedState, updateBeatSchemeSummary, updatePhaseUI, resetPatterns, buildAllLanes, resetFlashState, syncAudioStartTime, resetAudioScheduler } = deps;
 
     const meters = payload.m;
     if (!meters || typeof meters !== 'object') return;
@@ -404,6 +404,7 @@ function restoreFromPayload(payload, deps) {
     ui.masterPhraseCycles.value = String(state.masterPhraseCycles);
 
     updateDerivedState(state);
+    if (updateBeatSchemeSummary) updateBeatSchemeSummary();
 
     state.phaseA = 0;
     state.phaseB = 0;

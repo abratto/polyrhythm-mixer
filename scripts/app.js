@@ -400,6 +400,7 @@ const shareDeps = {
     lanes,
     channels,
     updateDerivedState,
+    updateBeatSchemeSummary,
     updatePhaseUI,
     resetPatterns,
     buildAllLanes,

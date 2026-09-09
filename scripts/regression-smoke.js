@@ -192,6 +192,7 @@ async function run() {
             meters: {
                 A: selectValue('#rhythmA'),
                 B: selectValue('#rhythmB'),
+                beatScheme: document.querySelector('#beatSchemeSummary')?.textContent?.trim() ?? null,
                 phraseA: selectValue('#phraseCyclesA'),
                 phraseB: selectValue('#phraseCyclesB'),
                 masterPhrase: selectValue('#masterPhraseCycles'),

@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.16.2 — 2026-09-09
+
+### Fixed
+- Refresh the Polyrhythm Beat Scheme label when loading a saved rhythm with a different meter.
+
 ## v1.16.1 — 2026-09-05
 
 ### Fixed (performance)
