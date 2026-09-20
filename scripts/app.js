@@ -22,12 +22,11 @@ import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } 
 import { copyShareLink, loadStateFromUrl, applyChannelState } from './share.js';
 import { closeSaveRhythmModal, closeSavedRhythmsModal, openSaveRhythmModal, openSavedRhythmsModal, saveCurrentRhythm } from './saved-rhythms.js';
 import { startAnimation } from './render.js';
+import { initGroupingLanes, syncGroupingLanesToFrame, resetGroupingLanes } from './grouping-lanes.js';
 
 const STARTING_MIXER_STATE = {
     A: 6,
     B: 4,
-    phraseCyclesA: 1,
-    phraseCyclesB: 1,
     masterPhraseCycles: 1,
     tempo: 90,
     masterVolume: 80,
@@ -57,10 +56,19 @@ channels.onMixChange = () => applyMixVisuals(lanes, channels);
 lanes.Awheel.channel = channels.Awheel;
 lanes.Bwheel.channel = channels.Bwheel;
 
+// Rhythm Tracks grouping lanes — dynamic list replacing the fixed A/B Phrase
+// lanes. Created before derived state exists, then re-validated once mainTeeth
+// is known (see Phase 3).
+initGroupingLanes({
+    state,
+    lanes,
+    channels,
+    container: ui.groupingLanesContainer,
+    onChange: () => { channels.onMixChange?.(); }
+});
+
 const PREFIX_CONFIG = {
-    master: { lane: lanes.master,  voiceKey: 'masterVoices', container: ui.masterVoiceContainer, color: '#ff9100', label: 'Master' },
-    A:      { lane: lanes.Aphrase, voiceKey: 'Avoices',      container: ui.AVoiceContainer,      color: '#ff3366', label: 'Meter A Phrase' },
-    B:      { lane: lanes.Bphrase, voiceKey: 'Bvoices',      container: ui.BVoiceContainer,      color: '#00e5ff', label: 'Meter B Phrase' }
+    master: { lane: lanes.master,  voiceKey: 'masterVoices', container: ui.masterVoiceContainer, color: '#ff9100', label: 'Master' }
 };
 
 function laneForPrefix(prefix) { return PREFIX_CONFIG[prefix].lane; }
@@ -107,9 +115,7 @@ function initVoiceChannels() {
     // Voice volume faders now live inside each voice row (built by buildVoiceButtons),
     // so we only create the channel objects here — no Sound Mixer strip DOM.
     const groups = [
-        { prefix: 'master', lane: lanes.master },
-        { prefix: 'A', lane: lanes.Aphrase },
-        { prefix: 'B', lane: lanes.Bphrase }
+        { prefix: 'master', lane: lanes.master }
     ];
     groups.forEach(({ prefix, lane }) => {
         lane.voices.forEach((_, idx) => {
@@ -151,8 +157,9 @@ function createFixedLaneInstrumentSelects() {
 }
 
 function _syncAudioAndVisualState() {
-    state.followPlayhead = { master: true, Aphrase: true, Bphrase: true };
-    state.visibleCycle = { master: 0, Aphrase: 0, Bphrase: 0 };
+    // Preserve grouping-lane cycle keys; only reset the master lane.
+    state.followPlayhead = { ...state.followPlayhead, master: true };
+    state.visibleCycle = { ...state.visibleCycle, master: 0 };
     state.mainAngle = 0;
     syncAudioStartTime(state);
     resetAudioScheduler(state);
@@ -181,6 +188,9 @@ function rebuildSystem(resetWheels = false) {
             lanes.Bwheel.selected[(g * state.teethB + state.phaseB) % state.mainTeeth] = true;
         }
     }
+    // Re-validate grouping lanes against the new frame (linked A/B lanes follow
+    // their meter; extras snap to a valid divisor).
+    syncGroupingLanesToFrame();
     buildAllLanes(lanes, state);
     refreshSilenced(channels);
     updateBeatSchemeSummary();
@@ -233,8 +243,6 @@ function resetLaneVoicesToSingle(lane) {
 function resetMixerToStartingState() {
     ui.selectA.value = String(STARTING_MIXER_STATE.A);
     ui.selectB.value = String(STARTING_MIXER_STATE.B);
-    ui.phraseCyclesA.value = String(STARTING_MIXER_STATE.phraseCyclesA);
-    ui.phraseCyclesB.value = String(STARTING_MIXER_STATE.phraseCyclesB);
     ui.masterPhraseCycles.value = String(STARTING_MIXER_STATE.masterPhraseCycles);
     ui.tempoSlider.value = String(STARTING_MIXER_STATE.tempo);
     ui.tempoLabel.textContent = String(STARTING_MIXER_STATE.tempo);
@@ -244,26 +252,21 @@ function resetMixerToStartingState() {
 
     state.A = STARTING_MIXER_STATE.A;
     state.B = STARTING_MIXER_STATE.B;
-    state.phraseCyclesA = STARTING_MIXER_STATE.phraseCyclesA;
-    state.phraseCyclesB = STARTING_MIXER_STATE.phraseCyclesB;
     state.masterPhraseCycles = STARTING_MIXER_STATE.masterPhraseCycles;
     state.phaseA = 0;
     state.phaseB = 0;
     state.tempo = STARTING_MIXER_STATE.tempo;
-    state.followPlayhead = { master: true, Aphrase: true, Bphrase: true };
-    state.visibleCycle = { master: 0, Aphrase: 0, Bphrase: 0 };
+    state.followPlayhead = { master: true };
+    state.visibleCycle = { master: 0 };
 
     resetFixedChannel(channels.driver, STARTING_MIXER_STATE.fixedChannels.driver);
     resetFixedChannel(channels.Awheel, STARTING_MIXER_STATE.fixedChannels.Awheel);
     resetFixedChannel(channels.Bwheel, STARTING_MIXER_STATE.fixedChannels.Bwheel);
 
     resetLaneVoicesToSingle(lanes.master);
-    resetLaneVoicesToSingle(lanes.Aphrase);
-    resetLaneVoicesToSingle(lanes.Bphrase);
 
     // Collapse every voice's rail controls on reset (matches the default load state).
-    [lanes.master, lanes.Aphrase, lanes.Bphrase].forEach(lane =>
-        lane.voices.forEach(v => { v.railCollapsed = true; }));
+    lanes.master.voices.forEach(v => { v.railCollapsed = true; });
 
     // Re-collapse the static pulse-section rails (Meter A/B Pulse + Master Beat click
     // track) so reset matches the default collapsed load state.
@@ -273,6 +276,7 @@ function resetMixerToStartingState() {
     updatePhaseUI(state, ui);
     resetFlashState(state);
     resetPatterns(state, lanes);
+    resetGroupingLanes();
     rebuildAllVoiceMixerStrips();
     buildAllLanes(lanes, state);
     state.mainAngle = 0;
@@ -386,8 +390,8 @@ function handleStop() {
     state.transport = 'stopped';
     stopAudioScheduler();
     state.mainAngle = 0;
-    state.followPlayhead = { master: true, Aphrase: true, Bphrase: true };
-    state.visibleCycle = { master: 0, Aphrase: 0, Bphrase: 0 };
+    state.followPlayhead = { ...state.followPlayhead, master: true };
+    state.visibleCycle = { ...state.visibleCycle, master: 0 };
     if (state.audioCtx) state.audioStartTime = state.audioCtx.currentTime;
     syncPlayButton();
     if (ui.transportReadout) ui.transportReadout.textContent = 'Stopped';
@@ -411,6 +415,9 @@ const shareDeps = {
 
 // Phase 3: Initialize derived state and populate UI
 updateDerivedState(state);
+// Rebuild grouping lanes now that mainTeeth is known (initGroupingLanes runs
+// before derived state exists, so its grouping option lists need a refresh).
+syncGroupingLanesToFrame();
 populateMenus(channels);
 wireChannels(channels);
 wireLaneClearButtons(lanes, state);
@@ -438,25 +445,13 @@ initVoiceChannels();
 lanes.master.onRemoveVoice = (voiceIndex) => {
     handleRemoveVoiceChannel('master', voiceIndex);
 };
-lanes.Aphrase.onRemoveVoice = (voiceIndex) => {
-    handleRemoveVoiceChannel('A', voiceIndex);
-};
-lanes.Bphrase.onRemoveVoice = (voiceIndex) => {
-    handleRemoveVoiceChannel('B', voiceIndex);
-};
 
 // Phase 5: Wire add/remove voice buttons
 ui.addMasterVoiceBtn.addEventListener('click', () => {
     handleAddVoice(lanes.master, 'master', ui.masterVoiceContainer, '#ff9100', PREFIX_CONFIG.master.label);
 });
 
-ui.addAPhraseVoiceBtn.addEventListener('click', () => {
-    handleAddVoice(lanes.Aphrase, 'A', ui.AVoiceContainer, '#ff3366', PREFIX_CONFIG.A.label);
-});
-
-ui.addBPhraseVoiceBtn.addEventListener('click', () => {
-    handleAddVoice(lanes.Bphrase, 'B', ui.BVoiceContainer, '#00e5ff', PREFIX_CONFIG.B.label);
-});
+// Grouping lanes add new lanes from their own + Voice button (see grouping-lanes.js).
 
 // Phase 6: Wire all user controls
 wireControls({

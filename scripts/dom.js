@@ -15,9 +15,6 @@ export function getDomRefs() {
         selectB: document.getElementById('rhythmB'),
         // Parameterized summary of the current A × B polyrhythm beat scheme
         beatSchemeSummary: document.getElementById('beatSchemeSummary'),
-        // Phrase length selectors (number of master cycles per phrase)
-        phraseCyclesA: document.getElementById('phraseCyclesA'),
-        phraseCyclesB: document.getElementById('phraseCyclesB'),
         // Master phrase length (cycles the master lane pattern spans)
         masterPhraseCycles: document.getElementById('masterPhraseCycles'),
         // Global tempo slider (BPM) and its display label
@@ -71,48 +68,34 @@ export function getDomRefs() {
 
         // Sequencer grid containers for each lane
         masterGrid: document.getElementById('masterGrid'),
-        meterAPhraseGrid: document.getElementById('meterAPhraseGrid'),
         meterAWheelGrid: document.getElementById('meterAWheelGrid'),
-        meterBPhraseGrid: document.getElementById('meterBPhraseGrid'),
         meterBWheelGrid: document.getElementById('meterBWheelGrid'),
 
         // Add voice buttons for multi-voice lanes
         addMasterVoiceBtn: document.getElementById('addMasterVoiceBtn'),
-        addAPhraseVoiceBtn: document.getElementById('addAPhraseVoiceBtn'),
-        addBPhraseVoiceBtn: document.getElementById('addBPhraseVoiceBtn'),
 
         // Clear buttons for each lane's sequencer
         clearMasterBtn: document.getElementById('clearMasterBtn'),
-        clearAPhraseBtn: document.getElementById('clearAPhraseBtn'),
         clearAWheelBtn: document.getElementById('clearAWheelBtn'),
-        clearBPhraseBtn: document.getElementById('clearBPhraseBtn'),
         clearBWheelBtn: document.getElementById('clearBWheelBtn'),
-
-        // Title/label elements that show descriptive text for each lane
-        masterTitle: document.getElementById('masterTitle'),
-        titleAPhrase: document.getElementById('titleAPhrase'),
-        titleBPhrase: document.getElementById('titleBPhrase'),
 
         // Lane explanation toggles and copy
         masterInfoBtn: document.getElementById('masterInfoBtn'),
-        aPhraseInfoBtn: document.getElementById('aPhraseInfoBtn'),
         aWheelInfoBtn: document.getElementById('aWheelInfoBtn'),
-        bPhraseInfoBtn: document.getElementById('bPhraseInfoBtn'),
         bWheelInfoBtn: document.getElementById('bWheelInfoBtn'),
         masterDescription: document.getElementById('masterDescription'),
-        aPhraseDescription: document.getElementById('aPhraseDescription'),
         aWheelDescription: document.getElementById('aWheelDescription'),
-        bPhraseDescription: document.getElementById('bPhraseDescription'),
         bWheelDescription: document.getElementById('bWheelDescription'),
 
         // Visualization explanation toggle
         vizInfoBtn: document.getElementById('vizInfoBtn'),
         vizDescription: document.getElementById('vizDescription'),
 
+        // Rhythm Tracks dynamic grouping lanes
+        groupingLanesContainer: document.getElementById('groupingLanesContainer'),
+
         // Mixer console containers for dynamic voice strips
-        masterVoiceContainer: document.getElementById('masterVoiceContainer'),
-        AVoiceContainer: document.getElementById('AVoiceContainer'),
-        BVoiceContainer: document.getElementById('BVoiceContainer')
+        masterVoiceContainer: document.getElementById('masterVoiceContainer')
     };
 
     return { canvas, ctx, ui };

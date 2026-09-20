@@ -56,40 +56,26 @@ function scheduleStepAudio(state, lanes, channels, stepIndex, hitTime, globalVol
         lsa.master = masterStep;
     }
 
-    // A-phrase lane. Pinned → loop the visible phrase cycle continuously.
-    const aps = getActivePhraseStep(stepIndex, state.phaseA, state.teethA, state.phraseStepsA);
-    let aStep = aps;
-    if (state.followPlayhead.Aphrase === false) {
-        aStep = state.visibleCycle.Aphrase * state.A + (aps % state.A);
-    }
-    if (aStep !== lsa.Aphrase) {
-        lanes.Aphrase.voices.forEach((voice, vi) => {
-            if (voice.selected[aStep]) {
-                const ch = channels.Avoices[vi];
-                if (ch) playSingleChannel(state, ch, globalVolume, hitTime);
-            }
+    // Grouping lanes — one hit per group onset, deduped per lane. Pinned lanes
+    // loop their visible cycle continuously, mirroring the phrase-lane behavior.
+    for (const lane of (lanes.grouping || [])) {
+        const groupSize = state.mainTeeth / lane.groupCount;
+        const active = getActivePhraseStep(stepIndex, 0, groupSize, lane.count());
+        let step = active;
+        if (state.followPlayhead[lane.cycleKey] === false) {
+            step = state.visibleCycle[lane.cycleKey] * lane.groupCount + (active % lane.groupCount);
+        }
+        if (step === lane._lastStep) continue;
+        lane._lastStep = step;
+        lane.voices.forEach((voice, vi) => {
+            if (!voice.selected[step]) return;
+            const ch = lane.voiceChannels[vi];
+            if (ch) playSingleChannel(state, ch, globalVolume, hitTime);
         });
-        lsa.Aphrase = aStep;
     }
 
     if (lanes.Awheel.selected[((stepIndex % state.mainTeeth) + state.mainTeeth) % state.mainTeeth]) {
         if (channels.Awheel) playSingleChannel(state, channels.Awheel, globalVolume, hitTime);
-    }
-
-    // B-phrase lane. Pinned → loop the visible phrase cycle continuously.
-    const bps = getActivePhraseStep(stepIndex, state.phaseB, state.teethB, state.phraseStepsB);
-    let bStep = bps;
-    if (state.followPlayhead.Bphrase === false) {
-        bStep = state.visibleCycle.Bphrase * state.B + (bps % state.B);
-    }
-    if (bStep !== lsa.Bphrase) {
-        lanes.Bphrase.voices.forEach((voice, vi) => {
-            if (voice.selected[bStep]) {
-                const ch = channels.Bvoices[vi];
-                if (ch) playSingleChannel(state, ch, globalVolume, hitTime);
-            }
-        });
-        lsa.Bphrase = bStep;
     }
 
     if (lanes.Bwheel.selected[((stepIndex % state.mainTeeth) + state.mainTeeth) % state.mainTeeth]) {

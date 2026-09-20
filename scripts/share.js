@@ -13,8 +13,15 @@
  */
 
 import { lcm } from './math.js';
+import { serializeGroupingLanes, restoreGroupingLanes } from './grouping-lanes.js';
 
-const SHARE_VERSION = 4;
+const SHARE_VERSION = 5;
+
+// Meter values accepted on restore. Keep in sync with the #rhythmA / #rhythmB
+// option lists in index.html so shared/saved rhythms don't silently downgrade
+// (e.g. 24 would otherwise clamp to 18 and leave the select blank).
+const MIN_METER = 2;
+const MAX_METER = 24;
 
 /** Converts a Uint8Array to a binary string using chunked spread to avoid argument count limits. */
 function bytesToBinary(bytes) {
@@ -167,8 +174,6 @@ function serializeState({ state, ui, lanes, channels }) {
         m: {
             A: state.A,
             B: state.B,
-            phraseA: state.phraseCyclesA,
-            phraseB: state.phraseCyclesB,
             masterPhrase: state.masterPhraseCycles,
             phaseA: 0,
             phaseB: 0,
@@ -177,9 +182,8 @@ function serializeState({ state, ui, lanes, channels }) {
         },
         p: {
             m: lanes.master.voices.map((v, i) => serializeVoice(v, channels.masterVoices[i])),
-            ap: lanes.Aphrase.voices.map((v, i) => serializeVoice(v, channels.Avoices[i])),
+            gl: serializeGroupingLanes(serializeVoice),
             aw: { s: selectedIndexes(lanes.Awheel.selected) },
-            bp: lanes.Bphrase.voices.map((v, i) => serializeVoice(v, channels.Bvoices[i])),
             bw: { s: selectedIndexes(lanes.Bwheel.selected) }
         },
         c: {
@@ -300,6 +304,38 @@ function migrateV3toV4(payload) {
 }
 
 /**
+ * Migrates v4 payloads (fixed A/B phrase lanes) to v5 (dynamic grouping lanes).
+ * The A and B phrase lanes become the first two grouping lanes, with group
+ * counts m.A / m.B and cycle lengths m.phraseA / m.phraseB.
+ */
+function migrateV4toV5(payload) {
+    const m = payload.m;
+    if (!m) return payload;
+    const p = payload.p || {};
+
+    const toLane = (voices, groupCount, cycles) => ({
+        g: groupCount,
+        c: cycles || 1,
+        lk: null,
+        v: Array.isArray(voices) ? voices : [{ s: [] }]
+    });
+
+    p.gl = [
+        toLane(p.ap, m.A, m.phraseA),
+        toLane(p.bp, m.B, m.phraseB)
+    ];
+    delete p.ap;
+    delete p.bp;
+    payload.p = p;
+
+    delete m.phraseA;
+    delete m.phraseB;
+
+    payload.v = 5;
+    return payload;
+}
+
+/**
  * Runs the appropriate migration functions based on the payload version.
  * Throws if the payload is invalid or from a future (unsupported) version.
  */
@@ -321,6 +357,11 @@ function migratePayload(payload) {
     // v2 or v3 → v4 (group-level → tooth-level wheel indices)
     if (payload.v >= 2 && payload.v <= 3) {
         payload = migrateV3toV4(payload);
+    }
+
+    // v4 → v5 (fixed A/B phrase lanes → dynamic grouping lanes)
+    if (payload.v === 4) {
+        payload = migrateV4toV5(payload);
     }
 
     // Reject payloads from future versions
@@ -385,22 +426,16 @@ function restoreFromPayload(payload, deps) {
     const meters = payload.m;
     if (!meters || typeof meters !== 'object') return;
 
-    const a = clampInteger(meters.A, 2, 18);
-    const b = clampInteger(meters.B, 2, 18);
-    const phraseA = clampInteger(meters.phraseA, 1, 4);
-    const phraseB = clampInteger(meters.phraseB, 1, 4);
+    const a = clampInteger(meters.A, MIN_METER, MAX_METER);
+    const b = clampInteger(meters.B, MIN_METER, MAX_METER);
     const masterPhrase = clampInteger(meters.masterPhrase, 1, 8);
 
     if (a !== null) state.A = a;
     if (b !== null) state.B = b;
-    if (phraseA !== null) state.phraseCyclesA = phraseA;
-    if (phraseB !== null) state.phraseCyclesB = phraseB;
     if (masterPhrase !== null) state.masterPhraseCycles = masterPhrase;
 
     ui.selectA.value = String(state.A);
     ui.selectB.value = String(state.B);
-    ui.phraseCyclesA.value = String(state.phraseCyclesA);
-    ui.phraseCyclesB.value = String(state.phraseCyclesB);
     ui.masterPhraseCycles.value = String(state.masterPhraseCycles);
 
     updateDerivedState(state);
@@ -442,8 +477,23 @@ function restoreFromPayload(payload, deps) {
          };
 
          restoreVoiceLane(lanes.master, payload.p.m);
-         restoreVoiceLane(lanes.Aphrase, payload.p.ap);
-         restoreVoiceLane(lanes.Bphrase, payload.p.bp);
+
+        // Rhythm Tracks grouping lanes (v5+). Older payloads are migrated to
+        // this shape before restore, so a missing `gl` falls back to defaults.
+        if (Array.isArray(payload.p.gl)) {
+            restoreGroupingLanes(payload.p.gl, (voice, lane, vd) => {
+                voice.selected = new Array(lane.count()).fill(false);
+                applySelectedIndexes(voice.selected, vd.s);
+                voice.nudgeOffset = clampInteger(vd.n, 0, Math.max(0, voice.selected.length - 1)) ?? 0;
+                const ch = voice.channel;
+                if (ch) {
+                    if (typeof vd.i === 'string' && vd.i) ch.sound = vd.i;
+                    if (typeof vd.v === 'number') ch.volume = Math.max(0, Math.min(1, vd.v));
+                    ch.muted = !!vd.u;
+                    ch.soloed = !!vd.o;
+                }
+            });
+        }
 
         // Single-voice lanes — old saved rhythms (v < 4) stored group-level wheel
         // indices rather than tooth-level positions. Convert on the fly as safety net.

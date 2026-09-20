@@ -218,33 +218,6 @@ export function createLanes(ui, state) {
             stepsPerCycle: () => state.mainTeeth,
             totalCycles: () => state.masterPhraseCycles
         },
-        Aphrase: {
-            container: ui.meterAPhraseGrid,
-            addVoiceBtn: ui.addAPhraseVoiceBtn,
-            clearBtn: ui.clearAPhraseBtn,
-            className: 'meterA-btn',
-            stepId: 'meterA-phrase-step',
-            count: () => state.phraseStepsA,
-            label: () => 'Meter A Phrase',
-            kind: 'phrase',
-            description: () => `Phrase (across cycles): ${state.phraseCyclesA} master cycle phrase • ${state.phraseStepsA} steps • clocked at ${masterRateLabelForMeter(state, state.A)} master rate`,
-            titleEl: null,
-            descriptionEl: ui.aPhraseDescription,
-            infoBtn: ui.aPhraseInfoBtn,
-            textForStep: i => (i % state.A) + 1,
-            isBeat: i => isOnQuarter((i * state.mainTeeth / state.A + state.phaseA) % state.mainTeeth, state.mainTeeth),
-            isBar: i => (i % state.A) === 0,
-            beatPeriod: () => quarterBeatPeriod(state.A),
-            voices: [createVoice()],
-            isMultiVoice: true,
-            allowVoiceNudge: true,
-            allowGroupNudge: true,
-            color: '#ff3366',
-            channelPrefix: 'A',
-            onRemoveVoice: null,
-            stepsPerCycle: () => state.A,
-            totalCycles: () => state.phraseCyclesA
-        },
         Awheel: {
             container: ui.meterAWheelGrid,
             clearBtn: ui.clearAWheelBtn,
@@ -269,33 +242,6 @@ export function createLanes(ui, state) {
             isMultiVoice: false,
             color: '#ff6b8f',
             channelPrefix: 'Awheel'
-        },
-        Bphrase: {
-            container: ui.meterBPhraseGrid,
-            addVoiceBtn: ui.addBPhraseVoiceBtn,
-            clearBtn: ui.clearBPhraseBtn,
-            className: 'meterB-btn',
-            stepId: 'meterB-phrase-step',
-            count: () => state.phraseStepsB,
-            label: () => 'Meter B Phrase',
-            kind: 'phrase',
-            description: () => `Phrase (across cycles): ${state.phraseCyclesB} master cycle phrase • ${state.phraseStepsB} steps • clocked at ${masterRateLabelForMeter(state, state.B)} master rate`,
-            titleEl: null,
-            descriptionEl: ui.bPhraseDescription,
-            infoBtn: ui.bPhraseInfoBtn,
-            textForStep: i => (i % state.B) + 1,
-            isBeat: i => isOnQuarter((i * state.mainTeeth / state.B + state.phaseB) % state.mainTeeth, state.mainTeeth),
-            isBar: i => (i % state.B) === 0,
-            beatPeriod: () => quarterBeatPeriod(state.B),
-            voices: [createVoice()],
-            isMultiVoice: true,
-            allowVoiceNudge: true,
-            allowGroupNudge: true,
-            color: '#00e5ff',
-            channelPrefix: 'B',
-            onRemoveVoice: null,
-            stepsPerCycle: () => state.B,
-            totalCycles: () => state.phraseCyclesB
         },
         Bwheel: {
             container: ui.meterBWheelGrid,
@@ -401,14 +347,6 @@ export function resetPatterns(state, lanes) {
         v.selected = new Array(state.masterPhraseSteps).fill(false);
         v.nudgeOffset = 0;
     });
-    lanes.Aphrase.voices.forEach(v => {
-        v.selected = new Array(state.phraseStepsA).fill(false);
-        v.nudgeOffset = 0;
-    });
-    lanes.Bphrase.voices.forEach(v => {
-        v.selected = new Array(state.phraseStepsB).fill(false);
-        v.nudgeOffset = 0;
-    });
     lanes.Awheel.selected = new Array(state.mainTeeth).fill(false);
     lanes.Bwheel.selected = new Array(state.mainTeeth).fill(false);
     for (let g = 0; g < state.A; g++) {
@@ -419,10 +357,8 @@ export function resetPatterns(state, lanes) {
     }
 
     if (lanes.master.voices[0]?.selected.length > 0) lanes.master.voices[0].selected[0] = true;
-    if (lanes.Aphrase.voices[0]?.selected.length > 0) lanes.Aphrase.voices[0].selected[0] = true;
-    if (lanes.Bphrase.voices[0]?.selected.length > 0) lanes.Bphrase.voices[0].selected[0] = true;
 
-    state.lastActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };
+    state.lastActive = { master: -1, Awheel: -1, Bwheel: -1 };
 }
 
 /**
@@ -454,14 +390,10 @@ export function resizeAllLanes(state, lanes) {
             copyCyclePattern(v, state.mainTeeth, oldLen);
         }
     });
-    lanes.Aphrase.voices.forEach(v => resizeVoice(v, state.phraseStepsA));
-    lanes.Bphrase.voices.forEach(v => resizeVoice(v, state.phraseStepsB));
     resizeSingleLane(lanes.Awheel, state.mainTeeth, false);
     resizeSingleLane(lanes.Bwheel, state.mainTeeth, false);
 
     if (lanes.master.voices[0]?.selected.length > 0) lanes.master.voices[0].selected[0] = true;
-    if (lanes.Aphrase.voices[0]?.selected.length > 0) lanes.Aphrase.voices[0].selected[0] = true;
-    if (lanes.Bphrase.voices[0]?.selected.length > 0) lanes.Bphrase.voices[0].selected[0] = true;
 }
 
 /** Copies the first cycle's pattern slice into each subsequent cycle, skipping
@@ -779,6 +711,7 @@ export function updateVoiceInstrumentLabels(lane) {
 }
 
 function cycleNavKey(lane) {
+    if (lane.cycleKey) return lane.cycleKey;
     if (lane.stepId.includes('meterA')) return 'Aphrase';
     if (lane.stepId.includes('meterB')) return 'Bphrase';
     return 'master';
@@ -794,8 +727,7 @@ export function updateVoiceStepsForCycle(lane, state) {
     const totalCycles = lane.totalCycles?.() ?? 1;
     if (totalCycles < 2) return;
 
-    const laneKey = lane.stepId.includes('meterA') ? 'Aphrase'
-        : lane.stepId.includes('meterB') ? 'Bphrase' : 'master';
+    const laneKey = cycleNavKey(lane);
     lane._visibleCycle = state?.visibleCycle?.[laneKey] ?? 0;
     const cycleStart = lane._visibleCycle * stepsPerCycle;
 
@@ -838,8 +770,7 @@ function updateCycleCue(lane, state) {
     const totalCycles = lane.totalCycles?.() ?? 1;
     if (totalCycles < 2) { cue.hidden = true; return; }
     const stepsPerCycle = lane.stepsPerCycle?.() ?? lane.count();
-    const laneKey = lane.stepId.includes('meterA') ? 'Aphrase'
-        : lane.stepId.includes('meterB') ? 'Bphrase' : 'master';
+    const laneKey = cycleNavKey(lane);
     const following = state?.followPlayhead?.[laneKey] !== false;
     if (following) { cue.hidden = true; return; }
     const activeSteps = lane.voices.map(v => v._currentIndex ?? 0);
@@ -855,8 +786,7 @@ function updateCycleCue(lane, state) {
 
 /** Updates the visible cycle without rebuilding the lane — keeps selects open. */
 function navigateCycle(lane, state, direction) {
-    const laneKey = lane.stepId.includes('meterA') ? 'Aphrase'
-        : lane.stepId.includes('meterB') ? 'Bphrase' : 'master';
+    const laneKey = cycleNavKey(lane);
     state.followPlayhead[laneKey] = false;
     const totalCycles = lane.totalCycles?.() ?? 1;
     const current = state.visibleCycle[laneKey] || 0;
@@ -934,9 +864,7 @@ function buildMultiVoiceLane(lane, state) {
     }
 
     if (state) {
-        const laneKey = lane.stepId.includes('meterA') ? 'Aphrase'
-            : lane.stepId.includes('meterB') ? 'Bphrase' : 'master';
-        lane._visibleCycle = state?.visibleCycle?.[laneKey] ?? 0;
+        lane._visibleCycle = state?.visibleCycle?.[cycleNavKey(lane)] ?? 0;
     }
 
     // Read-only "Master Beat" reference strip (the 4/4 click track the polyrhythm
@@ -1271,8 +1199,9 @@ export function registerRailLanes(lanes) {
 export function setAllRailsCollapsed(val) {
     _pulseRailControllers.forEach(set => set(val));
     if (_railLanes) {
-        Object.values(_railLanes).forEach(lane => {
-            (lane._voiceRailCtrls || []).forEach(set => set(val));
+        const laneList = [_railLanes.master, _railLanes.Awheel, _railLanes.Bwheel, ...(_railLanes.grouping || [])];
+        laneList.forEach(lane => {
+            (lane?._voiceRailCtrls || []).forEach(set => set(val));
         });
     }
 }
@@ -1399,8 +1328,7 @@ function applyLaneMixState(lane) {
 /** Re-applies mix-driven dimming across every lane. Called by `onMixChange`. */
 export function applyMixVisuals(lanes) {
     reflectLaneMix(lanes.master);
-    reflectLaneMix(lanes.Aphrase);
-    reflectLaneMix(lanes.Bphrase);
+    (lanes.grouping || []).forEach(lane => reflectLaneMix(lane));
     reflectLaneMixSingle(lanes.Awheel);
     reflectLaneMixSingle(lanes.Bwheel);
 }
@@ -1408,7 +1336,7 @@ export function applyMixVisuals(lanes) {
 /** Rebuilds every lane's DOM buttons. */
 export function buildAllLanes(lanes, state) {
     registerRailLanes(lanes);
-    Object.values(lanes).forEach(lane => buildLane(lane, state));
+    [lanes.master, lanes.Awheel, lanes.Bwheel, ...(lanes.grouping || [])].forEach(lane => buildLane(lane, state));
 }
 
 function removeCurrentClass(button) {
@@ -1614,11 +1542,9 @@ export function wireLaneMixButtons(lanes, channels) {
         }
     }
 
-    // Reorder phrase lane toolbar controls: Random/Reverse, Clear, Nudge Group
+    // Reorder master lane toolbar controls: Random/Reverse, Clear, Nudge Group
     // (+ Voice is now pinned to the bottom of the lane, below the voice rows).
     reorderWheelLaneControls(mountFor(lanes.master), ['.lane-edit-controls', 'clearMasterBtn', '.group-nudge-control']);
-    reorderWheelLaneControls(mountFor(lanes.Aphrase), ['.lane-edit-controls', 'clearAPhraseBtn', '.group-nudge-control']);
-    reorderWheelLaneControls(mountFor(lanes.Bphrase), ['.lane-edit-controls', 'clearBPhraseBtn', '.group-nudge-control']);
 }
 
     function reorderWheelLaneControls(mount, selectors) {
@@ -1801,8 +1727,7 @@ function markSingleVoiceCurrentButtons(lane, previous, next, state, masterPulse)
 export function markCurrentButtons(state, lanes, active, previousActive = null) {
     const mappings = [
         ['master', lanes.master, active.master],
-        ['Aphrase', lanes.Aphrase, active.Aphrase],
-        ['Bphrase', lanes.Bphrase, active.Bphrase],
+        ...(lanes.grouping || []).map(lane => [lane.cycleKey, lane, active[lane.cycleKey]]),
         ['Awheel', lanes.Awheel, active.Awheel],
         ['Bwheel', lanes.Bwheel, active.Bwheel]
     ];

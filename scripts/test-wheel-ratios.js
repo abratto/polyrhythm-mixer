@@ -29,6 +29,7 @@ function checkMeterRatio(a, b, mainAngle) {
 checkMeterRatio(6, 4, Math.PI / 3);
 checkMeterRatio(12, 18, Math.PI / 2);
 checkMeterRatio(17, 18, 1.2345);
+checkMeterRatio(24, 18, Math.PI / 5);
 
 const mainTeeth = lcm(12, 18);
 const teethA = mainTeeth / 12;

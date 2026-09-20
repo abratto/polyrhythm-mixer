@@ -497,6 +497,55 @@
         .meter-master-select label {
             color: #ffb866;
         }
+        /* Rhythm Tracks grouping lanes — dynamic equal divisions of the frame. */
+        .grouping-lanes-heading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 4px 0 8px;
+        }
+        .grouping-lanes-title {
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 1.1px;
+            text-transform: uppercase;
+            color: #ededf2;
+        }
+        .grouping-lanes-sub {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            color: #8a8a99;
+        }
+        .grouping-lanes {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .grouping-lane-row {
+            border-left: 3px solid var(--lane-accent, #666);
+            padding-left: 8px;
+            margin: 0;
+        }
+        /* Stack voice rows vertically like the master/phrase lanes (those set this
+           via their grid IDs; the dynamic grouping grids need the same treatment). */
+        .grouping-lane-row .sequencer-container {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .step-btn.grouping-btn.active {
+            background-color: var(--lane-accent, #ff9100);
+            border-color: #ffffff;
+            color: #000;
+            box-shadow: 0 0 6px var(--lane-accent, #ff9100);
+        }
+        .grouping-lane-row .grouping-count-group select,
+        .grouping-lane-row .grouping-cycles-group select {
+            padding: 6px 8px;
+            font-weight: 700;
+        }
         /* Meter A/B Pulse selector sits inline just above its own step sequencer,
            reading e.g. "Meter A [16]". */
         .pulse-select-line {

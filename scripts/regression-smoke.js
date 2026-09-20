@@ -188,30 +188,39 @@ async function run() {
         const selectText = (selector) => document.querySelector(selector)?.selectedOptions?.[0]?.textContent?.trim() ?? null;
         const muteText = (selector) => document.querySelector(selector)?.textContent?.trim() ?? null;
 
+        // Grouping lane selectors — lane N, voice M. The A/B names map to the
+        // first two grouping lanes so downstream assertions stay readable.
+        const gl = (lane, voice, sel) => `#groupingLanesContainer .grouping-lane-row:nth-child(${lane}) .sequencer-container > .voice-row:nth-child(${voice}) ${sel}`;
+        const groupingRows = Array.from(document.querySelectorAll('#groupingLanesContainer .grouping-lane-row'));
+
         return {
             meters: {
                 A: selectValue('#rhythmA'),
                 B: selectValue('#rhythmB'),
                 beatScheme: document.querySelector('#beatSchemeSummary')?.textContent?.trim() ?? null,
-                phraseA: selectValue('#phraseCyclesA'),
-                phraseB: selectValue('#phraseCyclesB'),
                 masterPhrase: selectValue('#masterPhraseCycles'),
                 tempo: document.querySelector('#tempoSlider')?.value ?? null,
-                masterVolume: document.querySelector('#masterVolumeSlider')?.value ?? null
+                masterVolume: selectValue('#masterVolumeSlider')
             },
             voiceCounts: {
                 master: document.querySelectorAll('#masterGrid .voice-row').length,
-                A: document.querySelectorAll('#meterAPhraseGrid .voice-row').length,
-                B: document.querySelectorAll('#meterBPhraseGrid .voice-row').length
+                A: document.querySelectorAll('#groupingLanesContainer .grouping-lane-row:nth-child(1) .sequencer-container > .voice-row').length,
+                B: document.querySelectorAll('#groupingLanesContainer .grouping-lane-row:nth-child(2) .sequencer-container > .voice-row').length
             },
             active: {
                 master1: activeIndexesFor('#masterGrid .voice-row:nth-child(1) .step-btn.active'),
                 master2: activeIndexesFor('#masterGrid .voice-row:nth-child(2) .step-btn.active'),
-                A1: activeIndexesFor('#meterAPhraseGrid .voice-row:nth-child(1) .step-btn.active'),
-                A2: activeIndexesFor('#meterAPhraseGrid .voice-row:nth-child(2) .step-btn.active'),
-                B1: activeIndexesFor('#meterBPhraseGrid .voice-row:nth-child(1) .step-btn.active'),
-                B2: activeIndexesFor('#meterBPhraseGrid .voice-row:nth-child(2) .step-btn.active')
+                A1: activeIndexesFor(gl(1, 1, '.step-btn.active')),
+                A2: activeIndexesFor(gl(1, 2, '.step-btn.active')),
+                B1: activeIndexesFor(gl(2, 1, '.step-btn.active')),
+                B2: activeIndexesFor(gl(2, 2, '.step-btn.active'))
             },
+            grouping: groupingRows.map(row => ({
+                g: row.querySelector('.grouping-count-select')?.value ?? null,
+                c: row.querySelector('.grouping-cycles-select')?.value ?? null,
+                voices: row.querySelectorAll('.sequencer-container > .voice-row').length,
+                active: Array.from(row.querySelectorAll('.sequencer-container > .voice-row:nth-child(1) .step-btn.active')).map(b => Array.from(b.parentElement.children).indexOf(b))
+            })),
             mixer: {
                 masterVolInLane: !!document.querySelector('#volDriver'),
                 masterClickSound: selectValue('#soundDriver'),
@@ -219,16 +228,16 @@ async function run() {
                 BWheelSolo: document.querySelector('#soloBWheel')?.classList.contains('soloed') ?? false,
                 masterVoice1Sound: selectValue('#sound_master_0'),
                 masterVoice2Sound: selectValue('#sound_master_1'),
-                AVoice1Sound: selectValue('#sound_A_0'),
-                BVoice1Sound: selectValue('#sound_B_0')
+                AVoice1Sound: selectValue(gl(1, 1, '.voice-instrument-select')),
+                BVoice1Sound: selectValue(gl(2, 1, '.voice-instrument-select'))
             },
             voiceLabels: {
                 master1: selectText('#masterGrid .voice-row:nth-child(1) .voice-instrument-select'),
                 master2: selectText('#masterGrid .voice-row:nth-child(2) .voice-instrument-select'),
-                A1: selectText('#meterAPhraseGrid .voice-row:nth-child(1) .voice-instrument-select'),
-                A2: selectText('#meterAPhraseGrid .voice-row:nth-child(2) .voice-instrument-select'),
-                B1: selectText('#meterBPhraseGrid .voice-row:nth-child(1) .voice-instrument-select'),
-                B2: selectText('#meterBPhraseGrid .voice-row:nth-child(2) .voice-instrument-select')
+                A1: selectText(gl(1, 1, '.voice-instrument-select')),
+                A2: selectText(gl(1, 2, '.voice-instrument-select')),
+                B1: selectText(gl(2, 1, '.voice-instrument-select')),
+                B2: selectText(gl(2, 2, '.voice-instrument-select'))
             },
             helpLeads: Array.from(document.querySelectorAll('#helpModal .modal-help-item > strong:first-child')).map(node => node.textContent.trim())
         };
@@ -283,11 +292,13 @@ async function run() {
         const initial = await snapshot();
 
         assert(same(initial.active.master1, [0]), 'Master voice 1 should start on pulse 1.', initial.active.master1);
-        assert(same(initial.active.A1, [0]), 'Meter A voice 1 should start on pulse 1.', initial.active.A1);
-        assert(same(initial.active.B1, [0]), 'Meter B voice 1 should start on pulse 1.', initial.active.B1);
+        assert(same(initial.active.A1, [0]), 'Grouping lane 1 voice 1 should start on step 1.', initial.active.A1);
+        assert(same(initial.active.B1, [0]), 'Grouping lane 2 voice 1 should start on step 1.', initial.active.B1);
+        assert(initial.grouping.length === 2 && initial.grouping[0].g === '6' && initial.grouping[1].g === '4',
+            'Rhythm Tracks should default to two grouping lanes for the chosen polyrhythm (6 and 4).', initial.grouping);
         assert(initial.mixer.masterVolInLane, 'Master wheel volume fader should be colocated in the Master lane toolbar.', initial.mixer);
-        assert(initial.voiceLabels.master1 === 'Bass Drum (Kick)' && initial.voiceLabels.A1 === 'Tambourine' && initial.voiceLabels.B1 === 'Tambourine', 'Voice rows should display their default mixer instruments.', initial.voiceLabels);
-        assert(initial.helpLeads.length === 4, 'Help modal should expose four bold lead sentences.', initial.helpLeads);
+        assert(initial.voiceLabels.master1 === 'Bass Drum (Kick)' && initial.voiceLabels.A1 === 'Woodblock Clack' && initial.voiceLabels.B1 === 'Woodblock Clack', 'Voice rows should display their default mixer instruments.', initial.voiceLabels);
+        assert(initial.helpLeads.length === 5, 'Help modal should expose five bold lead sentences.', initial.helpLeads);
         assert(await page.locator('#resetBtn').textContent() === 'Reset Mixer', 'Reset button should clearly describe full mixer reset.');
         const bataOptions = await page.locator('#soundDriver option').evaluateAll(options => options
             .map(option => ({ value: option.value, label: option.textContent.trim() }))
@@ -326,39 +337,63 @@ async function run() {
         ]), 'Mixer menus should expose the expanded percussion palette.', expandedPercussionOptions);
 
         // --- Higher meter values rebuild correctly ---
-        await setSelect('#rhythmA', 12);
-        await setSelect('#rhythmB', 18);
-        const twelveAgainstEighteen = await page.evaluate(() => ({
+        const groupingFrameSnapshot = () => page.evaluate(() => ({
             meterA: document.querySelector('#rhythmA')?.value ?? null,
             meterB: document.querySelector('#rhythmB')?.value ?? null,
             masterSteps: document.querySelectorAll('#masterGrid .voice-row:nth-child(1) .step-btn').length,
-            aWheelSteps: document.querySelectorAll('#meterAWheelGrid .step-btn').length,
-            bWheelSteps: document.querySelectorAll('#meterBWheelGrid .step-btn').length,
-            aPhraseSteps: document.querySelectorAll('#meterAPhraseGrid .voice-row:nth-child(1) .step-btn').length,
-            bPhraseSteps: document.querySelectorAll('#meterBPhraseGrid .voice-row:nth-child(1) .step-btn').length
+            pulseA: document.querySelectorAll('#meterAWheelGrid .step-btn').length,
+            pulseB: document.querySelectorAll('#meterBWheelGrid .step-btn').length,
+            groupingValues: Array.from(document.querySelectorAll('#groupingLanesContainer .grouping-count-select')).map(s => s.value),
+            groupingBoxes: Array.from(document.querySelectorAll('#groupingLanesContainer .grouping-lane-row')).map(r => r.querySelectorAll('.sequencer-container > .voice-row:nth-child(1) .step-btn').length)
         }));
+
+        await setSelect('#rhythmA', 12);
+        await setSelect('#rhythmB', 18);
+        const twelveAgainstEighteen = await groupingFrameSnapshot();
         assert(same(twelveAgainstEighteen, {
-            meterA: '12',
-            meterB: '18',
-            masterSteps: 36,
-            aWheelSteps: 36,
-            bWheelSteps: 36,
-            aPhraseSteps: 12,
-            bPhraseSteps: 18
-        }), '12 against 18 should be accepted and rebuild all sequencers with the expected lengths.', twelveAgainstEighteen);
+            meterA: '12', meterB: '18', masterSteps: 36, pulseA: 36, pulseB: 36,
+            groupingValues: ['12', '18'], groupingBoxes: [12, 18]
+        }), '12 against 18 should be accepted and show 12- and 18-group lanes.', twelveAgainstEighteen);
 
         await setSelect('#rhythmA', 17);
         await setSelect('#rhythmB', 18);
-        const seventeenAgainstEighteen = await page.evaluate(() => ({
-            masterSteps: document.querySelectorAll('#masterGrid .voice-row:nth-child(1) .step-btn').length,
-            wheelA: document.querySelectorAll('#meterAWheelGrid .step-btn').length,
-            wheelB: document.querySelectorAll('#meterBWheelGrid .step-btn').length
-        }));
+        const seventeenAgainstEighteen = await groupingFrameSnapshot();
         assert(same(seventeenAgainstEighteen, {
-            masterSteps: 306,
-            wheelA: 306,
-            wheelB: 306
+            meterA: '17', meterB: '18', masterSteps: 306, pulseA: 306, pulseB: 306,
+            groupingValues: ['17', '18'], groupingBoxes: [17, 18]
         }), 'Higher 18-based meter pairs should also rebuild beyond the old 240-step limit.', seventeenAgainstEighteen);
+
+        // --- 24 against 18 (the 72-pulse frame) ---
+        await setSelect('#rhythmA', 24);
+        await setSelect('#rhythmB', 18);
+        const twentyFourAgainstEighteen = await groupingFrameSnapshot();
+        assert(same(twentyFourAgainstEighteen, {
+            meterA: '24', meterB: '18', masterSteps: 72, pulseA: 72, pulseB: 72,
+            groupingValues: ['24', '18'], groupingBoxes: [24, 18]
+        }), '24 against 18 should build the 72-pulse frame with 24- and 18-group lanes.', twentyFourAgainstEighteen);
+
+        // The share/restore clamp must accept 24 rather than silently downgrading it.
+        await page.evaluate(() => { globalThis.CompressionStream = undefined; });
+        await page.locator('#shareBtn').click();
+        await page.waitForFunction(() => globalThis.__lastCopiedShareUrl && globalThis.__lastCopiedShareUrl.includes('?s='));
+        const twentyFourShareUrl = await page.evaluate(() => globalThis.__lastCopiedShareUrl);
+        await page.goto(twentyFourShareUrl, { waitUntil: 'networkidle' });
+        await waitForApp();
+        const restoredMeters = await page.evaluate(() => ({ A: document.querySelector('#rhythmA')?.value ?? null, B: document.querySelector('#rhythmB')?.value ?? null }));
+        assert(same(restoredMeters, { A: '24', B: '18' }), 'A shared 24-against-18 rhythm should restore as 24 against 18.', restoredMeters);
+
+        // Grouping selectors are per-lane (changing one must not touch the others)
+        // and include a single-group option.
+        const groupingPerLane = await page.evaluate(() => {
+            const selects = Array.from(document.querySelectorAll('#groupingLanesContainer .grouping-count-select'));
+            const options = Array.from(selects[0].options).map(o => o.value);
+            selects[0].value = '12';
+            selects[0].dispatchEvent(new Event('change', { bubbles: true }));
+            const after = Array.from(document.querySelectorAll('#groupingLanesContainer .grouping-count-select')).map(s => s.value);
+            return { options, after };
+        });
+        assert(groupingPerLane.options.includes('1'), 'Grouping dropdown should offer a single group (1).', groupingPerLane.options);
+        assert(same(groupingPerLane.after, ['12', '18']), 'Changing one grouping lane should not affect the others.', groupingPerLane);
 
         await page.locator('#resetBtn').click();
         await page.waitForFunction(() => document.querySelector('#rhythmA')?.value === '6' && document.querySelector('#rhythmB')?.value === '4');
@@ -379,25 +414,25 @@ async function run() {
                 const buttons = document.querySelectorAll(`${gridSelector} .step-btn`);
                 return Array.from(buttons).findIndex(btn => btn.classList.contains('current'));
             };
+            const groupingIdx = (lane) => currentBtnIndex(`#groupingLanesContainer .grouping-lane-row:nth-child(${lane}) .sequencer-container > .voice-row:nth-child(1)`);
             return {
                 masterCt: currentClassCount('#masterGrid'),
-                AphrCt: currentClassCount('#meterAPhraseGrid'),
-                BphrCt: currentClassCount('#meterBPhraseGrid'),
+                groupingCt: currentClassCount('#groupingLanesContainer'),
                 AwheelIdx: currentBtnIndex('#meterAWheelGrid'),
                 BwheelIdx: currentBtnIndex('#meterBWheelGrid'),
                 masterIdx: currentBtnIndex('#masterGrid'),
-                AphrIdx: currentBtnIndex('#meterAPhraseGrid'),
-                BphrIdx: currentBtnIndex('#meterBPhraseGrid')
+                grouping0Idx: groupingIdx(1),
+                grouping1Idx: groupingIdx(2)
             };
         });
 
         const hl1 = await snapshotHighlight();
 
         assert(hl1.masterCt >= 1, 'At least one master step button should be highlighted');
-        assert(hl1.AphrCt >= 1, 'At least one A-phrase step button should be highlighted');
-        assert(hl1.BphrCt >= 1, 'At least one B-phrase step button should be highlighted');
+        assert(hl1.groupingCt >= 2, 'Grouping lanes should highlight a current step.', hl1);
         assert(hl1.AwheelIdx >= 0, 'A-wheel step button should be highlighted', hl1);
         assert(hl1.BwheelIdx >= 0, 'B-wheel step button should be highlighted', hl1);
+        assert(hl1.grouping0Idx >= 0 && hl1.grouping1Idx >= 0, 'Every grouping lane should highlight its current group.', hl1);
 
         // Wait more and verify the highlighted step has advanced
         await page.waitForTimeout(2000);
@@ -405,6 +440,9 @@ async function run() {
 
         assert(hl2.masterIdx !== hl1.masterIdx,
             'Master step highlight should advance over time',
+            { before: hl1, after: hl2 });
+        assert(hl2.grouping0Idx !== hl1.grouping0Idx,
+            'Grouping lane highlight should advance over time',
             { before: hl1, after: hl2 });
 
         // --- Voice removal and re-add preserves mixer dropdown population ---
@@ -501,44 +539,51 @@ async function run() {
         assert(lowMasterVolumeGain < highMasterVolumeGain * 0.25, 'Master Volume changes while audio is running should affect newly scheduled hits.', { highMasterVolumeGain, lowMasterVolumeGain });
 
         // --- Reset restores a single voice per lane ---
-        await setSelect('#rhythmA', 5);
-        await setSelect('#rhythmB', 7);
-        await setSelect('#phraseCyclesA', 2);
-        await setSelect('#phraseCyclesB', 2);
-        await setRange('#tempoSlider', 118);
-        await setRange('#masterVolumeSlider', 72);
-        await setSelect('#soundDriver', 'cowbell');
-        await setSelect('#sound_master_0', 'snare');
-        await page.locator('#addMasterVoiceBtn').click();
-        await page.locator('#addAPhraseVoiceBtn').click();
-        await page.locator('#addBPhraseVoiceBtn').click();
-        await setSelect('#sound_master_1', 'claves');
-        await setSelect('#sound_A_0', 'woodblock');
-        await setSelect('#sound_B_0', 'cowbell');
-        // Pulse-section rails default to collapsed; expand so #soloBWheel is reachable.
-        await expandAllRails();
-        await page.locator('#soloBWheel').click();
+        const glGrid = (lane) => `#groupingLanesContainer .grouping-lane-row:nth-child(${lane}) .sequencer-container`;
+        const glRow = (lane) => `#groupingLanesContainer .grouping-lane-row:nth-child(${lane})`;
+
+        const applyGroupingEdits = async () => {
+            await setSelect('#rhythmA', 5);
+            await setSelect('#rhythmB', 7);
+            await setSelect(`${glRow(1)} .grouping-cycles-select`, 2);
+            await setRange('#tempoSlider', 118);
+            await setRange('#masterVolumeSlider', 72);
+            await setSelect('#soundDriver', 'cowbell');
+            await setSelect('#sound_master_0', 'snare');
+            await page.locator('#addMasterVoiceBtn').click();
+            // Add a third grouping voice lane via the single bottom "+ Voice"
+            // button. Each lane keeps its own grouping.
+            await page.locator('#groupingLanesContainer .add-voice-btn').click();
+            await setSelect(`${glRow(3)} .grouping-count-select`, 5);
+            await setSelect('#sound_master_1', 'claves');
+            await setSelect('#sound_grouping_0_0', 'woodblock');
+            await setSelect('#sound_grouping_2_0', 'cowbell');
+            // Expand rails so the colocated Solo button is reachable, then solo
+            // the second grouping lane.
+            await expandAllRails();
+            await page.locator('#solo_grouping_1_0').click();
+
+            await clickStep('#masterGrid', 1, 3);
+            await clickStep('#masterGrid', 1, 8);
+            await clickStep('#masterGrid', 2, 2);
+            await clickStep('#masterGrid', 2, 6);
+            await clickStep(glGrid(1), 1, 4);
+            await clickStep(glGrid(1), 1, 2);
+            await clickStep(glGrid(2), 1, 5);
+            await clickStep(glGrid(2), 1, 2);
+            await clickStep(glGrid(3), 1, 3);
+            await clickStep(glGrid(3), 1, 4);
+
+            await expandAllRails();
+            await page.locator('#masterGrid .voice-row:nth-child(2) .voice-nudge-btn[title="Shift Voice 2 right"]').click();
+            await page.locator(`${glRow(1)} .sequencer-container > .voice-row:nth-child(1) .voice-nudge-btn[title="Shift Voice 1 right"]`).click();
+            await page.locator(`${glRow(2)} .sequencer-container > .voice-row:nth-child(1) .voice-nudge-btn[title="Shift Voice 1 left"]`).click();
+        };
+
+        await applyGroupingEdits();
 
         const liveInstrumentLabels = await snapshot();
-        assert(liveInstrumentLabels.voiceLabels.master1 === 'Snare Drum' && liveInstrumentLabels.voiceLabels.master2 === 'Claves' && liveInstrumentLabels.voiceLabels.A1 === 'Woodblock Clack' && liveInstrumentLabels.voiceLabels.B1 === 'Analog Cowbell', 'Voice row instrument labels should update when mixer selections change.', liveInstrumentLabels.voiceLabels);
-
-        await clickStep('#masterGrid', 1, 3);
-        await clickStep('#masterGrid', 1, 8);
-        await clickStep('#masterGrid', 2, 2);
-        await clickStep('#masterGrid', 2, 6);
-        await clickStep('#meterAPhraseGrid', 1, 4);
-        await clickStep('#meterAPhraseGrid', 1, 2);
-        await clickStep('#meterAPhraseGrid', 2, 1);
-        await clickStep('#meterAPhraseGrid', 2, 3);
-        await clickStep('#meterBPhraseGrid', 1, 5);
-        await clickStep('#meterBPhraseGrid', 1, 2);
-        await clickStep('#meterBPhraseGrid', 2, 3);
-        await clickStep('#meterBPhraseGrid', 2, 6);
-
-        await expandAllRails();
-        await page.locator('#masterGrid .voice-row:nth-child(2) .voice-nudge-btn[title="Shift Voice 2 right"]').click();
-        await page.locator('#meterAPhraseGrid .voice-row:nth-child(1) .voice-nudge-btn[title="Shift Voice 1 right"]').click();
-        await page.locator('#meterBPhraseGrid .voice-row:nth-child(2) .voice-nudge-btn[title="Shift Voice 2 left"]').click();
+        assert(liveInstrumentLabels.voiceLabels.master1 === 'Snare Drum' && liveInstrumentLabels.voiceLabels.master2 === 'Claves' && liveInstrumentLabels.voiceLabels.A1 === 'Woodblock Clack', 'Voice row instrument labels should update when mixer selections change.', liveInstrumentLabels.voiceLabels);
 
         const expectedCurrent = await snapshot();
 
@@ -546,41 +591,7 @@ async function run() {
         await page.waitForFunction(() => document.querySelectorAll('#masterGrid .voice-row').length === 1);
         assert(same(await snapshot(), initial), 'Reset Mixer should restore the startup state after meter, voice, pattern, nudge, and mixer edits.', { expected: initial, actual: await snapshot() });
 
-        await setSelect('#rhythmA', 5);
-        await setSelect('#rhythmB', 7);
-        await setSelect('#phraseCyclesA', 2);
-        await setSelect('#phraseCyclesB', 2);
-        await setRange('#tempoSlider', 118);
-        await setRange('#masterVolumeSlider', 72);
-        await setSelect('#soundDriver', 'cowbell');
-        await setSelect('#sound_master_0', 'snare');
-        await page.locator('#addMasterVoiceBtn').click();
-        await page.locator('#addAPhraseVoiceBtn').click();
-        await page.locator('#addBPhraseVoiceBtn').click();
-        await setSelect('#sound_master_1', 'claves');
-        await setSelect('#sound_A_0', 'woodblock');
-        await setSelect('#sound_B_0', 'cowbell');
-        // Pulse-section rails default to collapsed; expand so #soloBWheel is reachable.
-        await expandAllRails();
-        await page.locator('#soloBWheel').click();
-
-        await clickStep('#masterGrid', 1, 3);
-        await clickStep('#masterGrid', 1, 8);
-        await clickStep('#masterGrid', 2, 2);
-        await clickStep('#masterGrid', 2, 6);
-        await clickStep('#meterAPhraseGrid', 1, 4);
-        await clickStep('#meterAPhraseGrid', 1, 2);
-        await clickStep('#meterAPhraseGrid', 2, 1);
-        await clickStep('#meterAPhraseGrid', 2, 3);
-        await clickStep('#meterBPhraseGrid', 1, 5);
-        await clickStep('#meterBPhraseGrid', 1, 2);
-        await clickStep('#meterBPhraseGrid', 2, 3);
-        await clickStep('#meterBPhraseGrid', 2, 6);
-
-        await expandAllRails();
-        await page.locator('#masterGrid .voice-row:nth-child(2) .voice-nudge-btn[title="Shift Voice 2 right"]').click();
-        await page.locator('#meterAPhraseGrid .voice-row:nth-child(1) .voice-nudge-btn[title="Shift Voice 1 right"]').click();
-        await page.locator('#meterBPhraseGrid .voice-row:nth-child(2) .voice-nudge-btn[title="Shift Voice 2 left"]').click();
+        await applyGroupingEdits();
 
         const testName = `Regression Save ${Date.now()}`;
 
@@ -590,10 +601,10 @@ async function run() {
         await page.waitForFunction(() => JSON.parse(localStorage.getItem('alans-polyrhythm-mixer-saved-rhythms') || '[]').some(item => String(item.name || '').startsWith('Regression Save ')));
 
         const savedPayload = await page.evaluate(({ key, name }) => JSON.parse(localStorage.getItem(key)).find(item => item.name === name)?.payload, { key: SAVED_RHYTHMS_KEY, name: testName });
-        assert(savedPayload?.v === 4, 'Saved rhythm should use the current payload version.', savedPayload);
+        assert(savedPayload?.v === 5, 'Saved rhythm should use the current payload version.', savedPayload);
         assert(savedPayload?.m?.masterVolume === 72, 'Saved rhythm should include Master Volume.', savedPayload?.m);
-        assert(savedPayload?.c?.bwheel?.o === 1, 'Saved rhythm should include B-wheel solo state.', savedPayload?.c?.bwheel);
-        assert(!!(savedPayload?.p?.m?.some(v => v.n) || savedPayload?.p?.ap?.some(v => v.n) || savedPayload?.p?.bp?.some(v => v.n)), 'Saved rhythm should include nudge offsets.', savedPayload?.p);
+        assert(savedPayload?.p?.gl?.[1]?.v?.[0]?.o === 1, 'Saved rhythm should include the second grouping lane\'s solo state.', savedPayload?.p?.gl?.[1]);
+        assert(!!(savedPayload?.p?.m?.some(v => v.n) || savedPayload?.p?.gl?.some(l => l.v?.some(v => v.n))), 'Saved rhythm should include nudge offsets.', savedPayload?.p);
 
         await page.goto(`${BASE_URL}/?cache-bust=save-fresh-load-${Date.now()}`, { waitUntil: 'networkidle' });
         await waitForApp();
@@ -616,15 +627,15 @@ async function run() {
 
         // Editing a later phrase cycle must update that cycle's absolute step,
         // not the same displayed step in cycle one.
-        const aPhraseCycleRow = page.locator('.matrix-row', { has: page.locator('#meterAPhraseGrid') });
-        const aPhraseNextCycle = aPhraseCycleRow.locator('.cycle-nav-btn[title="Next cycle"]');
-        const aPhrasePreviousCycle = aPhraseCycleRow.locator('.cycle-nav-btn[title="Previous cycle"]');
-        await aPhraseNextCycle.click();
-        await clickStep('#meterAPhraseGrid', 1, 4);
-        await aPhrasePreviousCycle.click();
-        await aPhraseNextCycle.click();
+        const groupingCycleRow = page.locator(glRow(1));
+        const groupingNextCycle = groupingCycleRow.locator('.cycle-nav-btn[title="Next cycle"]');
+        const groupingPreviousCycle = groupingCycleRow.locator('.cycle-nav-btn[title="Previous cycle"]');
+        await groupingNextCycle.click();
+        await clickStep(glGrid(1), 1, 4);
+        await groupingPreviousCycle.click();
+        await groupingNextCycle.click();
         assert(
-            await page.locator('#meterAPhraseGrid .voice-row:nth-child(1) .step-btn').nth(4).getAttribute('aria-pressed') === 'true',
+            await page.locator(`${glGrid(1)} > .voice-row:nth-child(1) .step-btn`).nth(4).getAttribute('aria-pressed') === 'true',
             'A step selected in a later phrase cycle should remain selected after navigating away and back.'
         );
 
@@ -675,16 +686,16 @@ async function run() {
         // of the phrase. It must wrap the global step index modulo the cycle
         // length so it loops the pinned cycle like the audio gate does.
         await page.locator('#audioBtn').click();
-        await setSelect('#phraseCyclesA', 2);
-        const aPhrasePinRow = page.locator('.matrix-row', { has: page.locator('#meterAPhraseGrid') });
-        await aPhrasePinRow.locator('.cycle-nav-btn[title="Next cycle"]').click(); // pins + shows cycle 2
+        await setSelect(`${glRow(1)} .grouping-cycles-select`, 2);
+        const groupingPinRow = page.locator(glRow(1));
+        await groupingPinRow.locator('.cycle-nav-btn[title="Next cycle"]').click(); // pins + shows cycle 2
         await page.waitForTimeout(400);
         const pinnedSamples = [];
         for (let i = 0; i < 8; i++) {
-            pinnedSamples.push(await page.evaluate(() => {
-                const btns = document.querySelectorAll('#meterAPhraseGrid .voice-row:nth-child(1) .step-btn');
+            pinnedSamples.push(await page.evaluate((sel) => {
+                const btns = document.querySelectorAll(sel);
                 return Array.from(btns).findIndex(b => b.classList.contains('current'));
-            }));
+            }, `${glGrid(1)} > .voice-row:nth-child(1) .step-btn`));
             await page.waitForTimeout(450);
         }
         assert(pinnedSamples.every(idx => idx >= 0), 'A pinned phrase lane should keep its playhead highlight lit at every sample, not only while the master playhead sweeps the pinned cycle.', pinnedSamples);

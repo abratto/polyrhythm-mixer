@@ -15,7 +15,8 @@ The **audio clock drives the visual**. The master wheel angle is computed from t
 ## Features
 
 - **Polyrhythm sequencers** — Meter A and Meter B pulse lanes with individual tooth selection; each tooth lights up independently on click and triggers its own sound, gear dot, and spoke
-- **Multi-voice phrase lanes** — Master, Meter A Phrase, and Meter B Phrase lanes each support independent voices with per-voice patterns, instruments, and controls
+- **Grouping voice lanes** — The Master lane plus a dynamic list of grouping lanes (equal divisions of the master cycle). Each lane is one voice, shows one step per group, and has its own grouping selector; **+ Voice** adds a new lane and **×** removes one
+- **Independent groupings** — Each lane defaults to the chosen polyrhythm (e.g. 6 against 4 → 6- and 4-group lanes) and can be repointed at any divisor of the master cycle (including a single group) without affecting the others
 - **Per-lane controls** — Instrument select, volume, solo, and mute are colocated with each sequencer
 - **Master Beat reference strip** — 4/4 click track displayed alongside the polyrhythm beat scheme
 - **Gear visualization** — Grey 4/4 spokes, pink (A) and cyan (B) meter spokes, and magenta overlap where they land on the same tooth; colored dots mark active pulse positions
@@ -36,17 +37,18 @@ All sounds are synthesized in real-time:
 
 ## How to Use
 
-1. **Pick a polyrhythm** — Select Meter A and Meter B values (2–18)
+1. **Pick a polyrhythm** — Select Meter A and Meter B values (2–24)
 2. **Enable audio** — Press Enable Audio (required by browser autoplay policy)
-3. **Tap steps** — Click individual teeth in the Meter A / Meter B pulse lanes to toggle hits
-4. **Add voices** — Click + Voice on the Master, A Phrase, or B Phrase lanes for layered patterns
-5. **Extend phrases** — Set Phrase Length to 2–4 cycles for longer repeating patterns
-6. **Choose sounds** — Each lane and voice has its own instrument select, volume, solo, and mute
-7. **Save or Share** — Save stores rhythms locally; Share copies a URL encoding the full state
+3. **Tap steps** — Click individual teeth in the Meter A / Meter B pulse lanes, or tap the grouping lanes in Rhythm Tracks
+4. **Add grouping voice lanes** — In Rhythm Tracks, click **+ Voice** to add a lane; each lane has its own Grouping dropdown to pick any equal division of the master cycle (scoped to that lane)
+5. **Layer voices** — Click + Voice on the Master lane for layered master patterns; each grouping lane is a voice of its own
+6. **Extend phrases** — Set a grouping lane's Phrase Length (or the Master) to 2–8 cycles for longer repeating patterns
+7. **Choose sounds** — Each lane and voice has its own instrument select, volume, solo, and mute
+8. **Save or Share** — Save stores rhythms locally; Share copies a URL encoding the full state
 
 ## Share Links & Versioning
 
-Share payloads are compressed (DEFLATE) and Base64URL-encoded with a `z:` prefix. Each payload carries a version number with automatic migration on load (v0 → v4). Saved rhythms use the same format in localStorage.
+Share payloads are compressed (DEFLATE) and Base64URL-encoded with a `z:` prefix. Each payload carries a version number with automatic migration on load (v0 → v5). Saved rhythms use the same format in localStorage.
 
 ## Technical Notes
 

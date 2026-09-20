@@ -40,8 +40,7 @@ function computePatternChecksum(lanes) {
         });
     };
     addLane(lanes.master.voices, 3);
-    addLane(lanes.Aphrase.voices, 5);
-    addLane(lanes.Bphrase.voices, 7);
+    (lanes.grouping || []).forEach((lane, li) => addLane(lane.voices, 5 + li * 2));
     for (let i = 0; i < lanes.Awheel.selected.length; i++) if (lanes.Awheel.selected[i]) h = (h + (i + 1) * 11) | 0;
     for (let i = 0; i < lanes.Bwheel.selected.length; i++) if (lanes.Bwheel.selected[i]) h = (h + (i + 1) * 13) | 0;
     return h;
@@ -67,21 +66,20 @@ function processTriggers(state, lanes, active, channels) {
         state.lastActive.master = active.master;
     }
 
-    if (active.Aphrase !== state.lastActive.Aphrase) {
-        lanes.Aphrase.voices.forEach((voice) => {
-            if (voice.selected[active.Aphrase] && !voice.channel?.silenced) state.flash.A = 12;
-        });
-        state.lastActive.Aphrase = active.Aphrase;
-    }
+    // Grouping lanes flash the A/B canvas accents (first two lanes only).
+    (lanes.grouping || []).forEach((lane, li) => {
+        const key = lane.cycleKey;
+        if (active[key] === state.lastActive[key]) return;
+        const flashKey = li === 0 ? 'A' : li === 1 ? 'B' : null;
+        if (flashKey) {
+            lane.voices.forEach((voice) => {
+                if (voice.selected[active[key]] && !voice.channel?.silenced) state.flash[flashKey] = 12;
+            });
+        }
+        state.lastActive[key] = active[key];
+    });
 
     if (lanes.Awheel.selected[((active.master % state.mainTeeth) + state.mainTeeth) % state.mainTeeth] && !lanes.Awheel.channel?.silenced) state.flash.A = 12;
-
-    if (active.Bphrase !== state.lastActive.Bphrase) {
-        lanes.Bphrase.voices.forEach((voice) => {
-            if (voice.selected[active.Bphrase] && !voice.channel?.silenced) state.flash.B = 12;
-        });
-        state.lastActive.Bphrase = active.Bphrase;
-    }
 
     if (lanes.Bwheel.selected[((active.master % state.mainTeeth) + state.mainTeeth) % state.mainTeeth] && !lanes.Bwheel.channel?.silenced) state.flash.B = 12;
 }
@@ -920,22 +918,17 @@ function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width, cycleProgr
         drawTimelineMarker(ctx, startX + step * pixelPerTooth, y + 14, '#6ef2ff', 'diamond', 4);
     });
 
-    // Phrase lane steps (triangles, further offset, one row per voice)
-    lanes.Aphrase.voices.forEach((voice, vi) => {
-        const yOffset = 28 + vi * 10;
-        voice.selected.forEach((on, i) => {
-            if (!on) return;
-            const step = (i * state.teethA + state.phaseA) % state.mainTeeth;
-            drawTimelineMarker(ctx, startX + step * pixelPerTooth, y - yOffset, '#ff3366', 'up', 4);
-        });
-    });
-
-    lanes.Bphrase.voices.forEach((voice, vi) => {
-        const yOffset = 28 + vi * 10;
-        voice.selected.forEach((on, i) => {
-            if (!on) return;
-            const step = (i * state.teethB + state.phaseB) % state.mainTeeth;
-            drawTimelineMarker(ctx, startX + step * pixelPerTooth, y + yOffset, '#00e5ff', 'down', 4);
+    // Grouping lane steps (triangles, alternating above/below, one row per voice)
+    (lanes.grouping || []).forEach((lane, li) => {
+        const dir = li % 2 === 0 ? -1 : 1;
+        lane.voices.forEach((voice, vi) => {
+            const yOffset = 28 + vi * 10;
+            const groupSize = state.mainTeeth / lane.groupCount;
+            voice.selected.forEach((on, i) => {
+                if (!on) return;
+                const step = (i * groupSize) % state.mainTeeth;
+                drawTimelineMarker(ctx, startX + step * pixelPerTooth, y + dir * yOffset, lane.color, 'up', 4);
+            });
         });
     });
 
@@ -966,69 +959,43 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width, include
     ctx.textAlign = 'left';
     ctx.fillText(`FULL PATTERN TIMELINE (${totalCycles} master cycles)`, startX, yTop - 8);
 
-    // Calculate row positions — master voices above A/B phrase rows
-    const masterVoiceCount = lanes.master.voices.length;
-    const aVoiceCount = lanes.Aphrase.voices.length;
-    const bVoiceCount = lanes.Bphrase.voices.length;
+    // Row layout — master voices first, then one row per grouping-lane voice.
     const rowHeight = 18;
+    const masterVoiceCount = lanes.master.voices.length;
     const masterStartY = yTop + 18;
-    const aStartY = masterStartY + (masterVoiceCount * rowHeight) + 10;
-    const bStartY = aStartY + (aVoiceCount * rowHeight) + 10;
-    const bottomY = bStartY + (bVoiceCount * rowHeight) + 10;
+    const masterRows = lanes.master.voices.map((_, vi) => masterStartY + vi * rowHeight);
+    let cursorY = masterStartY + masterVoiceCount * rowHeight + 10;
+    const groupingRows = [];
+    (lanes.grouping || []).forEach((lane) => {
+        const rows = lane.voices.map((_, vi) => cursorY + vi * rowHeight);
+        groupingRows.push({ lane, rows });
+        cursorY += lane.voices.length * rowHeight + 10;
+    });
+    const bottomY = cursorY;
 
-    // Master voice labels
+    // Labels
     lanes.master.voices.forEach((_, vi) => {
-        const rowY = masterStartY + vi * rowHeight;
         ctx.fillStyle = '#ff9100';
-        ctx.fillText(`Master${masterVoiceCount > 1 ? ` v${vi + 1}` : ''}`, startX, rowY - 4);
+        ctx.fillText(`Master${masterVoiceCount > 1 ? ` v${vi + 1}` : ''}`, startX, masterRows[vi] - 4);
+    });
+    groupingRows.forEach(({ lane, rows }) => {
+        rows.forEach((rowY, vi) => {
+            ctx.fillStyle = lane.color;
+            ctx.fillText(`G${lane.groupCount}${lane.voices.length > 1 ? ` v${vi + 1}` : ''}`, startX, rowY - 4);
+        });
     });
 
-    // A phrase labels
-    lanes.Aphrase.voices.forEach((_, vi) => {
-        const rowY = aStartY + vi * rowHeight;
-        ctx.fillStyle = '#ff3366';
-        ctx.fillText(`A phrase${aVoiceCount > 1 ? ` v${vi + 1}` : ''}`, startX, rowY - 4);
-    });
-
-    // B phrase labels
-    lanes.Bphrase.voices.forEach((_, vi) => {
-        const rowY = bStartY + vi * rowHeight;
-        ctx.fillStyle = '#00e5ff';
-        ctx.fillText(`B phrase${bVoiceCount > 1 ? ` v${vi + 1}` : ''}`, startX, rowY - 4);
-    });
-
-    // Timeline axes for master voices
-    lanes.master.voices.forEach((_, vi) => {
-        const rowY = masterStartY + vi * rowHeight;
+    // Timeline axes
+    const drawAxis = (rowY) => {
         ctx.strokeStyle = '#2d2d3d';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(startX, rowY);
         ctx.lineTo(startX + width, rowY);
         ctx.stroke();
-    });
-
-    // Timeline axes for A voices
-    lanes.Aphrase.voices.forEach((_, vi) => {
-        const rowY = aStartY + vi * rowHeight;
-        ctx.strokeStyle = '#2d2d3d';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(startX, rowY);
-        ctx.lineTo(startX + width, rowY);
-        ctx.stroke();
-    });
-
-    // Timeline axes for B voices
-    lanes.Bphrase.voices.forEach((_, vi) => {
-        const rowY = bStartY + vi * rowHeight;
-        ctx.strokeStyle = '#2d2d3d';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(startX, rowY);
-        ctx.lineTo(startX + width, rowY);
-        ctx.stroke();
-    });
+    };
+    masterRows.forEach(drawAxis);
+    groupingRows.forEach(({ rows }) => rows.forEach(drawAxis));
 
     // Adaptive cycle label spacing
     let labelEvery = 1;
@@ -1059,41 +1026,28 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width, include
     // Master voice markers (repeating across the full pattern, one row per voice)
     const masterRepeatSteps = state.masterPhraseSteps;
     lanes.master.voices.forEach((voice, vi) => {
-        const rowY = masterStartY + vi * rowHeight;
+        const rowY = masterRows[vi];
         voice.selected.forEach((on, i) => {
             if (!on) return;
             for (let pos = i; pos < totalSteps; pos += masterRepeatSteps) {
-                const x = startX + pos * pixelPerStep;
-                drawTimelineMarker(ctx, x, rowY, '#ff9100', 'dot', 4);
+                drawTimelineMarker(ctx, startX + pos * pixelPerStep, rowY, '#ff9100', 'dot', 4);
             }
         });
     });
 
-    // A phrase markers (repeating across the full pattern, one row per voice)
-    const aRepeatSteps = state.phraseStepsA * state.teethA;
-    lanes.Aphrase.voices.forEach((voice, vi) => {
-        const rowY = aStartY + vi * rowHeight;
-        voice.selected.forEach((on, i) => {
-            if (!on) return;
-            for (let pos = i * state.teethA + state.phaseA; pos < totalSteps + state.phaseA; pos += aRepeatSteps) {
-                const normalized = ((pos % totalSteps) + totalSteps) % totalSteps;
-                const x = startX + normalized * pixelPerStep;
-                drawTimelineMarker(ctx, x, rowY, '#ff3366', 'dot', 4);
-            }
-        });
-    });
-
-    // B phrase markers (one row per voice)
-    const bRepeatSteps = state.phraseStepsB * state.teethB;
-    lanes.Bphrase.voices.forEach((voice, vi) => {
-        const rowY = bStartY + vi * rowHeight;
-        voice.selected.forEach((on, i) => {
-            if (!on) return;
-            for (let pos = i * state.teethB + state.phaseB; pos < totalSteps + state.phaseB; pos += bRepeatSteps) {
-                const normalized = ((pos % totalSteps) + totalSteps) % totalSteps;
-                const x = startX + normalized * pixelPerStep;
-                drawTimelineMarker(ctx, x, rowY, '#00e5ff', 'dot', 4);
-            }
+    // Grouping lane markers (repeating across the full pattern)
+    groupingRows.forEach(({ lane, rows }) => {
+        const groupSize = state.mainTeeth / lane.groupCount;
+        const repeatSteps = lane.count() * groupSize;
+        lane.voices.forEach((voice, vi) => {
+            const rowY = rows[vi];
+            voice.selected.forEach((on, i) => {
+                if (!on) return;
+                for (let pos = i * groupSize; pos < totalSteps + groupSize; pos += repeatSteps) {
+                    const normalized = ((pos % totalSteps) + totalSteps) % totalSteps;
+                    drawTimelineMarker(ctx, startX + normalized * pixelPerStep, rowY, lane.color, 'dot', 4);
+                }
+            });
         });
     });
 
@@ -1178,7 +1132,8 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
 
     function animate(timestamp) {
         try {
-        const totalVoices = lanes.master.voices.length + lanes.Aphrase.voices.length + lanes.Bphrase.voices.length;
+        const groupingVoiceTotal = (lanes.grouping || []).reduce((n, lane) => n + lane.voices.length, 0);
+        const totalVoices = lanes.master.voices.length + groupingVoiceTotal;
         const f = state.flash;
         const hasActiveFlash = f.driver > 0 || f.custom > 0 || f.A > 0 || f.B > 0;
 
@@ -1326,13 +1281,17 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
 
         // Step-level visual tracking — audio handled by scheduler
         if (currentStep !== prevStep) {
-            const previousActive = {
-                master: state.lastActive.master,
-                Aphrase: state.lastActive.Aphrase,
-                Bphrase: state.lastActive.Bphrase,
-                Awheel: state.lastActive.Awheel,
-                Bwheel: state.lastActive.Bwheel
+            const previousActive = { ...state.lastActive };
+
+            // Active step per grouping lane for a given master step.
+            const groupingActive = (s) => {
+                const obj = {};
+                (lanes.grouping || []).forEach(lane => {
+                    obj[lane.cycleKey] = getActivePhraseStep(s, 0, state.mainTeeth / lane.groupCount, lane.count());
+                });
+                return obj;
             };
+
             // Bound catch-up after a main-thread stall (GC, layout, etc.): the
             // audio-clock-derived mainAngle jumps forward, and replaying every
             // skipped step in one frame turns a single stall into a visible
@@ -1345,8 +1304,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             if (catchUpSteps > MAX_VISUAL_CATCH_UP_STEPS) {
                 lastActive = {
                     master: ((currentStep % state.masterPhraseSteps) + state.masterPhraseSteps) % state.masterPhraseSteps,
-                    Aphrase: getActivePhraseStep(currentStep, state.phaseA, state.teethA, state.phraseStepsA),
-                    Bphrase: getActivePhraseStep(currentStep, state.phaseB, state.teethB, state.phraseStepsB),
+                    ...groupingActive(currentStep),
                     Awheel: getActiveWheelStep(currentStep, state.phaseA, state.teethA, state.A),
                     Bwheel: getActiveWheelStep(currentStep, state.phaseB, state.teethB, state.B)
                 };
@@ -1355,8 +1313,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
                 for (let s = prevStep + 1; s <= currentStep; s++) {
                     lastActive = {
                         master: ((s % state.masterPhraseSteps) + state.masterPhraseSteps) % state.masterPhraseSteps,
-                        Aphrase: getActivePhraseStep(s, state.phaseA, state.teethA, state.phraseStepsA),
-                        Bphrase: getActivePhraseStep(s, state.phaseB, state.teethB, state.phraseStepsB),
+                        ...groupingActive(s),
                         Awheel: getActiveWheelStep(s, state.phaseA, state.teethA, state.A),
                         Bwheel: getActiveWheelStep(s, state.phaseB, state.teethB, state.B)
                     };
@@ -1374,21 +1331,16 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
                 }
             }
 
-            if (state.phraseCyclesA > 1 && state.followPlayhead.Aphrase) {
-                const aCycle = Math.floor(lastActive.Aphrase / state.A);
-                if (aCycle !== state.visibleCycle.Aphrase) {
-                    state.visibleCycle.Aphrase = aCycle;
-                    _requestDeferredRebuild(lanes.Aphrase);
+            (lanes.grouping || []).forEach(lane => {
+                const key = lane.cycleKey;
+                if (lane.cycles > 1 && state.followPlayhead[key] !== false) {
+                    const cycle = Math.floor(lastActive[key] / lane.groupCount);
+                    if (cycle !== state.visibleCycle[key]) {
+                        state.visibleCycle[key] = cycle;
+                        _requestDeferredRebuild(lane);
+                    }
                 }
-            }
-
-            if (state.phraseCyclesB > 1 && state.followPlayhead.Bphrase) {
-                const bCycle = Math.floor(lastActive.Bphrase / state.B);
-                if (bCycle !== state.visibleCycle.Bphrase) {
-                    state.visibleCycle.Bphrase = bCycle;
-                    _requestDeferredRebuild(lanes.Bphrase);
-                }
-            }
+            });
         }
 
         // Decay flash counters (f is bound at the top of the frame)
@@ -1406,11 +1358,11 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         }
         _frameNo++;
         const patternChecksum = _cachedPatternChecksum;
-        const voiceCounts = `${lanes.master.voices.length}_${lanes.Aphrase.voices.length}_${lanes.Bphrase.voices.length}`;
+        const voiceCounts = `${lanes.master.voices.length}_${(lanes.grouping || []).map(l => l.voices.length).join('.')}`;
         const masterCurrentCycle = state.masterPhraseCycles > 1
             ? Math.floor(currentStep / state.mainTeeth) % state.masterPhraseCycles
             : 0;
-        const baseSig = [state.A, state.B, state.mainTeeth, state.teethA, state.teethB, state.masterPhraseCycles, state.phraseCyclesA, state.phraseCyclesB, state.masterPhraseSteps, state.phraseStepsA, state.phraseStepsB, state.fullPatternCycles, canvas.width, canvas.height, isMobile, voiceCounts, patternChecksum].join('|');
+        const baseSig = [state.A, state.B, state.mainTeeth, state.teethA, state.teethB, state.masterPhraseCycles, state.masterPhraseSteps, state.fullPatternCycles, canvas.width, canvas.height, isMobile, voiceCounts, patternChecksum].join('|');
 
         // Timelines — push down when many master voices to avoid overlapping the gear
         const timelineX = (canvas.width - 700) / 2;

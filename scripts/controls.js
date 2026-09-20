@@ -68,17 +68,6 @@ export function wireControls({ ui, state, lanes, rebuildSystem, resetMixerToStar
         rebuildSystem(true);
     });
 
-    // Phrase cycle selectors — changing either recalculates phrase step counts
-    ui.phraseCyclesA.addEventListener('change', () => {
-        state.phraseCyclesA = parseInt(ui.phraseCyclesA.value, 10);
-        rebuildSystem();
-    });
-
-    ui.phraseCyclesB.addEventListener('change', () => {
-        state.phraseCyclesB = parseInt(ui.phraseCyclesB.value, 10);
-        rebuildSystem();
-    });
-
     // Master phrase cycle selector — extends the master lane pattern
     ui.masterPhraseCycles.addEventListener('change', () => {
         state.masterPhraseCycles = parseInt(ui.masterPhraseCycles.value, 10);

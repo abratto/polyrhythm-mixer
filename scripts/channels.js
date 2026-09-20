@@ -55,7 +55,9 @@ export function createChannels() {
         // Multi-voice channels — populated dynamically
         masterVoices: [],
         Avoices: [],
-        Bvoices: []
+        Bvoices: [],
+        // Rhythm Tracks grouping lanes' voice channels — populated dynamically
+        groupingVoices: []
     };
 }
 
@@ -242,7 +244,8 @@ export function refreshSilenced(channels) {
         channels.Bwheel,
         ...(channels.masterVoices || []),
         ...(channels.Avoices || []),
-        ...(channels.Bvoices || [])
+        ...(channels.Bvoices || []),
+        ...(channels.groupingVoices || [])
     ];
     for (const c of all) {
         if (!c) continue;
@@ -256,7 +259,7 @@ export function isAnyChannelSoloed(channels) {
     for (const key of ['driver', 'Awheel', 'Bwheel']) {
         if (channels[key]?.soloed) return true;
     }
-    for (const key of ['masterVoices', 'Avoices', 'Bvoices']) {
+    for (const key of ['masterVoices', 'Avoices', 'Bvoices', 'groupingVoices']) {
         if ((channels[key] || []).some(ch => ch?.soloed)) return true;
     }
     return false;

@@ -6,6 +6,7 @@
     "test:oscillator-lifecycle": "node scripts/test-oscillator-lifecycle.js",
     "test:scheduler-recovery": "node scripts/test-scheduler-recovery.js",
     "test:wheel-ratios": "node scripts/test-wheel-ratios.js",
+    "test:groupings": "node scripts/test-groupings.js",
     "test:smoke": "node scripts/regression-smoke.js",
     "test:smoke:headed": "HEADFUL=1 node scripts/regression-smoke.js",
     "test:frames": "node scripts/frame-probe.js"

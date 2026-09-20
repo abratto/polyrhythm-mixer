@@ -22,10 +22,44 @@ export function lcm(x, y) {
     return Math.abs((x * y) / gcd(x, y));
 }
 
+/**
+ * Returns the equal group sizes available for a frame of `frame` pulses,
+ * smallest first. A group size `s` means the frame divides into `frame/s`
+ * groups of `s` pulses, so `s` must divide the frame; we return
+ * 2 ≤ s ≤ frame/2 (at least two groups, and no single all-encompassing group).
+ *
+ * A master voice "grouped by s" places one onset every s pulses.
+ *
+ * Example: 72 → [2, 3, 4, 6, 8, 9, 12, 18, 24, 36].
+ */
+export function groupingDivisors(frame) {
+    if (!Number.isInteger(frame) || frame < 4) return [];
+    const sizes = [];
+    for (let s = 2; s <= Math.floor(frame / 2); s++) {
+        if (frame % s === 0) sizes.push(s);
+    }
+    return sizes;
+}
+
 /** Reduce a fraction to its simplest form for display (e.g. "3/4"). */
 export function reduceFraction(n, d) {
     const divisor = gcd(n, d);
     return `${n / divisor}/${d / divisor}`;
+}
+
+/**
+ * Returns a boolean step pattern of `length` steps with an onset at step 0 and
+ * every `groupSize` steps thereafter. Used to pre-tap a master voice for an
+ * equal grouping; for a `length` that is a multiple of the frame (and a
+ * `groupSize` dividing it) the grouping repeats seamlessly across cycles.
+ */
+export function groupedPattern(length, groupSize) {
+    const pattern = new Array(length).fill(false);
+    if (!Number.isInteger(groupSize) || groupSize < 1) return pattern;
+    for (let i = 0; i < length; i++) {
+        pattern[i] = (i % groupSize === 0);
+    }
+    return pattern;
 }
 
 /**

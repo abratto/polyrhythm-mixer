@@ -27,17 +27,16 @@ try {
         phaseB: 0,
         teethA: 1,
         teethB: 1,
-        phraseStepsA: 4,
-        phraseStepsB: 4
+        followPlayhead: {},
+        visibleCycle: {}
     };
     const lanes = {
         master: { voices: [] },
-        Aphrase: { voices: [] },
+        grouping: [],
         Awheel: { selected: [] },
-        Bphrase: { voices: [] },
         Bwheel: { selected: [] }
     };
-    const channels = { masterVoices: [], Avoices: [], A: null, Bvoices: [], Awheel: null, Bwheel: null, driver: null };
+    const channels = { masterVoices: [], groupingVoices: [], Awheel: null, Bwheel: null, driver: null };
 
     startAudioScheduler(state, lanes, channels, 1);
     assert.ok(scheduledTick, 'Scheduler should queue its next tick.');

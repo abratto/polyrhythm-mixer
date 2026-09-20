@@ -5,7 +5,7 @@
  * and derived state (master wheel size, teeth counts, phrase step counts).
  * Derived values are recalculated whenever the user changes A, B, or phrase cycles.
  */
-import { lcm, phraseStepsFor } from './math.js';
+import { lcm } from './math.js';
 
 /**
  * Creates the initial state object from current UI element values.
@@ -14,12 +14,9 @@ import { lcm, phraseStepsFor } from './math.js';
  */
 export function createState(ui) {
     return {
-        // User-facing meter values (2–18)
+        // User-facing meter values (2–24)
         A: parseInt(ui.selectA.value, 10),
         B: parseInt(ui.selectB.value, 10),
-        // Number of master cycles each phrase spans
-        phraseCyclesA: parseInt(ui.phraseCyclesA.value, 10),
-        phraseCyclesB: parseInt(ui.phraseCyclesB.value, 10),
         // Number of master cycles the master lane pattern spans
         masterPhraseCycles: parseInt(ui.masterPhraseCycles.value, 10),
         // Legacy timeline phase values are fixed at zero; visible nudging edits rows directly.
@@ -30,10 +27,8 @@ export function createState(ui) {
         mainTeeth: 0,       // LCM(A, B) — total teeth on the master wheel
         teethA: 0,          // mainTeeth / A — teeth on wheel A
         teethB: 0,          // mainTeeth / B — teeth on wheel B
-        phraseStepsA: 0,    // total steps in phrase A
-        phraseStepsB: 0,    // total steps in phrase B
         masterPhraseSteps: 0, // total steps in master phrase (mainTeeth × masterPhraseCycles)
-        fullPatternCycles: 0, // LCM(masterPhraseCycles, phraseCyclesA, phraseCyclesB)
+        fullPatternCycles: 0, // LCM of master + grouping lane cycle lengths
 
         // Animation state
         mainAngle: 0,       // current rotation angle of the master wheel (radians)
@@ -51,16 +46,17 @@ export function createState(ui) {
         lastScheduledStep: 0,
         lastScheduledQuarter: 0,
         // Dedup state for the audio scheduler (separate from lastActive used by rAF)
-        lastScheduledActive: { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 },
+        lastScheduledActive: { master: -1, Awheel: -1, Bwheel: -1 },
 
         // Flash counters for visual/audio triggers (count down each frame)
         flash: { driver: 0, custom: 0, A: 0, B: 0 },
-        // Tracks the previously active step index per lane to detect transitions
-        lastActive: { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 },
+        // Tracks the previously active step index per lane to detect transitions.
+        // Grouping lanes add a `<cycleKey>: index` entry at runtime.
+        lastActive: { master: -1, Awheel: -1, Bwheel: -1 },
         // Which cycle is currently displayed in each multi-cycle lane
-        visibleCycle: { master: 0, Aphrase: 0, Bphrase: 0 },
+        visibleCycle: { master: 0 },
         // Whether each multi-cycle lane auto-follows the playhead (false = pinned/manual)
-        followPlayhead: { master: true, Aphrase: true, Bphrase: true },
+        followPlayhead: { master: true },
         // Which round visualization renders: 'gears' (mechanical) or 'rings' (clock face)
         vizMode: 'gears'
     };
@@ -75,11 +71,10 @@ export function updateDerivedState(state) {
     state.teethA = state.mainTeeth / state.A;
     state.teethB = state.mainTeeth / state.B;
 
-    state.phraseStepsA = phraseStepsFor(state.A, state.phraseCyclesA);
-    state.phraseStepsB = phraseStepsFor(state.B, state.phraseCyclesB);
     state.masterPhraseSteps = state.mainTeeth * state.masterPhraseCycles;
 
-    state.fullPatternCycles = lcm(state.masterPhraseCycles, lcm(state.phraseCyclesA, state.phraseCyclesB));
+    // Grouping-lane cycle lengths are folded in by grouping-lanes.js after this.
+    state.fullPatternCycles = state.masterPhraseCycles;
 }
 
 /**
