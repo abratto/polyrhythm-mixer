@@ -190,7 +190,7 @@ async function run() {
 
         // Grouping lane selectors — lane N, voice M. The A/B names map to the
         // first two grouping lanes so downstream assertions stay readable.
-        const gl = (lane, voice, sel) => `#groupingLanesContainer .grouping-lane-row:nth-child(${lane}) .sequencer-container > .voice-row:nth-child(${voice}) ${sel}`;
+        const gl = (lane, voice, sel) => `#groupingLanesContainer .grouping-lane-row:nth-child(${lane}) .sequencer-container > .voice-row[data-voice-index="${voice - 1}"] ${sel}`;
         const groupingRows = Array.from(document.querySelectorAll('#groupingLanesContainer .grouping-lane-row'));
 
         return {
@@ -204,8 +204,8 @@ async function run() {
             },
             voiceCounts: {
                 master: document.querySelectorAll('#masterGrid .voice-row').length,
-                A: document.querySelectorAll('#groupingLanesContainer .grouping-lane-row:nth-child(1) .sequencer-container > .voice-row').length,
-                B: document.querySelectorAll('#groupingLanesContainer .grouping-lane-row:nth-child(2) .sequencer-container > .voice-row').length
+                A: document.querySelectorAll('#groupingLanesContainer .grouping-lane-row:nth-child(1) .sequencer-container > .voice-row[data-voice-index]').length,
+                B: document.querySelectorAll('#groupingLanesContainer .grouping-lane-row:nth-child(2) .sequencer-container > .voice-row[data-voice-index]').length
             },
             active: {
                 master1: activeIndexesFor('#masterGrid .voice-row:nth-child(1) .step-btn.active'),
@@ -215,12 +215,17 @@ async function run() {
                 B1: activeIndexesFor(gl(2, 1, '.step-btn.active')),
                 B2: activeIndexesFor(gl(2, 2, '.step-btn.active'))
             },
-            grouping: groupingRows.map(row => ({
-                g: row.querySelector('.grouping-count-select')?.value ?? null,
-                c: row.querySelector('.grouping-cycles-select')?.value ?? null,
-                voices: row.querySelectorAll('.sequencer-container > .voice-row').length,
-                active: Array.from(row.querySelectorAll('.sequencer-container > .voice-row:nth-child(1) .step-btn.active')).map(b => Array.from(b.parentElement.children).indexOf(b))
-            })),
+            grouping: groupingRows.map(row => {
+                const slicedCell = row.querySelector('.sequencer-container > .voice-row[data-voice-index="0"] .step-btn.has-slices');
+                const slices = slicedCell ? Array.from(slicedCell.querySelectorAll('.step-slice')) : [];
+                return {
+                    g: row.querySelector('.grouping-count-select')?.value ?? null,
+                    c: row.querySelector('.grouping-cycles-select')?.value ?? null,
+                    voices: row.querySelectorAll('.sequencer-container > .voice-row[data-voice-index]').length,
+                    offset: slices.length ? slices.findIndex(s => s.classList.contains('start')) : null,
+                    active: Array.from(row.querySelectorAll('.sequencer-container > .voice-row[data-voice-index="0"] .step-btn.active')).map(b => Array.from(b.parentElement.children).indexOf(b))
+                };
+            }),
             mixer: {
                 masterVolInLane: !!document.querySelector('#volDriver'),
                 masterClickSound: selectValue('#soundDriver'),
@@ -562,6 +567,8 @@ async function run() {
             // the second grouping lane.
             await expandAllRails();
             await page.locator('#solo_grouping_1_0').click();
+            // Shift the first grouping lane's start by one pulse (frame 5×7 → 7 slices).
+            await page.locator(`${glRow(1)} .grouping-offset-next`).click();
 
             await clickStep('#masterGrid', 1, 3);
             await clickStep('#masterGrid', 1, 8);
@@ -604,6 +611,7 @@ async function run() {
         assert(savedPayload?.v === 5, 'Saved rhythm should use the current payload version.', savedPayload);
         assert(savedPayload?.m?.masterVolume === 72, 'Saved rhythm should include Master Volume.', savedPayload?.m);
         assert(savedPayload?.p?.gl?.[1]?.v?.[0]?.o === 1, 'Saved rhythm should include the second grouping lane\'s solo state.', savedPayload?.p?.gl?.[1]);
+        assert(savedPayload?.p?.gl?.[0]?.ph === 1, 'Saved rhythm should include the first grouping lane\'s pulse offset.', savedPayload?.p?.gl?.[0]);
         assert(!!(savedPayload?.p?.m?.some(v => v.n) || savedPayload?.p?.gl?.some(l => l.v?.some(v => v.n))), 'Saved rhythm should include nudge offsets.', savedPayload?.p);
 
         await page.goto(`${BASE_URL}/?cache-bust=save-fresh-load-${Date.now()}`, { waitUntil: 'networkidle' });

@@ -546,6 +546,46 @@
             padding: 6px 8px;
             font-weight: 700;
         }
+        /* Grouping cells are subdivided into one segment per pulse in the group;
+           the segment at the lane's offset (the grouping start) is highlighted.
+           The offset nudge in the toolbar moves it. */
+        .step-btn.has-slices {
+            position: relative;
+            padding-bottom: 8px;
+        }
+        .step-slices {
+            position: absolute;
+            left: 4px;
+            right: 4px;
+            bottom: 3px;
+            height: 4px;
+            display: flex;
+            gap: 1px;
+            pointer-events: none;
+        }
+        .step-slice {
+            flex: 1 1 0;
+            min-width: 0;
+            border-radius: 1px;
+            background: rgba(255, 255, 255, 0.18);
+        }
+        .step-slice.start {
+            background: #ffffff;
+            box-shadow: 0 0 4px rgba(255, 255, 255, 0.85);
+        }
+        .grouping-offset-nudge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .grouping-offset-value {
+            min-width: 26px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            color: #c9c9d6;
+        }
         /* Meter A/B Pulse selector sits inline just above its own step sequencer,
            reading e.g. "Meter A [16]". */
         .pulse-select-line {

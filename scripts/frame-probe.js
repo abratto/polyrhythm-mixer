@@ -12,6 +12,7 @@
  * Environment variables:
  *   CPU_RATE=4        CPU throttling factor (default 4).
  *   DENSE=1           Set meters to 12 against 18 before probing.
+ *   LANES=6           Add grouping voice lanes until the list has this many.
  *   SAMPLES=75        Number of rAF samples per mode (default 75 ≈ 2.5s@30fps).
  *   BASE_URL=...      Use an already-running server instead of starting one.
  */
@@ -34,6 +35,7 @@ const BASE_URL = process.env.BASE_URL || `http://127.0.0.1:${PORT}`;
 const CPU_RATE = Number.parseFloat(process.env.CPU_RATE || '4');
 const SAMPLES = Number.parseInt(process.env.SAMPLES || '75', 10);
 const DENSE = process.env.DENSE === '1';
+const LANES = Number.parseInt(process.env.LANES || '2', 10);
 const HELP_STORAGE_KEY = 'alans-polyrhythm-mixer-help-dismissed';
 
 const MODES = ['gears', 'rings', 'align', 'voice', 'shapes'];
@@ -107,12 +109,20 @@ async function run() {
         await page.locator('#rhythmB').dispatchEvent('change');
     }
 
+    // Add grouping voice lanes (each is one voice with its own grouping) to
+    // stress the Rhythm Tracks list, scheduler, and timeline.
+    for (let i = 2; i < LANES; i++) {
+        await page.locator('#groupingLanesContainer .add-voice-btn').click();
+        await page.waitForTimeout(40);
+    }
+
     // Start the transport so the canvas loop runs at full rate.
     await page.locator('#audioBtn').click();
     await page.waitForTimeout(800);
 
     const coarse = await page.evaluate(() => window.matchMedia('(pointer: coarse)').matches);
     const meter = await page.evaluate(() => `${document.querySelector('#rhythmA')?.value}×${document.querySelector('#rhythmB')?.value}`);
+    const lanes = await page.evaluate(() => document.querySelectorAll('#groupingLanesContainer .grouping-lane-row').length);
 
     // Instrument rAF callbacks: capture both the wall-clock delta between
     // frames and the JS self-time of each callback (the drawing work).
@@ -157,7 +167,7 @@ async function run() {
         results.push({ mode, ...r });
     }
 
-    console.log(`frame-probe: CPU throttle ×${CPU_RATE}, pointer-coarse=${coarse}, meter=${meter}, samples/mode≈${SAMPLES}`);
+    console.log(`frame-probe: CPU throttle ×${CPU_RATE}, pointer-coarse=${coarse}, meter=${meter}, groupingLanes=${lanes}, samples/mode≈${SAMPLES}`);
     console.log('mode    n    cbP50   cbP95   cbMax   Δp95    Δmax   (ms; cb = rAF callback JS self-time)');
     for (const r of results) {
         console.log(

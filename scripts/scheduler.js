@@ -29,6 +29,17 @@ export function syncAudioStartTime(state) {
 }
 
 /**
+ * True when `stepIndex` lands on a grouping-lane onset: the grouping start
+ * recurs every `groupSize` master steps, offset by `phase`. Testing the onset
+ * (rather than a change in the active step) is what makes a single-group lane
+ * — whose active step is always 0 — still fire once per cycle.
+ */
+export function isGroupOnset(stepIndex, phase, groupSize) {
+    if (!(groupSize >= 1)) return false;
+    return ((stepIndex - phase) % groupSize) === 0;
+}
+
+/**
  * Schedules audio for all voices across all lanes at a given master step.
  * Uses state.lastScheduledActive for dedup so consecutive master steps that
  * map to the same phrase/wheel step only fire once.
@@ -56,17 +67,18 @@ function scheduleStepAudio(state, lanes, channels, stepIndex, hitTime, globalVol
         lsa.master = masterStep;
     }
 
-    // Grouping lanes — one hit per group onset, deduped per lane. Pinned lanes
-    // loop their visible cycle continuously, mirroring the phrase-lane behavior.
+    // Grouping lanes — fire only on a group onset (stepIndex ≡ phase mod
+    // groupSize). Detecting the onset rather than a change in the active step
+    // is what lets a single-group lane (whose active step is always 0) fire
+    // once per cycle. Pinned lanes loop their visible cycle.
     for (const lane of (lanes.grouping || [])) {
         const groupSize = state.mainTeeth / lane.groupCount;
-        const active = getActivePhraseStep(stepIndex, 0, groupSize, lane.count());
+        if (!isGroupOnset(stepIndex, lane.phase || 0, groupSize)) continue;
+        const active = getActivePhraseStep(stepIndex, lane.phase || 0, groupSize, lane.count());
         let step = active;
         if (state.followPlayhead[lane.cycleKey] === false) {
             step = state.visibleCycle[lane.cycleKey] * lane.groupCount + (active % lane.groupCount);
         }
-        if (step === lane._lastStep) continue;
-        lane._lastStep = step;
         lane.voices.forEach((voice, vi) => {
             if (!voice.selected[step]) return;
             const ch = lane.voiceChannels[vi];

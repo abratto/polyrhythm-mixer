@@ -66,6 +66,9 @@ function makeLane(state, { groupCount, cycles = 1, linked = null, color = null }
         groupCount,
         cycles,
         linked,
+        // Offset: which pulse within the group the grouping starts on
+        // (0..groupSize-1). Only meaningful when groupSize > 1.
+        phase: 0,
         color: color || COLORS[_colorCursor++ % COLORS.length],
         cycleKey: `grouping_${id}`,
         channelPrefix: `grouping_${id}`,
@@ -97,12 +100,47 @@ function makeLane(state, { groupCount, cycles = 1, linked = null, color = null }
     lane.totalCycles = () => lane.cycles;
     lane.groupSize = () => state.mainTeeth / lane.groupCount;
     lane.label = () => `${lane.groupCount} ${lane.groupCount === 1 ? 'group' : 'groups'}`;
-    lane.description = () => `${lane.groupCount} groups of ${state.mainTeeth / lane.groupCount} pulses • ${lane.count()} steps across ${lane.cycles} ${lane.cycles === 1 ? 'cycle' : 'cycles'}`;
+    lane.description = () => {
+        const size = groupSizeFor(state, lane.groupCount);
+        const groups = `${lane.groupCount} ${lane.groupCount === 1 ? 'group' : 'groups'} of ${size} ${size === 1 ? 'pulse' : 'pulses'} per master cycle`;
+        const cycles = `${lane.count()} steps across ${lane.cycles} ${lane.cycles === 1 ? 'cycle' : 'cycles'}`;
+        const offset = size > 1
+            ? ` Each box is one group, split into its ${size} pulses; the highlighted segment is where the grouping starts (Offset ${lane.phase + 1}/${size}). Nudge Offset ← → to slide the grouping within its group.`
+            : ` The grouping spans the whole master cycle (one onset per cycle).`;
+        return `${groups} • ${cycles}.${offset}`;
+    };
     lane.textForStep = i => (i % lane.groupCount) + 1;
+    // Pulse segments drawn inside each group cell, with the offset marking the
+    // grouping's start pulse.
+    lane.stepSlices = () => groupSizeFor(state, lane.groupCount);
+    lane.stepPhase = () => lane.phase;
     lane.isBar = i => (i % lane.groupCount) === 0;
-    lane.isBeat = i => isOnQuarter((i * (state.mainTeeth / lane.groupCount)) % state.mainTeeth, state.mainTeeth);
+    lane.isBeat = i => isOnQuarter((i * (state.mainTeeth / lane.groupCount) + lane.phase) % state.mainTeeth, state.mainTeeth);
     lane.beatPeriod = () => quarterBeatPeriod(lane.groupCount);
     return lane;
+}
+
+/** Pulses per group for a lane (mainTeeth / groupCount), at least 1. */
+function groupSizeFor(state, groupCount) {
+    if (!Number.isInteger(groupCount) || groupCount <= 0) return 1;
+    const size = Math.round(state.mainTeeth / groupCount);
+    return size >= 1 ? size : 1;
+}
+
+/** Keeps lane.phase within 0..groupSize-1 after a grouping or frame change. */
+function normalizePhase(lane) {
+    const size = groupSizeFor(_deps.state, lane.groupCount);
+    if (size < 2) { lane.phase = 0; return; }
+    const p = Math.round(lane.phase) || 0;
+    lane.phase = ((p % size) + size) % size;
+}
+
+/** Shifts a lane's grouping start by one pulse (wrapping within the group). */
+function shiftPhase(lane, direction) {
+    const size = groupSizeFor(_deps.state, lane.groupCount);
+    if (size < 2) return;
+    lane.phase = ((lane.phase + direction) % size + size) % size;
+    rebuildGroupingLane(lane);
 }
 
 /** Creates a voice + channel on a lane and renders it. */
@@ -184,8 +222,9 @@ function buildLaneRow(lane, state) {
     gSel.addEventListener('change', () => {
         lane.groupCount = parseInt(gSel.value, 10);
         lane.linked = null;
+        normalizePhase(lane);
         resizeLaneVoices(lane, { fillNew: false });
-        buildGroupingLanes();
+        rebuildGroupingLane(lane);
     });
     gGroup.append(gLabel, gSel);
 
@@ -208,9 +247,40 @@ function buildLaneRow(lane, state) {
     cSel.addEventListener('change', () => {
         lane.cycles = parseInt(cSel.value, 10);
         resizeLaneVoices(lane, { fillNew: false });
-        buildGroupingLanes();
+        rebuildGroupingLane(lane);
     });
     cGroup.append(cLabel, cSel);
+
+    // Offset nudge: shifts which pulse within the group the grouping starts on.
+    // Visualized by the highlighted slice inside each group cell.
+    const offsetSize = groupSizeFor(state, lane.groupCount);
+    let oGroup = null;
+    if (offsetSize >= 2) {
+        oGroup = document.createElement('div');
+        oGroup.className = 'control-group lane-meter-select grouping-offset-group';
+        const oLabel = document.createElement('label');
+        oLabel.textContent = 'Offset';
+        oLabel.style.color = lane.color;
+        const nudge = document.createElement('div');
+        nudge.className = 'grouping-offset-nudge';
+        const oPrev = document.createElement('button');
+        oPrev.type = 'button';
+        oPrev.className = 'voice-nudge-btn grouping-offset-prev';
+        oPrev.textContent = '←';
+        oPrev.title = 'Shift the grouping start left';
+        oPrev.addEventListener('click', () => shiftPhase(lane, -1));
+        const oVal = document.createElement('span');
+        oVal.className = 'grouping-offset-value';
+        oVal.textContent = `${lane.phase + 1}/${offsetSize}`;
+        const oNext = document.createElement('button');
+        oNext.type = 'button';
+        oNext.className = 'voice-nudge-btn grouping-offset-next';
+        oNext.textContent = '→';
+        oNext.title = 'Shift the grouping start right';
+        oNext.addEventListener('click', () => shiftPhase(lane, 1));
+        nudge.append(oPrev, oVal, oNext);
+        oGroup.append(oLabel, nudge);
+    }
 
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
@@ -222,11 +292,13 @@ function buildLaneRow(lane, state) {
         if (idx >= 0) removeGroupingLane(idx);
     });
 
-    // Toolbar holds this lane's own grouping + phrase-length selectors and the
-    // remove control. Clear / Random / Reverse / Nudge and the per-voice mix
-    // controls live in the voice's collapsible rail (the ▸ dropdown), and
-    // + Voice sits at the bottom of the step boxes like the Master lane.
-    actions.append(gGroup, cGroup, removeBtn);
+    // Toolbar holds this lane's own grouping + phrase-length + offset controls
+    // and the remove button. Clear / Random / Reverse / Nudge and the per-voice
+    // mix controls live in the voice's collapsible rail (the ▸ dropdown),
+    // and + Voice sits at the bottom of the step boxes like the Master lane.
+    actions.append(gGroup, cGroup);
+    if (oGroup) actions.appendChild(oGroup);
+    actions.append(removeBtn);
 
     const viewActions = document.createElement('div');
     viewActions.className = 'lane-view-actions';
@@ -274,25 +346,8 @@ function buildLaneRow(lane, state) {
 }
 
 /** Rebuilds every grouping lane's DOM. */
-export function buildGroupingLanes() {
-    if (!_deps) return;
-    const { lanes, state, container } = _deps;
-    container.innerHTML = '';
-    lanes.grouping.forEach((lane, index) => {
-        lane._lastStep = -1;
-        if (lane.voices.length === 0) addGroupingVoice(lane);
-        lane.voices.forEach(v => { v._currentIndex = undefined; });
-        const row = buildLaneRow(lane, state);
-        container.appendChild(row);
-        buildLane(lane, state);
-        // Label each lane's (single) voice by lane number so the list reads
-        // "Voice 1, Voice 2, …" across lanes rather than "Voice 1" in every lane.
-        const firstLabel = lane.container.querySelector('.voice-row .voice-label');
-        if (firstLabel) firstLabel.textContent = `Voice ${index + 1}`;
-    });
-
-    // A single + Voice at the bottom of the list adds a new grouping lane —
-    // mirroring the Master lane's one + Voice button.
+/** Appends the single + Voice button that adds a new grouping lane. */
+function appendAddVoiceButton(container) {
     const addVoiceBtn = document.createElement('button');
     addVoiceBtn.type = 'button';
     addVoiceBtn.className = 'add-voice-btn';
@@ -300,7 +355,52 @@ export function buildGroupingLanes() {
     addVoiceBtn.title = 'Add a new grouping voice lane';
     addVoiceBtn.addEventListener('click', () => addGroupingLane());
     container.appendChild(addVoiceBtn);
+}
 
+/**
+ * Builds (or rebuilds in place) a single lane's DOM. Used both for the full
+ * list build and for targeted rebuilds when only one lane's grouping/cycles
+ * change — avoiding a teardown/recreate of every lane's step grid.
+ */
+function renderLaneRow(lane, index) {
+    const { state, container } = _deps;
+    lane._lastStep = -1;
+    if (lane.voices.length === 0) addGroupingVoice(lane);
+    lane.voices.forEach(v => { v._currentIndex = undefined; });
+    // Capture the previous row before buildLaneRow overwrites lane.rootEl.
+    const oldRow = lane.rootEl;
+    const row = buildLaneRow(lane, state);
+    if (oldRow && oldRow.parentElement === container) {
+        oldRow.replaceWith(row);
+    } else {
+        container.appendChild(row);
+    }
+    buildLane(lane, state);
+    // Label each lane's (single) voice by lane number so the list reads
+    // "Voice 1, Voice 2, …" across lanes rather than "Voice 1" in every lane.
+    const firstLabel = lane.container.querySelector('.voice-row .voice-label');
+    if (firstLabel) firstLabel.textContent = `Voice ${index + 1}`;
+}
+
+/** Rebuilds only the given lane (keeps the other lanes' DOM untouched). */
+function rebuildGroupingLane(lane) {
+    if (!_deps) return;
+    const index = _deps.lanes.grouping.indexOf(lane);
+    if (index < 0) return;
+    renderLaneRow(lane, index);
+    updateFullPatternCycles();
+    if (typeof _deps.onChange === 'function') _deps.onChange();
+}
+
+export function buildGroupingLanes() {
+    if (!_deps) return;
+    const { lanes, container } = _deps;
+    container.innerHTML = '';
+    lanes.grouping.forEach((lane, index) => renderLaneRow(lane, index));
+    // A single + Voice at the bottom of the list adds a new grouping lane —
+    // mirroring the Master lane's one + Voice button.
+    appendAddVoiceButton(container);
+    _lastSyncedFrame = _deps.state.mainTeeth;
     updateFullPatternCycles();
     if (typeof _deps.onChange === 'function') _deps.onChange();
 }
@@ -355,10 +455,18 @@ export function removeGroupingLane(index) {
  * lanes (the default A/B lanes) follow their meter; unlinked lanes snap to the
  * nearest valid divisor. Rebuilds the DOM.
  */
+let _lastSyncedFrame = -1;
+
 export function syncGroupingLanesToFrame() {
     if (!_deps) return;
     const { state, lanes } = _deps;
-    const valid = divisorsForGroups(state.mainTeeth);
+    const frame = state.mainTeeth;
+    const valid = divisorsForGroups(frame);
+    // A frame change alters the available groupings (option lists), so every
+    // lane must rebuild; otherwise only rebuild if a lane's count actually
+    // changed. This avoids tearing down all grouping lanes when an unrelated
+    // control (e.g. Master Phrase Length) triggers a system rebuild.
+    let changed = frame !== _lastSyncedFrame;
 
     lanes.grouping.forEach(lane => {
         const previous = lane.groupCount;
@@ -373,10 +481,19 @@ export function syncGroupingLanesToFrame() {
             lane.groupCount = nearestValue(valid, lane.groupCount);
         }
         // A grouping change invalidates the old step pattern; reset to default.
-        if (lane.groupCount !== previous) resetLaneVoicesToDefault(lane);
+        if (lane.groupCount !== previous) {
+            resetLaneVoicesToDefault(lane);
+            changed = true;
+        }
+        // groupSize depends on mainTeeth, so the offset can go out of range.
+        normalizePhase(lane);
     });
 
-    buildGroupingLanes();
+    _lastSyncedFrame = frame;
+    // The full-pattern length also depends on non-grouping cycles, so keep it
+    // current even when no lane needs a DOM rebuild.
+    updateFullPatternCycles();
+    if (changed) buildGroupingLanes();
 }
 
 /** Restores the default two A/B grouping lanes. */
@@ -396,17 +513,6 @@ export function resetGroupingLanes() {
     buildGroupingLanes();
 }
 
-/** Advances each grouping lane's playhead highlight for a master step. */
-export function markGroupingLanesActive(state, lanes, activeByKey) {
-    if (!lanes.grouping) return;
-    lanes.grouping.forEach(lane => {
-        const next = activeByKey?.[lane.cycleKey];
-        if (next === undefined) return;
-        if (lane._lastActive === next) return;
-        lane._lastActive = next;
-    });
-}
-
 function updateFullPatternCycles() {
     const { state, lanes } = _deps;
     const cycles = [state.masterPhraseCycles, ...lanes.grouping.map(l => l.cycles)];
@@ -424,6 +530,7 @@ export function serializeGroupingLanes(serializeVoice) {
     return _deps.lanes.grouping.map(lane => ({
         g: lane.groupCount,
         c: lane.cycles,
+        ph: lane.phase || 0,
         lk: lane.linked || null,
         v: lane.voices.map((voice, i) => serializeVoice(voice, lane.voiceChannels[i]))
     }));
@@ -449,6 +556,8 @@ export function restoreGroupingLanes(data, applyVoiceState) {
         cycles = Math.max(1, Math.min(MAX_CYCLES, cycles));
 
         const lane = makeLane(state, { groupCount, cycles, linked: entry.lk || null });
+        lane.phase = Number.isInteger(entry.ph) ? entry.ph : 0;
+        normalizePhase(lane);
         lanes.grouping.push(lane);
 
         const voiceData = Array.isArray(entry.v) && entry.v.length ? entry.v : [{}];
@@ -466,8 +575,3 @@ export function restoreGroupingLanes(data, applyVoiceState) {
     return true;
 }
 
-/** Returns the maximum cycle count across grouping lanes (for full-pattern length). */
-export function groupingMaxCycles() {
-    if (!_deps) return 1;
-    return _deps.lanes.grouping.reduce((max, l) => Math.max(max, l.cycles), 1);
-}

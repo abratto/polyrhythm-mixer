@@ -926,7 +926,7 @@ function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width, cycleProgr
             const groupSize = state.mainTeeth / lane.groupCount;
             voice.selected.forEach((on, i) => {
                 if (!on) return;
-                const step = (i * groupSize) % state.mainTeeth;
+                const step = ((i * groupSize) + (lane.phase || 0)) % state.mainTeeth;
                 drawTimelineMarker(ctx, startX + step * pixelPerTooth, y + dir * yOffset, lane.color, 'up', 4);
             });
         });
@@ -1041,9 +1041,11 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width, include
         const repeatSteps = lane.count() * groupSize;
         lane.voices.forEach((voice, vi) => {
             const rowY = rows[vi];
+            const phase = lane.phase || 0;
             voice.selected.forEach((on, i) => {
                 if (!on) return;
-                for (let pos = i * groupSize; pos < totalSteps + groupSize; pos += repeatSteps) {
+                for (let base = i * groupSize; base < totalSteps + groupSize; base += repeatSteps) {
+                    const pos = base + phase;
                     const normalized = ((pos % totalSteps) + totalSteps) % totalSteps;
                     drawTimelineMarker(ctx, startX + normalized * pixelPerStep, rowY, lane.color, 'dot', 4);
                 }
@@ -1283,13 +1285,18 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         if (currentStep !== prevStep) {
             const previousActive = { ...state.lastActive };
 
-            // Active step per grouping lane for a given master step.
-            const groupingActive = (s) => {
-                const obj = {};
-                (lanes.grouping || []).forEach(lane => {
-                    obj[lane.cycleKey] = getActivePhraseStep(s, 0, state.mainTeeth / lane.groupCount, lane.count());
-                });
-                return obj;
+            // Fills an active-step object in place (one per step) — avoids the
+            // intermediate object + spread the grouping lanes used to need.
+            const grouping = lanes.grouping || [];
+            const fillActive = (s, out) => {
+                out.master = ((s % state.masterPhraseSteps) + state.masterPhraseSteps) % state.masterPhraseSteps;
+                for (let i = 0; i < grouping.length; i++) {
+                    const lane = grouping[i];
+                    out[lane.cycleKey] = getActivePhraseStep(s, lane.phase || 0, state.mainTeeth / lane.groupCount, lane.count());
+                }
+                out.Awheel = getActiveWheelStep(s, state.phaseA, state.teethA, state.A);
+                out.Bwheel = getActiveWheelStep(s, state.phaseB, state.teethB, state.B);
+                return out;
             };
 
             // Bound catch-up after a main-thread stall (GC, layout, etc.): the
@@ -1302,21 +1309,11 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             const catchUpSteps = currentStep - prevStep;
             let lastActive;
             if (catchUpSteps > MAX_VISUAL_CATCH_UP_STEPS) {
-                lastActive = {
-                    master: ((currentStep % state.masterPhraseSteps) + state.masterPhraseSteps) % state.masterPhraseSteps,
-                    ...groupingActive(currentStep),
-                    Awheel: getActiveWheelStep(currentStep, state.phaseA, state.teethA, state.A),
-                    Bwheel: getActiveWheelStep(currentStep, state.phaseB, state.teethB, state.B)
-                };
+                lastActive = fillActive(currentStep, {});
                 state.lastActive = { ...lastActive };
             } else {
                 for (let s = prevStep + 1; s <= currentStep; s++) {
-                    lastActive = {
-                        master: ((s % state.masterPhraseSteps) + state.masterPhraseSteps) % state.masterPhraseSteps,
-                        ...groupingActive(s),
-                        Awheel: getActiveWheelStep(s, state.phaseA, state.teethA, state.A),
-                        Bwheel: getActiveWheelStep(s, state.phaseB, state.teethB, state.B)
-                    };
+                    lastActive = fillActive(s, {});
                     processTriggers(state, lanes, lastActive, channels);
                 }
             }

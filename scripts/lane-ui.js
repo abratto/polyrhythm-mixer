@@ -480,12 +480,36 @@ function buildVoiceInstrumentSelect(lane, voice, voiceIndex) {
 }
 
 /** Creates a single step button for a voice with click-to-toggle behavior. */
+/**
+ * Grouping cells draw a horizontal row of pulse segments (one per pulse in the
+ * group) along the bottom edge; the segment at the lane's offset marks where
+ * the grouping starts. Lanes without a `stepSlices` hook (master, etc.) are
+ * unaffected.
+ */
+function applyStepSlices(btn, lane) {
+    if (typeof lane.stepSlices !== 'function') return;
+    const count = lane.stepSlices();
+    // Skip huge subdivisions (small group counts) where segments would collapse.
+    if (!Number.isInteger(count) || count < 2 || count > 24) return;
+    btn.classList.add('has-slices');
+    const phase = typeof lane.stepPhase === 'function' ? lane.stepPhase() : 0;
+    const slices = document.createElement('span');
+    slices.className = 'step-slices';
+    for (let s = 0; s < count; s++) {
+        const slice = document.createElement('span');
+        slice.className = 'step-slice' + (s === phase ? ' start' : '');
+        slices.appendChild(slice);
+    }
+    btn.appendChild(slices);
+}
+
 function createStepButton(lane, voice, i, actualIndex) {
     actualIndex = actualIndex ?? i;
     const btn = document.createElement('button');
     btn.className = `step-btn ${lane.className}`;
     btn.id = `${lane.stepId}-${i}`;
     btn.textContent = lane.textForStep(i);
+    applyStepSlices(btn, lane);
 
     applyGroupClasses(btn, lane, i);
     if (voice.selected[actualIndex]) btn.classList.add('active');
@@ -1333,10 +1357,14 @@ export function applyMixVisuals(lanes) {
     reflectLaneMixSingle(lanes.Bwheel);
 }
 
-/** Rebuilds every lane's DOM buttons. */
+/**
+ * Rebuilds the fixed lanes' DOM buttons. Grouping lanes are rebuilt by
+ * grouping-lanes.js (which also owns their offset row), so they are excluded
+ * here — otherwise a rebuild would wipe the offset row.
+ */
 export function buildAllLanes(lanes, state) {
     registerRailLanes(lanes);
-    [lanes.master, lanes.Awheel, lanes.Bwheel, ...(lanes.grouping || [])].forEach(lane => buildLane(lane, state));
+    [lanes.master, lanes.Awheel, lanes.Bwheel].forEach(lane => buildLane(lane, state));
 }
 
 function removeCurrentClass(button) {
@@ -1605,12 +1633,32 @@ export function onScrollFollowChange(fn) {
  */
 const _lastPageByScroller = new WeakMap();
 
+// Caches whether each step scroller actually overflows. Reading
+// clientWidth/scrollWidth forces a synchronous layout, and this runs once per
+// voice on every step change — so with many grouping lanes it can thrash
+// layout on low-end devices. The result is cached per scroller and invalidated
+// on window resize (a rebuild produces fresh scroller elements, which simply
+// get measured once on first use).
+let _scrollOverflowCache = new WeakMap();
+if (typeof window !== 'undefined') {
+    window.addEventListener('resize', () => { _scrollOverflowCache = new WeakMap(); });
+}
+
+function scrollerOverflows(scroller) {
+    let overflows = _scrollOverflowCache.get(scroller);
+    if (overflows === undefined) {
+        overflows = scroller.scrollWidth > scroller.clientWidth;
+        _scrollOverflowCache.set(scroller, overflows);
+    }
+    return overflows;
+}
+
 function revealStepInView(btn) {
     if (!_followScroll || !btn) return;
     const scroller = btn.closest('.voice-steps, .sequencer-container');
     if (!scroller) return;
+    if (!scrollerOverflows(scroller)) return;
     const clientWidth = scroller.clientWidth;
-    if (scroller.scrollWidth <= clientWidth) return;
     const sRect = scroller.getBoundingClientRect();
     const bRect = btn.getBoundingClientRect();
     const scrollLeft = scroller.scrollLeft;

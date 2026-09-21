@@ -17,6 +17,7 @@ The **audio clock drives the visual**. The master wheel angle is computed from t
 - **Polyrhythm sequencers** — Meter A and Meter B pulse lanes with individual tooth selection; each tooth lights up independently on click and triggers its own sound, gear dot, and spoke
 - **Grouping voice lanes** — The Master lane plus a dynamic list of grouping lanes (equal divisions of the master cycle). Each lane is one voice, shows one step per group, and has its own grouping selector; **+ Voice** adds a new lane and **×** removes one
 - **Independent groupings** — Each lane defaults to the chosen polyrhythm (e.g. 6 against 4 → 6- and 4-group lanes) and can be repointed at any divisor of the master cycle (including a single group) without affecting the others
+- **Grouping offset** — Each group cell is subdivided into its pulses; the **Offset** nudge shifts where the grouping starts within its group (e.g. the four distinct 3-against-4s of a 3-against-4 frame)
 - **Per-lane controls** — Instrument select, volume, solo, and mute are colocated with each sequencer
 - **Master Beat reference strip** — 4/4 click track displayed alongside the polyrhythm beat scheme
 - **Gear visualization** — Grey 4/4 spokes, pink (A) and cyan (B) meter spokes, and magenta overlap where they land on the same tooth; colored dots mark active pulse positions
@@ -41,10 +42,24 @@ All sounds are synthesized in real-time:
 2. **Enable audio** — Press Enable Audio (required by browser autoplay policy)
 3. **Tap steps** — Click individual teeth in the Meter A / Meter B pulse lanes, or tap the grouping lanes in Rhythm Tracks
 4. **Add grouping voice lanes** — In Rhythm Tracks, click **+ Voice** to add a lane; each lane has its own Grouping dropdown to pick any equal division of the master cycle (scoped to that lane)
-5. **Layer voices** — Click + Voice on the Master lane for layered master patterns; each grouping lane is a voice of its own
-6. **Extend phrases** — Set a grouping lane's Phrase Length (or the Master) to 2–8 cycles for longer repeating patterns
-7. **Choose sounds** — Each lane and voice has its own instrument select, volume, solo, and mute
-8. **Save or Share** — Save stores rhythms locally; Share copies a URL encoding the full state
+5. **Set the offset** — Each group box is split into its pulses; nudge **Offset** to start the grouping on a different pulse (e.g. the four distinct 3-against-4s)
+6. **Layer voices** — Click + Voice on the Master lane for layered master patterns; each grouping lane is a voice of its own
+7. **Extend phrases** — Set a grouping lane's Phrase Length (or the Master) to 2–8 cycles for longer repeating patterns
+8. **Choose sounds** — Each lane and voice has its own instrument select, volume, solo, and mute
+9. **Save or Share** — Save stores rhythms locally; Share copies a URL encoding the full state
+
+## Groupings & Offsets
+
+The **Polyrhythm Beat Scheme** defines the *frame*: Meter A and Meter B set the master cycle to `LCM(A, B)` pulses. **Rhythm Tracks** then sequences that frame as a dynamic list of **grouping lanes**.
+
+Each grouping lane is one voice and one **equal division** of the master cycle. Pick a group count (any divisor of the frame) and the lane shows one box per group. The default two lanes are the groupings of the chosen polyrhythm, and **+ Voice** adds more — each lane keeps its own Grouping menu, phrase length, instrument, and controls, independent of the others.
+
+Each box is split into its pulses (the segment row along the bottom edge). The highlighted segment is where the grouping starts; the **Offset** nudge (`← 2/4 →`) slides that start by one pulse, wrapping within the group.
+
+- **6 against 4** → frame of 12 pulses. The 6-group lane has 2 pulses per group, so each box splits into 2 segments; the 4-group lane splits into 3.
+- **3 against 4** → frame of 12 pulses. The 3-group lane has 4 pulses per group, giving **four distinct start positions** — the four "3-against-4s" (the grouping starting on pulse 1, 2, 3, or 4 of its group).
+
+Offset is per lane, so different lanes can sit at different phases. A grouping of **1** (the whole master cycle) fires once per cycle.
 
 ## Share Links & Versioning
 
@@ -57,6 +72,7 @@ Share payloads are compressed (DEFLATE) and Base64URL-encoded with a `z:` prefix
 - **Modular codebase** — `lane-ui.js`, `scheduler.js`, `render.js`, `share.js`, `instruments.js`, etc.
 - **Shared synthesis data** — `instrument-data.js` is the single source of truth; both the app and tuner pages import from it
 - **Per-tooth scheduling** — Each tooth in a wheel lane is independently scheduled, selected, and visualized
+- **Grouping scheduling** — Grouping lanes fire on group onsets (`stepIndex ≡ phase mod groupSize`), so any group count — including a single group — fires once per cycle; the playhead derives its active step from the same helper
 
 ## Running Locally
 
