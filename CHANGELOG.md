@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.17.0 — 2026-09-21
+
+### Added
+- **Rhythm Tracks grouping voice lanes** replace the fixed Meter A/B Phrase lanes. Each lane is one voice and one equal division of the master cycle; the default two lanes are the chosen polyrhythm's groupings (e.g. 6 against 4 → a 6-group and a 4-group lane). **+ Voice** adds a lane, **×** removes one, and each lane has its own Grouping selector (any divisor of the frame, including a single group), phrase length, instrument, volume, solo/mute, nudge, and per-voice edit controls.
+- **Grouping offset.** Each group cell is split into its pulses; the highlighted segment marks where the grouping starts, and the **Offset** nudge (`← n/N →`) slides that start by one pulse, wrapping within the group. For 3 against 4, the 3-group lane's 4 pulses give the four distinct 3-against-4s. Offset is per lane and persists in share/save payloads.
+- The meter range is extended to 24, so 18 against 24 (the 72-pulse frame) can be selected directly.
+- Share payloads are now **v5**, with automatic migration from v0 → v5 (old A/B phrase lanes become the first two grouping lanes; a missing offset defaults to 0).
+
+### Fixed
+- A single-group grouping lane now fires once per cycle. Group onsets are detected directly (`stepIndex ≡ phase mod groupSize`) rather than by changes in the active step, which never changed for a one-group lane.
+
+### Changed (performance)
+- Editing one grouping lane's grouping or phrase length rebuilds only that lane, and unrelated system rebuilds no longer tear down every grouping lane.
+- Step-follow no longer forces a synchronous layout for every voice on every step (scroller overflow is cached and invalidated on resize).
+- Fewer per-step allocations in the render loop; dead grouping helpers removed.
+- `npm run test:frames` (frame-probe) gains a `LANES` stress option.
+
+### Docs
+- README gains a "Groupings & Offsets" section; the per-lane "?" help and the help modal were updated.
+
 ## v1.16.2 — 2026-09-09
 
 ### Fixed
