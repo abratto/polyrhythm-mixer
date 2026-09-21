@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.17.1 — 2026-09-21
+
+### Fixed (performance)
+- Playback no longer skips or plays unevenly on low-end tablets. The audio path was both audio-thread and main-thread bound:
+  - Prerendered instruments were 3-second buffers played in full (the sound plus a long silent tail), so overlapping hits piled seconds of silence onto the audio thread and caused underruns. Each buffer now stores its real sounding length and plays only that span (`source.start(now, 0, duration)`), so nodes free on time.
+  - The scheduler lookahead is raised from 50 ms to 120 ms, so a main-thread stall under that window is already pre-scheduled and still plays on time. The catch-up reseed is now time-based (250 ms) rather than a fixed 8 steps — which was ~150 ms at dense meters but ~1.8 s at sparse ones.
+  - The per-frame canvas signature strings (voice counts / layer signature) are rebuilt on the existing 4-frame stride, so a frame allocates none of them.
+
 ## v1.17.0 — 2026-09-21
 
 ### Added
