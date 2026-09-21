@@ -1131,6 +1131,13 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
     let _frameNo = 0;
     let _cachedPatternChecksum = 0;
     let _cachedDotsSig = '';
+    // Signature strings are rebuilt on the same stride (they only detect
+    // changes), so a frame doesn't allocate them.
+    let _cachedVoiceCounts = '';
+    let _cachedBaseSig = '';
+    let _cachedSigB = '';
+    let _sigBaseForB = null;
+    let _sigCycleForB = null;
 
     function animate(timestamp) {
         try {
@@ -1352,14 +1359,16 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         if (_frameNo % 4 === 0) {
             _cachedPatternChecksum = computePatternChecksum(lanes);
             _cachedDotsSig = computeDotsSignature(state, lanes);
+            let voiceCounts = String(lanes.master.voices.length);
+            for (const lane of (lanes.grouping || [])) voiceCounts += '.' + lane.voices.length;
+            _cachedVoiceCounts = voiceCounts;
+            _cachedBaseSig = [state.A, state.B, state.mainTeeth, state.teethA, state.teethB, state.masterPhraseCycles, state.masterPhraseSteps, state.fullPatternCycles, state.phaseA, state.phaseB, canvas.width, canvas.height, isMobile, _cachedVoiceCounts, _cachedPatternChecksum].join('|');
         }
         _frameNo++;
-        const patternChecksum = _cachedPatternChecksum;
-        const voiceCounts = `${lanes.master.voices.length}_${(lanes.grouping || []).map(l => l.voices.length).join('.')}`;
+        const baseSig = _cachedBaseSig;
         const masterCurrentCycle = state.masterPhraseCycles > 1
             ? Math.floor(currentStep / state.mainTeeth) % state.masterPhraseCycles
             : 0;
-        const baseSig = [state.A, state.B, state.mainTeeth, state.teethA, state.teethB, state.masterPhraseCycles, state.masterPhraseSteps, state.fullPatternCycles, canvas.width, canvas.height, isMobile, voiceCounts, patternChecksum].join('|');
 
         // Timelines — push down when many master voices to avoid overlapping the gear
         const timelineX = (canvas.width - 700) / 2;
@@ -1480,7 +1489,13 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         // Master-cycle timeline layer: rebuilt only when the playing master
         // cycle (or meter/pattern state) changes, then blitted. The playhead
         // is drawn live on top every frame.
-        const sigB = `${baseSig}_${masterCurrentCycle}_${state.phaseA}_${state.phaseB}`;
+        let sigB = _cachedSigB;
+        if (baseSig !== _sigBaseForB || masterCurrentCycle !== _sigCycleForB) {
+            sigB = `${baseSig}_${masterCurrentCycle}`;
+            _cachedSigB = sigB;
+            _sigBaseForB = baseSig;
+            _sigCycleForB = masterCurrentCycle;
+        }
         if (sigB !== _layerBSig || !_layerB) {
             _layerB = _ensureScratchLayer(_layerB, canvas.width, canvas.height);
             const o = _layerB.getContext('2d');

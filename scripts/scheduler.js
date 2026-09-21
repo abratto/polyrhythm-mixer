@@ -97,7 +97,18 @@ function scheduleStepAudio(state, lanes, channels, stepIndex, hitTime, globalVol
 
 
 let _schedulerTimer = null;
-const MAX_CATCH_UP_STEPS = 8;
+
+// Scheduling horizon: hits are pre-scheduled this far ahead, so a main-thread
+// stall shorter than this is already committed to the audio graph and still
+// plays on time. Larger = more resilient to jank. Taps don't preview audio
+// (only the scheduler triggers sounds), so this adds no tap-feedback latency —
+// it only means pattern/volume edits are heard up to this much later.
+const LOOKAHEAD_SECONDS = 0.12;
+
+// Reseed (drop the missed steps) only when a stall exceeds this. Time-based so
+// the behaviour is consistent across meters and tempos — a fixed step count is
+// ~150ms at dense meters but ~1.8s at sparse ones.
+const MAX_CATCH_UP_SECONDS = 0.25;
 
 /**
  * Self-adjusting audio scheduling loop. Runs independently of rAF,
@@ -117,9 +128,8 @@ export function startAudioScheduler(state, lanes, channels, globalVolumeSource) 
     const stepDuration = stepSize / rps;
     const quarterDuration = 60 / state.tempo;
     const elapsed = state.audioCtx.currentTime - state.audioStartTime;
-    const lookahead = 0.05;
-    state.lastScheduledStep = Math.floor((elapsed + lookahead) / stepDuration);
-    state.lastScheduledQuarter = Math.floor((elapsed + lookahead) / quarterDuration);
+    state.lastScheduledStep = Math.floor((elapsed + LOOKAHEAD_SECONDS) / stepDuration);
+    state.lastScheduledQuarter = Math.floor((elapsed + LOOKAHEAD_SECONDS) / quarterDuration);
     state.lastScheduledActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };
 
 
@@ -153,15 +163,17 @@ export function startAudioScheduler(state, lanes, channels, globalVolumeSource) 
 
         const now = state.audioCtx.currentTime;
         const elapsed = now - state.audioStartTime;
-        const lookahead = 0.05;
-        const targetStep = Math.floor((elapsed + lookahead) / stepDuration);
-        const targetQuarter = Math.floor((elapsed + lookahead) / quarterDuration);
+        const targetStep = Math.floor((elapsed + LOOKAHEAD_SECONDS) / stepDuration);
+        const targetQuarter = Math.floor((elapsed + LOOKAHEAD_SECONDS) / quarterDuration);
         const globalVolume = currentGlobalVolume();
 
-        // A throttled tab or a long main-thread stall can leave thousands of
-        // expired events behind. Resume from the current clock position instead
-        // of collapsing every missed hit into an audible burst.
-        if (targetStep - state.lastScheduledStep > MAX_CATCH_UP_STEPS) {
+        // A throttled tab or a long main-thread stall can leave many expired
+        // events behind. Resume from the current clock position instead of
+        // collapsing every missed hit into an audible burst. Stalls shorter
+        // than the lookahead are already pre-scheduled, so this only trips on
+        // genuinely large gaps.
+        const catchUpSteps = targetStep - state.lastScheduledStep;
+        if (catchUpSteps > 0 && catchUpSteps * stepDuration > MAX_CATCH_UP_SECONDS) {
             state.lastScheduledStep = targetStep;
             state.lastScheduledQuarter = targetQuarter;
             state.lastScheduledActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };

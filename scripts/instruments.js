@@ -1486,8 +1486,29 @@ function acquireGain(state) { return state.audioCtx.createGain(); }
 // Live synthesis remains the fallback: it runs while the offline render is
 // pending and permanently if rendering fails.
 const PRERENDER_SECONDS = 3;
-const _prerenderBuffers = new Map();   // variant -> AudioBuffer | null (null = live-only)
+// variant -> { buffer, duration } | null (null = live-only). `duration` is the
+// buffer's real sounding length, so a hit plays only the sound (not the long
+// silent tail), which keeps the audio thread from mixing seconds of silence
+// per overlapping hit on low-end devices.
+const _prerenderBuffers = new Map();
 const _prerenderPending = new Set();
+
+/**
+ * Finds the sounding length of a rendered buffer by scanning back from the end
+ * for the last sample above a small threshold, then adds a short release tail.
+ * Clamped to the buffer duration with a small minimum.
+ */
+function soundingDuration(buffer, sampleRate) {
+    const data = buffer.getChannelData(0);
+    const threshold = 1e-4;
+    let last = -1;
+    for (let i = data.length - 1; i >= 0; i--) {
+        if (Math.abs(data[i]) > threshold) { last = i; break; }
+    }
+    if (last < 0) return Math.min(buffer.duration, 0.05);
+    const seconds = (last + 1) / sampleRate + 0.04;
+    return Math.max(0.05, Math.min(buffer.duration, seconds));
+}
 
 function variantKeyFor(key, channelName) {
     return channelName && channelName.startsWith('A') ? `${key}:A` : key;
@@ -1501,7 +1522,10 @@ function prerenderVariant(state, key, variant, channelName) {
         if (!fn) throw new Error(`Unknown instrument: ${key}`);
         fn({ audioCtx: offline }, 0, 1, channelName || '');
         offline.startRendering().then(buffer => {
-            _prerenderBuffers.set(variant, buffer);
+            _prerenderBuffers.set(variant, {
+                buffer,
+                duration: soundingDuration(buffer, sampleRate)
+            });
         }).catch(() => {
             _prerenderBuffers.set(variant, null);
         });
@@ -1518,15 +1542,15 @@ function prerenderVariant(state, key, variant, channelName) {
  */
 export function triggerInstrument(state, key, now, vol, channelName) {
     const variant = variantKeyFor(key, channelName);
-    let buffer = _prerenderBuffers.get(variant);
-    if (buffer === undefined) {
+    let entry = _prerenderBuffers.get(variant);
+    if (entry === undefined) {
         if (!_prerenderPending.has(variant)) {
             _prerenderPending.add(variant);
             prerenderVariant(state, key, variant, channelName);
         }
-        buffer = null;
+        entry = null;
     }
-    if (!buffer) {
+    if (!entry) {
         const fn = instruments[key];
         if (fn) fn(state, now, vol, channelName || '');
         return;
@@ -1534,12 +1558,13 @@ export function triggerInstrument(state, key, now, vol, channelName) {
 
     const ctx = state.audioCtx;
     const source = ctx.createBufferSource();
-    source.buffer = buffer;
+    source.buffer = entry.buffer;
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(vol, now);
     source.connect(gain);
     gain.connect(ctx.destination);
-    source.start(now);
+    // Play only the sounding span, not the whole (mostly silent) prerender.
+    source.start(now, 0, entry.duration);
     source.onended = () => { source.disconnect(); gain.disconnect(); };
 }
 
