@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.18.0 — 2026-09-21
+
+### Added
+- **Every instrument in the catalog is now tunable.** Instruments previously hardcoded in `instruments.js` were given editable parameter blocks in `instrument-data.js` and their synthesis functions refactored to read them, so what the tuners preview is exactly what the app plays.
+  - **Bongos:** new **Bongo Slap (High)** (Macho golpe seco) and **Bongo Mute (Low)** (Hembra tapao).
+  - **Congas:** retuned open tones plus new **bass/palma** (×3), **press/tapao** (×3), and **ringing slap/galleta** (×3) strokes, completing the stroke set across Tumba, Tres Dos, and Quinto.
+  - **Batá:** the full ensemble (open tones, chachá strikes, and presses) is now parameter-driven and tuneable in the hybrid tuner. The old generic "Batá Slap" was retired in favour of the drum-specific chachá strikes.
+  - **21 percussion instruments** (metals, bells, woods, shakers, and noise) are now tuneable: closed/open hi-hat, shaker, foot tap, crash, ride, agogo, ping, claves, woodblock, rimshot, temple block, castanets, cowbell, clap, maraca, tambourine, cabasa/shekere, guiro, gankogui, and triangle. Added **Palitos (Cáscara / Catá)**.
+  - **Gankogui** is now two single iron bells (**Low** and **High**) in place of the paired double-bell strike; added **Cowbell Mouth (Boca)** and **Cowbell Body (Centro)** campana strokes.
+  - **Ewe ensemble** (Agbadza/Gahu): **Kaganu**, **Kidi**, **Sogo**, **Atsimevu** (hand), **Atsimevu Stick**, plus **Kidi Press** and **Sogo Press**.
+  - **Axatse** (Ewe gourd rattle): **Thigh (Pa)** and **Palm (Ti)** strokes.
+- **`tuners/percussion.html`** — new tuner page for the metals, bells, woods, and shakers.
+- The tuner pages now preview the real synth (`scripts/instruments.js`) instead of duplicating inline synthesis, so tuning matches the app exactly; **Copy as Code** emits a pasteable `params:` block.
+- Catalog instruments alphabetised by display label.
+
+### Changed (internal)
+- Introduced shared, parameter-driven renderers (`playCongaVariant`, `playBongoVariant`, `playBata*`, `playGankoguiBell`, `playCowbell*`, and others) so instrument families share one code path; removed the now-dead `createCongaTone`/`createBataTone`/`createMetalBellStrike` helpers.
+- The bongo renderer accepts both numbered (`overRatio1`) and unnumbered (`overRatio`) first-overtone keys.
+- Added a `MIN_GAIN` constant for exponential-decay floors and explicitly stop noise sources at the end of their transient.
+
 ## v1.17.2 — 2026-09-21
 
 ### Changed (internal cleanup)

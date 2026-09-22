@@ -314,7 +314,6 @@ async function run() {
             { value: 'bata_high', label: 'Batá Drum (High)' },
             { value: 'bata_low_press', label: 'Batá Press (Low)' },
             { value: 'bata_middle_press', label: 'Batá Press (Middle)' },
-            { value: 'bata_slap', label: 'Batá Slap' },
             { value: 'bata_high_slap', label: 'Batá Slap (High)' },
             { value: 'bata_low_slap', label: 'Batá Slap (Low)' },
             { value: 'bata_middle_slap', label: 'Batá Slap (Middle)' }
@@ -326,14 +325,24 @@ async function run() {
             { value: 'conga_high', label: 'Conga (High)' },
             { value: 'conga_low', label: 'Conga (Low)' },
             { value: 'conga_middle', label: 'Conga (Middle)' },
-            { value: 'conga_slap', label: 'Conga Slap' }
-        ]), 'Mixer menus should expose low, middle, high, and slap conga sounds.', congaOptions);
+            { value: 'conga_high_bass', label: 'Conga Bass (High)' },
+            { value: 'conga_low_bass', label: 'Conga Bass (Low)' },
+            { value: 'conga_middle_bass', label: 'Conga Bass (Middle)' },
+            { value: 'conga_high_press', label: 'Conga Press (High)' },
+            { value: 'conga_low_press', label: 'Conga Press (Low)' },
+            { value: 'conga_middle_press', label: 'Conga Press (Middle)' },
+            { value: 'conga_slap', label: 'Conga Slap' },
+            { value: 'conga_high_slap', label: 'Conga Slap (High)' },
+            { value: 'conga_low_slap', label: 'Conga Slap (Low)' },
+            { value: 'conga_middle_slap', label: 'Conga Slap (Middle)' }
+        ]), 'Mixer menus should expose the conga open tones, press strokes, and slaps.', congaOptions);
         const expandedPercussionOptions = await page.locator('#soundDriver option').evaluateAll(options => options
             .map(option => ({ value: option.value, label: option.textContent.trim() }))
-            .filter(option => ['cabasa_shekere', 'gankogui', 'guiro', 'talking_drum', 'temple_block', 'triangle', 'udu'].includes(option.value)));
+            .filter(option => ['cabasa_shekere', 'gankogui_low', 'gankogui_high', 'guiro', 'talking_drum', 'temple_block', 'triangle', 'udu'].includes(option.value)));
         assert(same(expandedPercussionOptions, [
             { value: 'cabasa_shekere', label: 'Cabasa / Shekere' },
-            { value: 'gankogui', label: 'Gankogui Double Bell' },
+            { value: 'gankogui_low', label: 'Gankogui Bell (Low)' },
+            { value: 'gankogui_high', label: 'Gankogui Bell (High)' },
             { value: 'guiro', label: 'Guiro Scraper' },
             { value: 'talking_drum', label: 'Talking Drum' },
             { value: 'temple_block', label: 'Temple Block' },

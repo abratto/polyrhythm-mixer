@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Membrane Family Tuner</title>
+<title>Percussion Family Tuner</title>
 <style>
 body { font-family: system-ui, sans-serif; max-width: 680px; margin: 30px auto; background: #121214; color: #e0e0e6; padding: 0 16px; }
 h1 { font-size: 20px; text-align: center; margin-bottom: 4px; }
@@ -26,8 +26,8 @@ button { padding: 12px 0; font-size: 16px; font-weight: 700; border: none; borde
 </style>
 </head>
 <body>
-<h1>Membrane Family Tuner</h1>
-<p class="subtitle">Kick, Tom, Talking Drum, Udu</p>
+<h1>Percussion Family Tuner</h1>
+<p class="subtitle">Metals, Bells, Woods, Shakers &amp; Noise</p>
 
 <select id="instrumentSelect"></select>
 <div id="params"></div>
@@ -42,12 +42,9 @@ import { instrumentData } from '../scripts/instrument-data.js';
 import { instruments as synth } from '../scripts/instruments.js';
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-// ── Instrument parameter database (current values from instruments.js) ──
-
-
 // ── Instruments loaded from instrument-data.js ──
 const instruments = {};
-Object.keys(instrumentData).filter(k => instrumentData[k].family === 'membrane').forEach(k => {
+Object.keys(instrumentData).filter(k => instrumentData[k].family === 'percussion').forEach(k => {
   const src = instrumentData[k];
   instruments[k] = {
     label: src.label,
@@ -74,14 +71,14 @@ let currentInstrument = null;
 function loadInstrument(key) {
   currentInstrument = key;
   const data = instruments[key];
-  
+
   Object.keys(sliders).forEach(k => delete sliders[k]);
   paramsDiv.innerHTML = '';
-  
+
   data.params.forEach(p => {
     const div = document.createElement('div');
     div.className = 'param';
-    
+
     const label = document.createElement('label');
     const nameSpan = document.createElement('span');
     nameSpan.className = 'name';
@@ -91,31 +88,31 @@ function loadInstrument(key) {
     valSpan.textContent = p.val + (p.unit ? ' ' + p.unit : '');
     label.appendChild(nameSpan);
     label.appendChild(valSpan);
-    
+
     const input = document.createElement('input');
     input.type = 'range';
     input.min = p.min;
     input.max = p.max;
     input.step = p.step;
     input.value = p.val;
-    
+
     const gloss = document.createElement('div');
     gloss.className = 'glossary';
     gloss.textContent = p.gloss;
-    
+
     sliders[p.key] = { input, valSpan, unit: p.unit };
-    
+
     input.addEventListener('input', () => {
       valSpan.textContent = parseFloat(input.value) + (p.unit ? ' ' + p.unit : '');
       document.getElementById('status').textContent = 'Tweaking ' + data.label;
     });
-    
+
     div.appendChild(label);
     div.appendChild(input);
     div.appendChild(gloss);
     paramsDiv.appendChild(div);
   });
-  
+
   document.getElementById('status').textContent = data.label + ' loaded. Adjust sliders, then press Play.';
   document.getElementById('codeArea').style.display = 'none';
 }
