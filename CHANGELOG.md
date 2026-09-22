@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.17.2 — 2026-09-21
+
+### Changed (internal cleanup)
+- Removed dead code left over from the retired Meter A/B Phrase lanes, de-duplicated shared helpers (the quarter-note helpers now live in `math.js`; grouping uses `lcm`), and simplified unreachable branches. No behavior change.
+- Added `npm test` (runs the fast suites) and wired the previously unlisted compression test as `test:compression`.
+- Refreshed `roadmap.md`.
+
 ## v1.17.1 — 2026-09-21
 
 ### Fixed (performance)
