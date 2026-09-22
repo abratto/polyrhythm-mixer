@@ -1,3 +1,9 @@
+/**
+ * saved-rhythms.js — Named rhythm library in localStorage.
+ *
+ * Serializes/restores the full app state via share.js, manages the saved-rhythms
+ * list (create, rename, delete, load), and drives the Save/Load modals.
+ */
 import { createStatePayload, restoreStatePayload } from './share.js';
 
 const SAVED_RHYTHMS_KEY = 'alans-polyrhythm-mixer-saved-rhythms';

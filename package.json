@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "test": "npm run test:groupings && npm run test:wheel-ratios && npm run test:scheduler-recovery && npm run test:oscillator-lifecycle && npm run test:compression",
     "test:oscillator-lifecycle": "node scripts/test-oscillator-lifecycle.js",
     "test:scheduler-recovery": "node scripts/test-scheduler-recovery.js",
     "test:wheel-ratios": "node scripts/test-wheel-ratios.js",
     "test:groupings": "node scripts/test-groupings.js",
+    "test:compression": "node scripts/test-compression.js",
     "test:smoke": "node scripts/regression-smoke.js",
     "test:smoke:headed": "HEADFUL=1 node scripts/regression-smoke.js",
     "test:frames": "node scripts/frame-probe.js"

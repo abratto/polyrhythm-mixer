@@ -15,7 +15,7 @@
  * (buildMultiVoiceLane via buildLane); this module owns their DOM, channels,
  * and pattern lifecycle.
  */
-import { getActivePhraseStep, gcd } from './math.js';
+import { getActivePhraseStep, isOnQuarter, quarterBeatPeriod, lcm } from './math.js';
 import { createVoiceChannel } from './channels.js';
 import { buildLane } from './lanes.js';
 
@@ -41,17 +41,6 @@ export function divisorsForGroups(frame) {
 function nearestValue(values, target) {
     if (!values.length) return target;
     return values.reduce((best, v) => Math.abs(v - target) < Math.abs(best - target) ? v : best, values[0]);
-}
-
-function quarterBeatPeriod(n) {
-    return n / gcd(n, 4);
-}
-
-function isOnQuarter(tick, mainTeeth) {
-    const q = mainTeeth / 4;
-    if (q === 0) return false;
-    const r = ((tick % q) + q) % q;
-    return Math.min(r, q - r) < 1e-6;
 }
 
 function makeVoice() {
@@ -516,12 +505,7 @@ export function resetGroupingLanes() {
 function updateFullPatternCycles() {
     const { state, lanes } = _deps;
     const cycles = [state.masterPhraseCycles, ...lanes.grouping.map(l => l.cycles)];
-    state.fullPatternCycles = cycles.reduce((acc, c) => lcmSafe(acc, c), 1);
-}
-
-function lcmSafe(a, b) {
-    if (!a || !b) return a || b || 1;
-    return Math.abs(a * b) / gcd(a, b);
+    state.fullPatternCycles = cycles.reduce((acc, c) => lcm(acc, c), 1);
 }
 
 /** Serializes grouping lanes for share/save. */

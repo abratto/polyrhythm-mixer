@@ -54,8 +54,6 @@ export function createChannels() {
         },
         // Multi-voice channels — populated dynamically
         masterVoices: [],
-        Avoices: [],
-        Bvoices: [],
         // Rhythm Tracks grouping lanes' voice channels — populated dynamically
         groupingVoices: []
     };
@@ -107,19 +105,19 @@ export function createVoiceChannel(container, voiceIndex, prefix, defaults, gain
 
 /** Default instruments for each voice channel prefix. */
 const voiceDefaults = {
-    master: 'kick',
-    A: 'tambourine',
-    B: 'tambourine'
+    master: 'kick'
 };
 
-/** Adds a new voice channel to a multi-voice group. */
+/**
+ * Adds a new voice channel to the Master lane group. Grouping lanes create
+ * their own channels in grouping-lanes.js.
+ */
 export function addVoiceChannel(channels, prefix, container, voiceIndex) {
     try {
-        const gainScale = prefix === 'master' ? 0.6 : prefix === 'A' ? 0.5 : 0.4;
+        const gainScale = prefix === 'master' ? 0.6 : 0.5;
         const channel = createVoiceChannel(container, voiceIndex, prefix, voiceDefaults, gainScale);
-        const key = prefix === 'master' ? 'masterVoices' : prefix === 'A' ? 'Avoices' : 'Bvoices';
-        if (!channels[key]) channels[key] = [];
-        channels[key].push(channel);
+        if (!channels.masterVoices) channels.masterVoices = [];
+        channels.masterVoices.push(channel);
 
         // Volume is owned by the mixer strip; Solo/Mute are mounted inside the
         // lane voice rows and bound there via bindSoloMute.
@@ -243,8 +241,6 @@ export function refreshSilenced(channels) {
         channels.Awheel,
         channels.Bwheel,
         ...(channels.masterVoices || []),
-        ...(channels.Avoices || []),
-        ...(channels.Bvoices || []),
         ...(channels.groupingVoices || [])
     ];
     for (const c of all) {
@@ -259,7 +255,7 @@ export function isAnyChannelSoloed(channels) {
     for (const key of ['driver', 'Awheel', 'Bwheel']) {
         if (channels[key]?.soloed) return true;
     }
-    for (const key of ['masterVoices', 'Avoices', 'Bvoices', 'groupingVoices']) {
+    for (const key of ['masterVoices', 'groupingVoices']) {
         if ((channels[key] || []).some(ch => ch?.soloed)) return true;
     }
     return false;

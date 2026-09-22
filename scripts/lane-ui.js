@@ -1,16 +1,16 @@
 /**
- * lanes.js — Sequencer lane management with multi-voice support.
+ * lane-ui.js — Sequencer lane rendering and interaction.
  *
- * Each "lane group" represents a row of step buttons in the mixer UI:
- *   - master: the master wheel sequence (one step per tooth)
- *   - Aphrase / Bphrase: phrase sequencers for meters A and B
- *   - Awheel / Bwheel: wheel lanes showing equal placements within one cycle
+ * Owns the fixed lane groups and the shared lane-building machinery:
+ *   - master: the master wheel sequence (one step per tooth), multi-voice
+ *   - Awheel / Bwheel: pulse lanes showing equal placements within one cycle
  *
- * Master, Aphrase, and Bphrase support multiple independent voices.
- * Each voice has its own selected[] pattern, DOM buttons, and audio channel.
- * Awheel and Bwheel remain single-voice (no pattern to layer).
+ * The dynamic Rhythm Tracks grouping lanes are built by grouping-lanes.js,
+ * which reuses the multi-voice rendering here (`buildLane`). This module also
+ * covers pattern editing, cycle navigation, the Master Beat reference strip,
+ * rail collapse, mix dimming, and playhead marking.
  */
-import { gcd, reduceFraction } from './math.js';
+import { isOnQuarter, quarterBeatPeriod } from './math.js';
 import { populateInstrumentSelect, bindSoloMute } from './audio.js';
 
 /**
@@ -43,12 +43,12 @@ function setStepValue(arr, i, val, btn) {
  *   - plain click or click-drag: paints a run of steps to the new toggle value
  *   - shift-click: toggles a contiguous range (from the last clicked step)
  *   - right-click: clears that step
- * `isSingle` distinguishes single-voice lanes (state on `lane.selected`) from
- * multi-voice lanes (state on `voice.selected`).
+ * The pattern lives on the voice (`voice.selected`), shared by the buttons in
+ * `voice.buttons`.
  */
-function attachStepHandlers(btn, lane, voice, index, isSingle) {
-    const getArr = () => isSingle ? lane.selected : voice.selected;
-    const getBtn = (i) => isSingle ? lane.buttons[i] : voice.buttons[i];
+function attachStepHandlers(btn, lane, voice, index) {
+    const getArr = () => voice.selected;
+    const getBtn = (i) => voice.buttons[i];
     btn.setAttribute('aria-pressed', String(!!getArr()[index]));
 
     btn.onpointerdown = (e) => {
@@ -81,11 +81,6 @@ function attachStepHandlers(btn, lane, voice, index, isSingle) {
     };
 }
 
-/** Returns a human-readable ratio like "3/4" for the master-to-meter relationship. */
-function masterRateLabelForMeter(state, meterValue) {
-    return reduceFraction(state.mainTeeth / meterValue, state.mainTeeth);
-}
-
 /**
  * Beat grouping is anchored to the tool's single global rhythmic reference:
  * the quarter-note grid. One master cycle (mainTeeth ticks) spans 4 quarter
@@ -99,20 +94,9 @@ function masterRateLabelForMeter(state, meterValue) {
  *     so the master lane shows no internal beats — which is the honest result.
  *   - Phrase/wheel lanes show beats only where their pulses coincide with a
  *     quarter, at a period of meter / gcd(meter, 4) steps.
+ *
+ * The quarterBeatPeriod / isOnQuarter helpers live in math.js.
  */
-
-/** Number of steps between consecutive quarter-note beats for a lane of `n` steps per cycle. */
-function quarterBeatPeriod(n) {
-    return n / gcd(n, 4);
-}
-
-/** True when `tick` (in master-tick units) falls on a quarter-note boundary. */
-function isOnQuarter(tick, mainTeeth) {
-    const q = mainTeeth / 4;
-    if (q === 0) return false;
-    const r = ((tick % q) + q) % q;
-    return Math.min(r, q - r) < 1e-6;
-}
 
 /**
  * Creates a single voice object with empty selected pattern and no DOM refs yet.
@@ -169,25 +153,10 @@ function resetLaneVoices(lane) {
     lane.voices.forEach(resetVoicePattern);
 }
 
-function voiceInstrumentLabel(voice) {
-    const soundEl = voice.channel?.soundEl;
-    if (soundEl?.selectedOptions?.[0]?.textContent) {
-        return soundEl.selectedOptions[0].textContent;
-    }
-
-    if (voice.channel?.sound) {
-        return voice.channel.sound
-            .split('_')
-            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-            .join(' ');
-    }
-
-    return 'Instrument';
-}
-
 /**
- * Creates the lane configuration objects. Multi-voice lanes (master, Aphrase, Bphrase)
- * have a `voices` array. Single-voice lanes (Awheel, Bwheel) have a flat structure.
+ * Creates the lane configuration objects. Multi-voice lanes (master and the
+ * grouping lanes built by grouping-lanes.js) have a `voices` array; the
+ * single-voice pulse lanes (Awheel, Bwheel) have a flat structure.
  */
 export function createLanes(ui, state) {
     return {
@@ -390,8 +359,8 @@ export function resizeAllLanes(state, lanes) {
             copyCyclePattern(v, state.mainTeeth, oldLen);
         }
     });
-    resizeSingleLane(lanes.Awheel, state.mainTeeth, false);
-    resizeSingleLane(lanes.Bwheel, state.mainTeeth, false);
+    resizeSingleLane(lanes.Awheel, state.mainTeeth);
+    resizeSingleLane(lanes.Bwheel, state.mainTeeth);
 
     if (lanes.master.voices[0]?.selected.length > 0) lanes.master.voices[0].selected[0] = true;
 }
@@ -410,10 +379,10 @@ function copyCyclePattern(voice, cycleLength, skipBefore = 0) {
     }
 }
 
-/** Resizes a single-voice lane (wheel lanes). */
-function resizeSingleLane(lane, newLength, isWheel = false) {
+/** Resizes a single-voice pulse lane's selection (Awheel / Bwheel). */
+function resizeSingleLane(lane, newLength) {
     const old = lane.selected;
-    const resized = new Array(newLength).fill(isWheel);
+    const resized = new Array(newLength).fill(false);
     const copyCount = Math.min(old.length, newLength);
     for (let i = 0; i < copyCount; i++) {
         resized[i] = old[i];
@@ -514,7 +483,7 @@ function createStepButton(lane, voice, i, actualIndex) {
     applyGroupClasses(btn, lane, i);
     if (voice.selected[actualIndex]) btn.classList.add('active');
 
-    attachStepHandlers(btn, lane, voice, actualIndex, false);
+    attachStepHandlers(btn, lane, voice, actualIndex);
 
     return btn;
 }
@@ -734,11 +703,10 @@ export function updateVoiceInstrumentLabels(lane) {
     });
 }
 
+/** State key for a lane's cycle window: grouping lanes carry their own key,
+    the fixed multi-voice lane is the master. */
 function cycleNavKey(lane) {
-    if (lane.cycleKey) return lane.cycleKey;
-    if (lane.stepId.includes('meterA')) return 'Aphrase';
-    if (lane.stepId.includes('meterB')) return 'Bphrase';
-    return 'master';
+    return lane.cycleKey || 'master';
 }
 
 /**
@@ -768,7 +736,7 @@ export function updateVoiceStepsForCycle(lane, state) {
             const active = !!voice.selected[actualIndex];
             btn.classList.toggle('active', active);
             btn.setAttribute('aria-pressed', String(active));
-            attachStepHandlers(btn, lane, voice, actualIndex, false);
+            attachStepHandlers(btn, lane, voice, actualIndex);
             voice.buttons.push(btn);
         });
     });
@@ -1108,32 +1076,6 @@ function animateMasterBeatQuarters(state, bands, totalCycles) {
     }
 }
 
-/** Builds a single-voice lane. */
-function buildSingleLane(lane) {
-    lane.container.innerHTML = '';
-    updateLaneHeader(lane);
-    lane.container.style.position = 'relative';
-    lane.buttons = [];
-    // Wrap steps in the same box (voice-steps-column > voice-steps) as the multi-voice
-    // lanes, so wheel lanes share the left-rail + step-grid layout.
-    const stepsColumn = document.createElement('div');
-    stepsColumn.className = 'voice-steps-column';
-    const steps = document.createElement('div');
-    steps.className = 'voice-steps';
-    lane.container.appendChild(stepsColumn);
-    stepsColumn.appendChild(steps);
-    for (let i = 0; i < lane.count(); i++) {
-        const btn = createStepButtonForSingle(lane, i);
-        steps.appendChild(btn);
-        lane.buttons.push(btn);
-    }
-    const playhead = document.createElement('div');
-    playhead.className = 'lane-playhead lane-playhead-single';
-    playhead.setAttribute('aria-hidden', 'true');
-    stepsColumn.appendChild(playhead);
-    lane._playhead = playhead;
-}
-
 /** Attaches click handlers to each lane's inline explanation toggle. */
 export function wireLaneInfoButtons(lanes) {
     Object.values(lanes).forEach((lane) => {
@@ -1230,21 +1172,6 @@ export function setAllRailsCollapsed(val) {
     }
 }
 
-/** Creates a step button for a single-voice lane. */
-function createStepButtonForSingle(lane, i) {
-    const btn = document.createElement('button');
-    btn.className = `step-btn ${lane.className}`;
-    btn.id = `${lane.stepId}-${i}`;
-    btn.textContent = lane.textForStep(i);
-
-    applyGroupClasses(btn, lane, i);
-    if (lane.selected[i]) btn.classList.add('active');
-
-    attachStepHandlers(btn, lane, null, i, true);
-
-    return btn;
-}
-
 /** Converts a #rrggbb color into an rgba() string at the given alpha. */
 function hexToRgba(hex, alpha) {
     const h = hex.replace('#', '');
@@ -1316,8 +1243,6 @@ export function buildLane(lane, state) {
         buildMultiVoiceLane(lane, state);
     } else if (lane.grouping) {
         buildGroupingLane(lane, state);
-    } else {
-        buildSingleLane(lane);
     }
     applyLaneMixState(lane);
 }

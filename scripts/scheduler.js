@@ -41,8 +41,8 @@ export function isGroupOnset(stepIndex, phase, groupSize) {
 
 /**
  * Schedules audio for all voices across all lanes at a given master step.
- * Uses state.lastScheduledActive for dedup so consecutive master steps that
- * map to the same phrase/wheel step only fire once.
+ * `state.lastScheduledActive.master` dedups the master lane so consecutive
+ * master steps that map to the same phrase step only fire once.
  */
 function scheduleStepAudio(state, lanes, channels, stepIndex, hitTime, globalVolume) {
     const lsa = state.lastScheduledActive;
@@ -130,7 +130,7 @@ export function startAudioScheduler(state, lanes, channels, globalVolumeSource) 
     const elapsed = state.audioCtx.currentTime - state.audioStartTime;
     state.lastScheduledStep = Math.floor((elapsed + LOOKAHEAD_SECONDS) / stepDuration);
     state.lastScheduledQuarter = Math.floor((elapsed + LOOKAHEAD_SECONDS) / quarterDuration);
-    state.lastScheduledActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };
+    state.lastScheduledActive = { master: -1 };
 
 
     // Cache scheduler timing values; only recalc when tempo or teeth change
@@ -176,7 +176,7 @@ export function startAudioScheduler(state, lanes, channels, globalVolumeSource) 
         if (catchUpSteps > 0 && catchUpSteps * stepDuration > MAX_CATCH_UP_SECONDS) {
             state.lastScheduledStep = targetStep;
             state.lastScheduledQuarter = targetQuarter;
-            state.lastScheduledActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };
+            state.lastScheduledActive = { master: -1 };
         }
 
         for (let s = state.lastScheduledStep + 1; s <= targetStep; s++) {
@@ -221,7 +221,7 @@ export function resetAudioScheduler(state) {
         const elapsed = state.audioCtx.currentTime - state.audioStartTime;
         state.lastScheduledStep = Math.floor(elapsed / stepDuration);
         state.lastScheduledQuarter = Math.floor(elapsed / quarterDuration);
-        state.lastScheduledActive = { master: -1, Aphrase: -1, Awheel: -1, Bphrase: -1, Bwheel: -1 };
+        state.lastScheduledActive = { master: -1 };
     }
 }
 

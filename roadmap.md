@@ -2,13 +2,12 @@
 
 ## Performance
 
-## Performance
-
-### ~~AudioNode pooling~~ 🚧 IN PROGRESS
-Swap `createOscillator` / `createGain` / `createBiquadFilter` for pooled
-versions. After each trigger's nodes finish (onended), they're disconnected
-and returned to the pool instead of being GC'd. Eliminates ~90% of per-trigger
-allocations with no architectural changes. ~100 lines.
+### ~~AudioNode pooling~~ ✗ Not viable
+Evaluated and dropped: oscillator nodes are one-shot (they cannot be restarted),
+so recycling them raises invalid-state errors. `pool.js` is now a plain
+`createOscillator` factory. Steady-state synthesis is already avoided by
+pre-rendering each instrument to an audio buffer (`instruments.js`), which plays
+through a single gain node per hit.
 
 ### AudioWorklet synthesis (future)
 Replace the entire instrument dispatch with a single `AudioWorkletProcessor`
@@ -18,46 +17,49 @@ Requires rewriting all 50+ instruments as DSP code (sine/triangle/square waves,
 envelopes, biquad filters) inside the worklet's `process()` method.
 Estimated effort: 500–800 lines.
 
+### Web Worker scheduler timer (if still needed on low-end devices)
+Move the scheduler's wake-up `setTimeout` into a Web Worker so wake-ups are not
+delayed by main-thread rendering; the lookahead can then be reduced. Pair with
+`audioCtx.outputLatency` compensation for tighter audio/visual sync.
+
 ### Timeline marker batching
 Multiple `drawTimelineMarker` calls each do their own `save/restore` + `beginPath` +
-`fill` + `stroke`. Batch same-color dots into a single `beginPath` block.
+`fill` + `stroke`. Batch same-color dots into a single `beginPath` block. Only
+affects layer rebuilds (edits), not steady playback.
 
 ### Teeth index precomputation
-`(i * state.teethA + state.phaseA) % state.mainTeeth` computed in 6+ loop
+`(i * state.teethA + state.phaseA) % state.mainTeeth` computed in several loop
 bodies every frame. Precompute a `Uint16Array` lookup once per meter change.
-
-### Canvas text rasterization avoidance
-~8 `fillText` calls per frame for static labels. Cache rasterized text on an
-offscreen canvas and `drawImage()` instead.
 
 ---
 
 ## Code Quality
 
-### ~~Split large files~~ ✓ DONE
-- `audio.js` (1,746 lines) → `instruments.js` (1,248), `channels.js` (263),
-  `scheduler.js` (224), `audio.js` (66)
-- `lanes.js` (1,413 lines) → `lane-ui.js` (1,413), `lanes.js` (22-line facade)
-- Both use re-export facades so existing imports continue to work.
+### Split lane-ui.js
+`lane-ui.js` (~1,700 lines) still mixes lane config, pattern editing, voice-row
+rendering, cycle navigation, the Master Beat strip, rail collapse, mix dimming,
+and playhead marking. Candidate split — lane-config / lane-render / cycle-nav /
+master-beat-strip / lane-mix / lane-playhead — behind the existing `lanes.js`
+facade so imports don't churn.
+
+### Fold the Master Beat rAF into the main loop
+The Master Beat strip runs its own `requestAnimationFrame` loop alongside the
+canvas loop; driving it from the main frame would remove the duplicate callback.
 
 ### Normalize CSS indentation
-`main.css` has mixed 8-space, 4-space, and 0-space indentation.
+`main.css` has mixed 8-space and 0-space indentation (notably the volume-fader
+block around line 984).
 
 ### Move inline styles to CSS
-6 label color inline styles in `index.html` and several `.style.*` assignments
-in `lanes.js` should use CSS classes.
+A few inline `style=` attributes in `index.html` and `.style.*` assignments in JS
+should use CSS classes.
 
 ### Normalize naming
-- `masterVoices` vs `Avoices` vs `Bvoices` (inconsistent capitalization)
-- `shareDeps` in `app.js` vs `deps` in consuming modules
+`shareDeps` in `app.js` vs `deps` in consuming modules.
 
 ---
 
 ## Features
-
-### Copy/paste for lanes
-`copyLane` / `pasteLane` functions exist in `lanes.js` but are not wired to
-any UI button. Wire them and add copy/paste buttons to lane edit controls.
 
 ### Per-channel effect controls
 Reverb send, filter cutoff, pan per channel.

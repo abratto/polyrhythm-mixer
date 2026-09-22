@@ -46,7 +46,7 @@ export function createState(ui) {
         lastScheduledStep: 0,
         lastScheduledQuarter: 0,
         // Dedup state for the audio scheduler (separate from lastActive used by rAF)
-        lastScheduledActive: { master: -1, Awheel: -1, Bwheel: -1 },
+        lastScheduledActive: { master: -1 },
 
         // Flash counters for visual/audio triggers (count down each frame)
         flash: { driver: 0, custom: 0, A: 0, B: 0 },
