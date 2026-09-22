@@ -40,19 +40,8 @@ textarea { width: 100%; height: 200px; font-family: monospace; font-size: 11px; 
 
 <script type="module">
 import { instrumentData } from '../scripts/instrument-data.js';
+import { instruments as synth } from '../scripts/instruments.js';
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function acquireNoise(ctx) {
-  const buf = (() => {
-    const s = ctx.sampleRate;
-    const b = ctx.createBuffer(1, s, s);
-    const d = b.getChannelData(0);
-    for (let i = 0; i < s; i++) d[i] = Math.random() * 2 - 1;
-    return b;
-  })();
-  const src = ctx.createBufferSource();
-  src.buffer = buf;
-  return src;
-}
 
 // ── Instrument parameter database ──
 
@@ -148,291 +137,52 @@ sel.addEventListener('change', () => loadInstrument(sel.value));
 loadInstrument(sel.value);
 
 // ── Play ──
+// Preview through the REAL synth (scripts/instruments.js) so what you hear here
+// is exactly what the app plays. The synth reads `instrumentData`, so we push
+// the current slider values into it first.
 document.getElementById('playBtn').addEventListener('click', async () => {
   if (!currentInstrument) return;
   if (audioCtx.state === 'suspended') await audioCtx.resume();
-  
-  const v = {};
-  Object.keys(sliders).forEach(key => { v[key] = parseFloat(sliders[key].input.value); });
-  const now = audioCtx.currentTime;
-  const vol = 1.0;
-  
-  if (currentInstrument === 'bongo_low' || currentInstrument === 'bongo_high') {
-    const master = audioCtx.createGain();
-    master.gain.setValueAtTime(vol, now);
-    master.connect(audioCtx.destination);
-    
-    // 1. Fundamental
-    const o1 = audioCtx.createOscillator();
-    const g1 = audioCtx.createGain();
-    o1.type = 'sine';
-    o1.frequency.setValueAtTime(v.baseFreq * v.pitchBend, now);
-    o1.frequency.exponentialRampToValueAtTime(v.baseFreq, now + 0.025);
-    g1.gain.setValueAtTime(v.bodyVol, now);
-    g1.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay);
-    o1.connect(g1); g1.connect(master);
-    o1.start(now); o1.stop(now + v.bodyDecay);
-    
-    // 2. Overtone
-    const o2 = audioCtx.createOscillator();
-    const g2 = audioCtx.createGain();
-    o2.type = 'triangle';
-    o2.frequency.setValueAtTime(v.baseFreq * v.overRatio * v.pitchBend, now);
-    o2.frequency.exponentialRampToValueAtTime(v.baseFreq * v.overRatio, now + 0.025);
-    g2.gain.setValueAtTime(v.overVol, now);
-    g2.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay * v.overDecay);
-    o2.connect(g2); g2.connect(master);
-    o2.start(now); o2.stop(now + v.bodyDecay * v.overDecay);
-    
-    // 3. Impact noise
-    const noise = acquireNoise(audioCtx);
-    if (noise) {
-      const nf = audioCtx.createBiquadFilter();
-      nf.type = 'bandpass';
-      nf.frequency.setValueAtTime(v.noiseFreq, now);
-      nf.Q.setValueAtTime(v.noiseQ, now);
-      const ng = audioCtx.createGain();
-      ng.gain.setValueAtTime(v.noiseVol, now);
-      ng.gain.exponentialRampToValueAtTime(0.001, now + v.noiseDecay);
-      noise.connect(nf); nf.connect(ng); ng.connect(master);
-      noise.start(now);
-    }
-    master.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay + 0.05);
+
+  const data = instrumentData[currentInstrument];
+  data?.params?.forEach(p => {
+    const s = sliders[p.k];
+    if (s) p.v = parseFloat(s.input.value);
+  });
+
+  const fn = synth[currentInstrument];
+  if (!fn) {
+    document.getElementById('status').textContent = 'No synth for ' + currentInstrument;
+    return;
   }
-  
-  else if (currentInstrument === 'synth_kick') {
-    const sub = audioCtx.createOscillator();
-    const sg = audioCtx.createGain();
-    sub.type = 'sine';
-    sub.frequency.setValueAtTime(v.bodyFreq, now);
-    sub.frequency.exponentialRampToValueAtTime(v.bodyEndFreq, now + v.bodySweep);
-    sg.gain.setValueAtTime(vol * v.bodyVol, now);
-    sg.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay);
-    sub.connect(sg); sg.connect(audioCtx.destination);
-    sub.start(now); sub.stop(now + v.bodyDecay);
-    
-    const noise = acquireNoise(audioCtx);
-    if (noise) {
-      const nf = audioCtx.createBiquadFilter();
-      nf.type = 'bandpass';
-      nf.frequency.setValueAtTime(v.clickFreq, now);
-      nf.Q.setValueAtTime(v.clickQ, now);
-      const ng = audioCtx.createGain();
-      ng.gain.setValueAtTime(vol * v.clickVol, now);
-      ng.gain.exponentialRampToValueAtTime(0.001, now + v.clickDecay);
-      noise.connect(nf); nf.connect(ng); ng.connect(audioCtx.destination);
-      noise.start(now);
-    }
-  }
-  
-  else if (currentInstrument === 'snare' || currentInstrument === 'electronic_snare') {
-    // Body oscillator
-    const osc = audioCtx.createOscillator();
-    const og = audioCtx.createGain();
-    osc.type = currentInstrument === 'electronic_snare' ? 'sine' : 'triangle';
-    if (currentInstrument === 'electronic_snare') {
-      osc.frequency.setValueAtTime(v.bodyFreq, now);
-      osc.frequency.exponentialRampToValueAtTime(v.bodyEndFreq, now + v.bodySweep);
-    } else {
-      osc.frequency.setValueAtTime(v.bodyFreq, now);
-    }
-    og.gain.setValueAtTime(vol * v.bodyVol, now);
-    og.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay);
-    osc.connect(og); og.connect(audioCtx.destination);
-    osc.start(now); osc.stop(now + v.bodyDecay);
-    
-    // Noise
-    const noise = acquireNoise(audioCtx);
-    if (noise) {
-      const nf = audioCtx.createBiquadFilter();
-      const isBP = currentInstrument === 'electronic_snare';
-      nf.type = isBP ? 'bandpass' : 'highpass';
-      nf.frequency.setValueAtTime(v.noiseFreq, now);
-      if (isBP) nf.Q.setValueAtTime(v.noiseQ, now);
-      const ng = audioCtx.createGain();
-      ng.gain.setValueAtTime(vol * v.noiseVol, now);
-      ng.gain.exponentialRampToValueAtTime(0.001, now + v.noiseDecay);
-      noise.connect(nf); nf.connect(ng); ng.connect(audioCtx.destination);
-      noise.start(now);
-    }
-  }
-  
-  else if (currentInstrument.startsWith('conga_')) {
-    const master = audioCtx.createGain();
-    master.gain.setValueAtTime(vol, now);
-    master.connect(audioCtx.destination);
-    
-    // Fundamental
-    const o1 = audioCtx.createOscillator();
-    const g1 = audioCtx.createGain();
-    o1.type = 'sine';
-    o1.frequency.setValueAtTime(v.baseFreq * (v.bodyPitchBend || 1.2), now);
-    o1.frequency.exponentialRampToValueAtTime(v.baseFreq, now + 0.03);
-    g1.gain.setValueAtTime(v.bodyVol, now);
-    g1.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay);
-    o1.connect(g1); g1.connect(master);
-    o1.start(now); o1.stop(now + v.bodyDecay);
-    
-    // Overtone 1
-    const o2 = audioCtx.createOscillator();
-    const g2 = audioCtx.createGain();
-    o2.type = 'triangle';
-    o2.frequency.setValueAtTime(v.baseFreq * v.overRatio1, now);
-    g2.gain.setValueAtTime(v.overVol1, now);
-    g2.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay * 0.8);
-    o2.connect(g2); g2.connect(master);
-    o2.start(now); o2.stop(now + v.bodyDecay * 0.8);
-    
-    if (v.overRatio2) {
-      const o3 = audioCtx.createOscillator();
-      const g3 = audioCtx.createGain();
-      o3.type = 'triangle';
-      o3.frequency.setValueAtTime(v.baseFreq * v.overRatio2, now);
-      g3.gain.setValueAtTime(v.overVol2, now);
-      g3.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay * 0.6);
-      o3.connect(g3); g3.connect(master);
-      o3.start(now); o3.stop(now + v.bodyDecay * 0.6);
-    }
-    
-    slap: if (v.slapFreq) {
-      const noise = acquireNoise(audioCtx);
-      if (!noise) break slap;
-      const nf = audioCtx.createBiquadFilter();
-      nf.type = 'bandpass';
-      nf.frequency.setValueAtTime(v.slapFreq, now);
-      if (v.slapQ) nf.Q.setValueAtTime(v.slapQ, now);
-      const ng = audioCtx.createGain();
-      ng.gain.setValueAtTime(vol * v.slapVol, now);
-      ng.gain.exponentialRampToValueAtTime(0.001, now + v.slapDecay);
-      noise.connect(nf); nf.connect(ng); ng.connect(master);
-      noise.start(now);
-    }
-    master.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay + 0.05);
-  }
-  
-  else if (currentInstrument === 'timbale') {
-    const osc = audioCtx.createOscillator();
-    const og = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(v.bodyFreq, now);
-    osc.frequency.exponentialRampToValueAtTime(v.bodyEndFreq, now + v.bodySweep);
-    og.gain.setValueAtTime(0.001, now);
-    og.gain.linearRampToValueAtTime(vol * v.bodyVol, now + 0.003);
-    og.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay);
-    osc.connect(og); og.connect(audioCtx.destination);
-    osc.start(now); osc.stop(now + v.bodyDecay);
-    
-    const noise = acquireNoise(audioCtx);
-    if (noise) {
-      const nf = audioCtx.createBiquadFilter();
-      nf.type = 'highpass';
-      nf.frequency.setValueAtTime(v.noiseFreq, now);
-      const ng = audioCtx.createGain();
-      ng.gain.setValueAtTime(vol * v.noiseVol, now);
-      ng.gain.exponentialRampToValueAtTime(0.001, now + v.noiseDecay);
-      noise.connect(nf); nf.connect(ng); ng.connect(audioCtx.destination);
-      noise.start(now);
-    }
-  }
-  
-  else if (currentInstrument === 'cajon_trad_bass' || currentInstrument === 'cajon_snare_bass') {
-    const mg = audioCtx.createGain();
-    mg.gain.setValueAtTime(vol, now);
-    mg.connect(audioCtx.destination);
-    
-    const cav = audioCtx.createOscillator();
-    const cg = audioCtx.createGain();
-    cav.type = 'sine';
-    cav.frequency.setValueAtTime(v.cavityFreq, now);
-    cg.gain.setValueAtTime(v.cavityVol, now);
-    cg.gain.exponentialRampToValueAtTime(0.001, now + v.cavityDecay);
-    cav.connect(cg); cg.connect(mg);
-    cav.start(now); cav.stop(now + v.cavityDecay);
-    
-    const wood = audioCtx.createOscillator();
-    const wg = audioCtx.createGain();
-    wood.type = 'triangle';
-    wood.frequency.setValueAtTime(v.woodFreq, now);
-    wg.gain.setValueAtTime(v.woodVol, now);
-    wg.gain.exponentialRampToValueAtTime(0.001, now + v.woodDecay);
-    wood.connect(wg); wg.connect(mg);
-    wood.start(now); wood.stop(now + v.woodDecay);
-    
-    const pn = acquireNoise(audioCtx);
-    if (pn) {
-      const pf = audioCtx.createBiquadFilter();
-      pf.type = 'lowpass';
-      pf.frequency.setValueAtTime(v.palmFreq, now);
-      const pg = audioCtx.createGain();
-      pg.gain.setValueAtTime(v.palmVol, now);
-      pg.gain.exponentialRampToValueAtTime(0.001, now + v.palmDecay);
-      pn.connect(pf); pf.connect(pg); pg.connect(mg);
-      pn.start(now);
-    }
-    
-    if (currentInstrument === 'cajon_snare_bass' && v.snareFreq) {
-      const sn = acquireNoise(audioCtx);
-      if (sn) {
-        const sf = audioCtx.createBiquadFilter();
-        sf.type = 'highpass';
-        sf.frequency.setValueAtTime(v.snareFreq, now);
-        const sg = audioCtx.createGain();
-        sg.gain.setValueAtTime(v.snareVol, now);
-        sg.gain.exponentialRampToValueAtTime(0.001, now + v.snareDecay);
-        sn.connect(sf); sf.connect(sg); sg.connect(mg);
-        sn.start(now);
-      }
-    }
-  }
-  
-  else if (currentInstrument === 'cajon_trad_slap' || currentInstrument === 'cajon_snare_slap' || currentInstrument === 'slap') {
-    const noise = acquireNoise(audioCtx);
-    if (noise) {
-      const nf = audioCtx.createBiquadFilter();
-      nf.type = 'bandpass';
-      nf.frequency.setValueAtTime(v.noiseFreq, now);
-      const ng = audioCtx.createGain();
-      ng.gain.setValueAtTime(vol * v.noiseVol, now);
-      ng.gain.exponentialRampToValueAtTime(0.001, now + v.noiseDecay);
-      noise.connect(nf); nf.connect(ng); ng.connect(audioCtx.destination);
-      noise.start(now);
-    }
-    const osc = audioCtx.createOscillator();
-    const og = audioCtx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(v.bodyFreq, now);
-    if (v.bodyEndFreq) osc.frequency.exponentialRampToValueAtTime(v.bodyEndFreq, now + v.bodySweep);
-    og.gain.setValueAtTime(vol * v.bodyVol, now);
-    og.gain.exponentialRampToValueAtTime(0.001, now + v.bodyDecay);
-    osc.connect(og); og.connect(audioCtx.destination);
-    osc.start(now); osc.stop(now + v.bodyDecay);
-  }
-  
+  fn({ audioCtx }, audioCtx.currentTime, 1.0, '');
   document.getElementById('status').textContent = 'Playing ' + instruments[currentInstrument].label;
 });
 
 // ── Copy as code ──
+// Emits the current slider values as a `params:` block ready to paste over the
+// instrument's entry in scripts/instrument-data.js.
 document.getElementById('copyBtn').addEventListener('click', () => {
   if (!currentInstrument) return;
   const data = instruments[currentInstrument];
-  const v = {};
-  data.params.forEach(p => {
-    v[p.key] = parseFloat(sliders[p.key].input.value);
-  });
-
-  let code = `// ${data.label} — tuned values\n`;
-  code += `function play${currentInstrument.replace(/_./g, m => m[1].toUpperCase()).replace(/^./, m => m.toUpperCase())}(state, now, vol` +
-    (currentInstrument === 'bongo_low' || currentInstrument === 'bongo_high' || currentInstrument.startsWith('conga_') || currentInstrument === 'timbale' || currentInstrument.startsWith('cajon_') ? ', channelName' : '') + `) {\n`;
-
-  data.params.forEach(p => {
-    code += `  // ${p.key} = ${v[p.key]}\n`;
-  });
-
-  code += `}\n`;
+  const code = `  ${currentInstrument}: {\n    params: [\n` +
+    data.params.map(p => {
+      const val = parseFloat(sliders[p.key].input.value);
+      const fields = [`k: ${JSON.stringify(p.key)}`, `v: ${val}`];
+      if (p.section) fields.push(`section: ${JSON.stringify(p.section)}`);
+      fields.push(
+        `label: ${JSON.stringify(p.label)}`,
+        `unit: ${JSON.stringify(p.unit || '')}`,
+        `lo: ${p.min}`, `hi: ${p.max}`, `step: ${p.step}`,
+        `gloss: ${JSON.stringify(p.gloss)}`
+      );
+      return `      { ${fields.join(', ')} },`;
+    }).join('\n') +
+    `\n    ]\n  },`;
 
   document.getElementById('codeArea').value = code;
   document.getElementById('codeArea').style.display = 'block';
-  document.getElementById('status').textContent = 'Placeholder generated. Copy and paste into instruments.js.';
+  document.getElementById('status').textContent = 'Tuned params generated — paste into instrument-data.js.';
 });
 </script>
 </body>
