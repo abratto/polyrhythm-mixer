@@ -1508,16 +1508,56 @@ export function wireLaneMixButtons(lanes, channels) {
         });
     }
 
-/** Moves a lane's playhead column overlay to the given visible step index. */
+/**
+ * Moves a lane's playhead column overlay to the given visible step index.
+ *
+ * Writes are limited to compositor-only properties: the column width is set
+ * once per step count (it never changes while the lane is on screen) and the
+ * position is a translateX in pixels, measured from the overlay's container.
+ * The old code wrote `left`/`width` as percentages on every step boundary,
+ * which forced layout across the whole sequence at dense meters.
+ */
 function positionPlayhead(overlay, displayedIndex, stepsPerCycle) {
     if (!overlay) return;
     if (displayedIndex < 0 || displayedIndex >= stepsPerCycle) {
-        overlay.style.opacity = '0';
+        if (overlay.style.opacity !== '0') overlay.style.opacity = '0';
         return;
     }
-    overlay.style.opacity = '1';
-    overlay.style.left = (displayedIndex / stepsPerCycle) * 100 + '%';
-    overlay.style.width = (1 / stepsPerCycle) * 100 + '%';
+    if (overlay.style.opacity !== '1') overlay.style.opacity = '1';
+
+    // Width is fixed for a given step count — set it only when that changes.
+    if (overlay._spr !== stepsPerCycle) {
+        overlay._spr = stepsPerCycle;
+        overlay.style.width = (1 / stepsPerCycle) * 100 + '%';
+        overlay._trackWidth = 0;
+    }
+
+    // Container width is measured lazily and cached; refreshed when the step
+    // count changes (above) or when a resize/scroll changes it between calls.
+    const container = overlay.parentElement;
+    if (container) {
+        const w = container.clientWidth;
+        if (w > 0 && w !== overlay._trackWidth) {
+            overlay._trackWidth = w;
+            overlay._lastX = null;
+        }
+    }
+
+    const trackWidth = overlay._trackWidth || 0;
+    if (trackWidth > 0) {
+        const x = (displayedIndex / stepsPerCycle) * trackWidth;
+        if (overlay._lastX !== x) {
+            overlay._lastX = x;
+            // Clear any percentage fallback so the base `left` stays at 0 and
+            // the transform is the sole horizontal offset.
+            if (overlay.style.left) overlay.style.left = '0';
+            overlay.style.transform = `translateX(${x.toFixed(1)}px)`;
+        }
+    } else {
+        // Width not measured yet: fall back to the percentage write so the
+        // column is never stuck at the left edge.
+        overlay.style.left = (displayedIndex / stepsPerCycle) * 100 + '%';
+    }
 }
 
 // Follow-playhead state for over-long scrollable sequences. When on, the view
