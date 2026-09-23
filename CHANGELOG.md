@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.18.2 — 2026-09-21
+
+### Fixed
+- **Noise-based instruments were silent on some mobile browsers** (shaker, hi-hats, claps, tambourine, and every other noise instrument — e.g. the Meter A/B shaker lanes), while oscillator instruments still sounded. The shared noise buffer was created lazily by whichever audio context first requested it; because pre-rendering runs first on an `OfflineAudioContext`, that context owned the buffer and every live hit borrowed it. Some mobile browsers refuse to play a buffer across contexts, so those instruments produced no sound. The buffer is now cached per context, keeping each render self-contained.
+
 ## v1.18.1 — 2026-09-21
 
 ### Fixed (performance)
