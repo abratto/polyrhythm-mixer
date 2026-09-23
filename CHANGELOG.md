@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.18.1 — 2026-09-21
+
+### Fixed (performance)
+- **Mini playhead** in the sticky transport bar moved with `left` every frame, forcing a style recalc + layout + paint of the bar. It now uses a compositor-only `translateX` with a cached track width (re-measured on resize).
+- **Lane playhead** overlays wrote `opacity`, `left`, and `width` as percentages on every step boundary per lane, churning layout across the sequence at dense meters. The width is set once per step count and the position is a cached `translateX`, so only compositing runs per step.
+- **Master-cycle timeline** (Layer B) was re-rasterized into a full-canvas offscreen buffer once per master cycle, dropping a frame at each measure boundary. The buffer is now sized to just the band the timeline occupies (~9× less clear/blit area), and the per-cycle counter is drawn live.
+- **Per-hit gain allocation:** every prerendered-instrument hit allocated a fresh `GainNode`. Gains are now pooled and reused after their hit ends (buffer sources stay per-hit, as they are one-shot). Steady-state gain allocations drop from ~136 to ~2 per 10s at 12×18.
+- **Hidden-tab playback:** hidden-tab timers are clamped to ~1s, but the scheduler pre-scheduled only 120ms of hits per wake-up, dropping audio once a tablet locked. The scheduling horizon now rises to 1.5s while `document.hidden` (and the catch-up reseed threshold scales with it), restoring on visibility.
+- **Gear sprite cache** did a full flush at its size cap, forcing a burst of re-renders into one frame. It now evicts only the least-recently-used sprite.
+
+### Changed (internal)
+- The frame profiler (`npm run test:frames`) now reports a measure-boundary spike metric, pairing each frame delta with the master-cycle phase.
+
 ## v1.18.0 — 2026-09-21
 
 ### Added
