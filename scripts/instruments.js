@@ -135,6 +135,15 @@ function acquireNoiseSource(state) {
     return newSource;
 }
 
+/** Picks a random read offset (seconds) into the 1 s noise buffer, leaving room
+ *  for `needSeconds` of playback. Used so layers/micro-bursts read independent
+ *  noise and don't comb-filter against each other. */
+function randomNoiseOffset(state, needSeconds = 0.2) {
+    const ctx = state.audioCtx;
+    const max = ctx ? Math.max(0, ctx.sampleRate - 1) / (ctx.sampleRate || 1) - needSeconds : 0;
+    return Math.max(0, Math.random() * max);
+}
+
 // ===== Instrument synthesis functions =====
 
 /** Kick drum: sine oscillator with fast pitch sweep downward. */
@@ -244,37 +253,101 @@ function playTom(state, now, vol, channelName) {    const p = instrumentData.tom
     registerCleanup(osc, gain);
 }
 
-/** Handclap: multiple short noise bursts followed by a longer tail through a bandpass filter. */
+/**
+ * Handclap — one person's clap. The key to realism is micro-transient structure:
+ * the fingers/heel never land at exactly the same instant, so the "burst" layer
+ * is a tight flutter of 2–4 sub-impacts fused within a few ms rather than one
+ * clean hit. Layers:
+ *   1. Burst flutter — 3 short bright impacts over ~6 ms, each with jittered
+ *      centre frequency and a soft ~1 ms attack (a hard 0->peak step clicks).
+ *   2. Cup resonance — the hollow "pop" of the cupped palms.
+ *   3. Body — a low triangle for mass (below the pitch threshold).
+ *   4. Tail — a short breath of room.
+ * Per-hit frequency/decay jitter and independent noise read-offsets keep it
+ * sounding like a person, not a loop byte — so the clap is live-only.
+ */
 function playClap(state, now, vol) {
     const p = readParams('clap');
-    const filter = state.audioCtx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(p.filterFreq, now);
+    // Each layer carries `vol` itself and connects straight to the destination,
+    // so every gain write stays <= vol.
+    const dest = state.audioCtx.destination;
 
-    const gain = acquireGain(state);
-    filter.connect(gain);
-    gain.connect(state.audioCtx.destination);
+    // 1. Burst flutter — 3 sub-impacts over ~6 ms with decreasing energy.
+    for (let i = 0; i < p.burstCount; i++) {
+        const level = p.burstVol * Math.pow(0.62, i); // 0.8 -> 0.50 -> 0.31
+        if (level <= 0) continue;
+        const t = Math.max(now, now + i * p.burstSpacing);
+        // Jitter the centre frequency and decay so the impacts don't
+        // phase-reinforce into one louder burst.
+        const freq = p.burstFreq * (1 + (Math.random() - 0.5) * p.burstJitterPct * 2);
+        const decay = p.burstDecay * (1 + (Math.random() - 0.5) * 0.2);
+        const noise = acquireNoiseSource(state);
+        if (!noise) return;
+        const filter = state.audioCtx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(freq, t);
+        filter.Q.setValueAtTime(p.burstQ, t);
+        const g = acquireGain(state);
+        // Soft attack (a hard step clicks), then exponential decay.
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(vol * level, t + 0.001);
+        g.gain.exponentialRampToValueAtTime(MIN_GAIN, t + decay);
+        noise.connect(filter); filter.connect(g); g.connect(dest);
+        noise.start(t, randomNoiseOffset(state, decay + 0.02));
+        noise.stop(t + decay + 0.02);
+        registerCleanup(filter, g);
+    }
 
-    [0, 0.012, 0.024].forEach((delay) => {
-        const burst = acquireNoiseSource(state);
-        if (!burst) return;
-        const burstGain = acquireGain(state);
-        burstGain.gain.setValueAtTime(vol * p.burstVol, now + delay);
-        burstGain.gain.exponentialRampToValueAtTime(MIN_GAIN, now + delay + p.burstDecay);
-        burst.connect(filter);
-        burstGain.connect(state.audioCtx.destination);
-        burst.start(now + delay);
-        burst.stop(now + delay + p.burstDecay + 0.02);
-    });
+    // 2. Cup resonance — the hollow "pop" of the cupped palms.
+    if (p.cupVol > 0) {
+        const cupNoise = acquireNoiseSource(state);
+        if (cupNoise) {
+            const cupFilter = state.audioCtx.createBiquadFilter();
+            cupFilter.type = 'bandpass';
+            cupFilter.frequency.setValueAtTime(p.cupFreq * (1 + (Math.random() - 0.5) * 0.1), now);
+            cupFilter.Q.setValueAtTime(p.cupQ, now);
+            const cg = acquireGain(state);
+            cg.gain.setValueAtTime(0, now);
+            cg.gain.linearRampToValueAtTime(vol * p.cupVol, now + 0.001);
+            cg.gain.exponentialRampToValueAtTime(MIN_GAIN, now + p.cupDecay);
+            cupNoise.connect(cupFilter); cupFilter.connect(cg); cg.connect(dest);
+            cupNoise.start(now, randomNoiseOffset(state, p.cupDecay + 0.02));
+            cupNoise.stop(now + p.cupDecay + 0.02);
+            registerCleanup(cupFilter, cg);
+        }
+    }
 
-    const mainClap = acquireNoiseSource(state);
-    if (!mainClap) return;
-    gain.gain.setValueAtTime(vol * p.tailVol, now + 0.038);
-    gain.gain.exponentialRampToValueAtTime(MIN_GAIN, now + p.tailDecay);
-    mainClap.connect(filter);
-    mainClap.start(now + 0.038);
-    mainClap.stop(now + p.tailDecay + 0.02);
-    registerCleanup(filter, gain);
+    // 3. Body — a fixed low triangle for a hint of weight behind the smack.
+    if (p.bodyVol > 0) {
+        const osc = acquireOsc(state);
+        const og = acquireGain(state);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(p.bodyFreq, now);
+        og.gain.setValueAtTime(vol * p.bodyVol, now);
+        og.gain.exponentialRampToValueAtTime(MIN_GAIN, now + p.bodyDecay);
+        osc.connect(og); og.connect(dest);
+        osc.start(now); osc.stop(now + p.bodyDecay);
+        registerCleanup(osc, og);
+    }
+
+    // 4. Tail — a short breath of room, kept brief so it stays dry.
+    if (p.tailVol > 0) {
+        const tailNoise = acquireNoiseSource(state);
+        if (tailNoise) {
+            const tailFilter = state.audioCtx.createBiquadFilter();
+            tailFilter.type = 'bandpass';
+            tailFilter.frequency.setValueAtTime(p.tailFreq, now);
+            tailFilter.Q.setValueAtTime(p.tailQ, now);
+            const tg = acquireGain(state);
+            tg.gain.setValueAtTime(MIN_GAIN, now);
+            tg.gain.linearRampToValueAtTime(vol * p.tailVol, now + 0.006);
+            tg.gain.exponentialRampToValueAtTime(MIN_GAIN, now + p.tailDecay);
+            tailNoise.connect(tailFilter); tailFilter.connect(tg); tg.connect(dest);
+            tailNoise.start(now, randomNoiseOffset(state, p.tailDecay + 0.02));
+            tailNoise.stop(now + p.tailDecay + 0.02);
+            registerCleanup(tailFilter, tg);
+        }
+    }
 }
 
 /** Agogo bell: sine oscillator, pitch varies by channel. */
@@ -1230,46 +1303,76 @@ function playBataHigh(state, now, vol) {
 }
 
 /**
- * Batá chachá strike (small head). Unlike the enú tone, the chachá has no
- * fardela: it is drier, brighter, and sharper. Striking the small, highly
- * tensioned head also can't push enough low-frequency energy to excite the
- * heavy enú head, so there is no sympathetic coupling layer — just a fast,
- * dry fundamental, an undamped skin overtone, and a sharp high-Q transient.
+ * Batá chachá strike (small head). Unlike the enú tone the chachá has no
+ * fardela, so it is drier and sharper. It still has a few coupled behaviours
+ * worth modelling:
+ *   1. Body  — a fast sine fundamental (with a short tension-spike bend).
+ *   2. Overtones — three inharmonic skin/shell modes, quieter by ratio.
+ *   3. Coupling — the small head can't drive much air, but a little low
+ *      sympathetic energy still reaches the opposite head; a micro-delayed,
+ *      smoothed sine at the enú fundamental adds that low "bloom".
+ *   4. Attack — a bright rawhide crack.
+ * All layers are parameter-driven so the balance can be tuned per drum.
  */
 function playBataChacha(state, now, vol, p) {
     const masterGain = acquireGain(state);
     masterGain.gain.setValueAtTime(vol, now);
     masterGain.connect(state.audioCtx.destination);
 
-    // 1. Body — dry fundamental that dies quickly.
+    // 1. Body — fast fundamental.
     const bodyOsc = acquireOsc(state);
     const bodyGain = acquireGain(state);
     bodyOsc.type = 'sine';
     bodyOsc.frequency.setValueAtTime(p.baseFreq * p.pitchBend, now);
     bodyOsc.frequency.exponentialRampToValueAtTime(p.baseFreq, now + p.pitchBendTime);
     bodyGain.gain.setValueAtTime(p.bodyVol, now);
-    bodyGain.gain.exponentialRampToValueAtTime(0.001, now + p.bodyDecay);
+    bodyGain.gain.exponentialRampToValueAtTime(MIN_GAIN, now + p.bodyDecay);
     bodyOsc.connect(bodyGain); bodyGain.connect(masterGain);
     bodyOsc.start(now); bodyOsc.stop(now + p.bodyDecay);
     registerCleanup(bodyOsc, bodyGain);
 
-    // 2. Skin overtone — louder than the enú because there is no paste to damp it.
-    if (p.overVol1 > 0) {
-        const overOsc = acquireOsc(state);
-        const overGain = acquireGain(state);
-        overOsc.type = 'triangle';
-        overOsc.frequency.setValueAtTime(p.baseFreq * p.overRatio1, now);
-        overGain.gain.setValueAtTime(p.overVol1, now);
-        overGain.gain.exponentialRampToValueAtTime(0.001, now + p.overDecay1);
-        overOsc.connect(overGain); overGain.connect(masterGain);
-        overOsc.start(now); overOsc.stop(now + p.overDecay1);
-        registerCleanup(overOsc, overGain);
+    // 2. Inharmonic skin/shell overtones (triangle), each quieter by ratio.
+    addBataChachaOvertone(state, masterGain, now, p.baseFreq, p.overRatio1, p.overVol1, p.overDecay1);
+    addBataChachaOvertone(state, masterGain, now, p.baseFreq, p.overRatio2, p.overVol2, p.overDecay2);
+    addBataChachaOvertone(state, masterGain, now, p.baseFreq, p.overRatio3, p.overVol3, p.overDecay3);
+
+    // 3. Enú coupling — low sympathetic bloom, micro-delayed and smoothed.
+    if (p.couplingVol > 0) {
+        const cDelay = now + p.couplingDelay;
+        const cOsc = acquireOsc(state);
+        const cGain = acquireGain(state);
+        cOsc.type = 'sine';
+        cOsc.frequency.setValueAtTime(p.couplingFreq, cDelay);
+        cGain.gain.setValueAtTime(0, cDelay);
+        cGain.gain.linearRampToValueAtTime(p.couplingVol, cDelay + p.couplingAttack);
+        cGain.gain.exponentialRampToValueAtTime(MIN_GAIN, cDelay + p.couplingDecay);
+        cOsc.connect(cGain); cGain.connect(masterGain);
+        cOsc.start(cDelay); cOsc.stop(cDelay + p.couplingDecay + 0.05);
+        registerCleanup(cOsc, cGain);
     }
 
-    // 3. Attack — pure, bright rawhide crack; the dominant feature.
-    createBataSlap(state, p.slapVol, masterGain, now, p.slapDecay, p.slapFreq, p.slapQ);
+    // 4. Attack — rawhide crack.
+    if (p.slapVol > 0) {
+        createBataSlap(state, p.slapVol, masterGain, now, p.slapDecay, p.slapFreq, p.slapQ);
+    }
 
-    masterGain.gain.exponentialRampToValueAtTime(0.001, now + Math.max(p.bodyDecay, p.overDecay1) + 0.05);
+    const maxTail = Math.max(p.bodyDecay, p.overDecay1, p.overDecay2, p.overDecay3,
+        p.couplingDelay + p.couplingDecay);
+    masterGain.gain.exponentialRampToValueAtTime(MIN_GAIN, now + maxTail + 0.05);
+}
+
+/** One inharmonic chachá overtone (triangle), skipped when silent. */
+function addBataChachaOvertone(state, dest, now, baseFreq, ratio, level, decay) {
+    if (!(level > 0) || !(ratio > 0) || !(decay > 0)) return;
+    const osc = acquireOsc(state);
+    const gain = acquireGain(state);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(baseFreq * ratio, now);
+    gain.gain.setValueAtTime(level, now);
+    gain.gain.exponentialRampToValueAtTime(MIN_GAIN, now + decay);
+    osc.connect(gain); gain.connect(dest);
+    osc.start(now); osc.stop(now + decay);
+    registerCleanup(osc, gain);
 }
 
 /** Batá low chachá (Iyá small head) — tuned to the enú's 1.5 coupling (225 Hz). */
@@ -1791,6 +1894,12 @@ const PRERENDER_SECONDS = 3;
 const _prerenderBuffers = new Map();
 const _prerenderPending = new Set();
 
+// Instruments that synthesize live on every hit instead of using a cached
+// buffer, because their realism depends on per-hit randomization that a single
+// pre-rendered buffer cannot express. Keep these short and cheap so the
+// per-hit cost stays negligible.
+const LIVE_ONLY = new Set(['clap']);
+
 /**
  * Finds the sounding length of a rendered buffer by scanning back from the end
  * for the last sample above a small threshold, then adds a short release tail.
@@ -1862,6 +1971,14 @@ function releasePooledGain(gain) {
  */
 export function triggerInstrument(state, key, now, vol, channelName) {
     const variant = variantKeyFor(key, channelName);
+    // Live-only instruments use per-hit randomness (e.g. the clap's flam jitter)
+    // that cannot be captured by a single pre-rendered buffer, so they always
+    // synthesize live. They are deliberately short/cheap.
+    if (LIVE_ONLY.has(key)) {
+        const fn = instruments[key];
+        if (fn) fn(state, now, vol, channelName || '');
+        return;
+    }
     let entry = _prerenderBuffers.get(variant);
     if (entry === undefined) {
         if (!_prerenderPending.has(variant)) {
