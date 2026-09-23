@@ -2188,6 +2188,7 @@
             background: #ffea00;
             box-shadow: 0 0 8px rgba(255, 234, 0, 0.8);
             border-radius: 999px;
+            will-change: transform;
         }
 
         /* Moving playhead column overlay — replaces per-button outlines as the

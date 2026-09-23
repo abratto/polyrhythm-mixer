@@ -1086,6 +1086,10 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
     let lastDrawTime = 0;
     let _lastReadout = null;
     let _lastMiniPct = null;
+    // Mini-playhead track width, measured lazily and re-measured on the frame
+    // stride (and on resize, which changes the track width). Written to the dot
+    // as a compositor-only translateX so the sticky bar never triggers layout.
+    let _miniTrackWidth = 0;
 
     // Lane rebuild queue — defer DOM rebuilds from the animation loop to avoid
     // innerHTML teardown + recreation mid-rAF, which guarantees a frame drop.
@@ -1225,10 +1229,30 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         }
 
         // Compact playhead in the sticky transport bar tracks master-cycle progress.
+        // Uses a compositor-only translateX (writing `left` forced a style recalc +
+        // layout + paint of the transport bar every frame). The track width is
+        // measured lazily and refreshed on the frame stride so resize is handled.
         const cycleProgress = (state.mainAngle % (2 * Math.PI)) / (2 * Math.PI);
         if (ui && ui.miniPlayhead) {
+            if (_frameNo % 4 === 0) {
+                const track = ui.miniPlayhead.parentElement;
+                if (track) {
+                    const w = track.clientWidth;
+                    if (w > 0) _miniTrackWidth = w;
+                }
+            }
             const pct = (cycleProgress * 100).toFixed(2);
-            if (_lastMiniPct !== pct) { ui.miniPlayhead.style.left = `${pct}%`; _lastMiniPct = pct; }
+            if (_lastMiniPct !== pct) {
+                _lastMiniPct = pct;
+                if (_miniTrackWidth > 0) {
+                    const x = cycleProgress * _miniTrackWidth;
+                    ui.miniPlayhead.style.transform = `translateX(${x.toFixed(1)}px)`;
+                } else {
+                    // Width not measured yet (first paint): fall back to the
+                    // percentage write once so the dot is never stuck at 0.
+                    ui.miniPlayhead.style.left = `${pct}%`;
+                }
+            }
         }
 
         // (Header text moved into the cached static layer — see ensureStaticLayers.)
