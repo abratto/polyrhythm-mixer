@@ -105,7 +105,7 @@ export function createVoiceChannel(container, voiceIndex, prefix, defaults, gain
 
 /** Default instruments for each voice channel prefix. */
 const voiceDefaults = {
-    master: 'kick'
+    master: 'clap'
 };
 
 /**

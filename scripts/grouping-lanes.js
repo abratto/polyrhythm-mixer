@@ -21,7 +21,7 @@ import { buildLane } from './lanes.js';
 
 const COLORS = ['#ff3366', '#00e5ff', '#ff9100', '#8be28b', '#c07ae6', '#ffd166', '#f4845f', '#7bdff2'];
 const MAX_CYCLES = 8;
-const DEFAULT_SOUND = 'woodblock';
+const DEFAULT_SOUND = 'clap';
 
 let _deps = null;
 let _nextId = 0;

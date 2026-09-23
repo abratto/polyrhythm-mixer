@@ -302,7 +302,7 @@ async function run() {
         assert(initial.grouping.length === 2 && initial.grouping[0].g === '6' && initial.grouping[1].g === '4',
             'Rhythm Tracks should default to two grouping lanes for the chosen polyrhythm (6 and 4).', initial.grouping);
         assert(initial.mixer.masterVolInLane, 'Master wheel volume fader should be colocated in the Master lane toolbar.', initial.mixer);
-        assert(initial.voiceLabels.master1 === 'Bass Drum (Kick)' && initial.voiceLabels.A1 === 'Woodblock Clack' && initial.voiceLabels.B1 === 'Woodblock Clack', 'Voice rows should display their default mixer instruments.', initial.voiceLabels);
+        assert(initial.voiceLabels.master1 === 'Handclap' && initial.voiceLabels.A1 === 'Handclap' && initial.voiceLabels.B1 === 'Handclap', 'Voice rows should display their default mixer instruments.', initial.voiceLabels);
         assert(initial.helpLeads.length === 5, 'Help modal should expose five bold lead sentences.', initial.helpLeads);
         assert(await page.locator('#resetBtn').textContent() === 'Reset Mixer', 'Reset button should clearly describe full mixer reset.');
         const bataOptions = await page.locator('#soundDriver option').evaluateAll(options => options
