@@ -1823,6 +1823,28 @@ function prerenderVariant(state, key, variant, channelName) {
     }
 }
 
+// Per-hit output-gain pool. The prerendered path creates one GainNode per hit;
+// at dense meters that is a steady allocation stream (≈14/s) whose GC can
+// surface as main-thread jitter on low-end devices. Unlike oscillators and
+// buffer sources, a GainNode has no one-shot start/enabled state, so once its
+// hit has ended and it is disconnected it can be reused — reset its automation
+// and hand it back. The source stays one-shot and is created per hit.
+const GAIN_POOL_MAX = 64;
+const _gainPool = [];
+
+function acquirePooledGain(ctx) {
+    const gain = _gainPool.pop();
+    if (gain) return gain;
+    return ctx.createGain();
+}
+
+function releasePooledGain(gain) {
+    // Clear any automation left by the finished hit before the node idles in
+    // the pool, and only retain up to a bounded number of spare nodes.
+    try { gain.gain.cancelScheduledValues(0); } catch (err) { /* older engines */ }
+    if (_gainPool.length < GAIN_POOL_MAX) _gainPool.push(gain);
+}
+
 /**
  * Triggers one instrument hit. Uses the pre-rendered buffer for this
  * instrument + channel variant when it is available (BufferSource + gain),
@@ -1848,13 +1870,17 @@ export function triggerInstrument(state, key, now, vol, channelName) {
     const ctx = state.audioCtx;
     const source = ctx.createBufferSource();
     source.buffer = entry.buffer;
-    const gain = ctx.createGain();
+    const gain = acquirePooledGain(ctx);
     gain.gain.setValueAtTime(vol, now);
     source.connect(gain);
     gain.connect(ctx.destination);
     // Play only the sounding span, not the whole (mostly silent) prerender.
     source.start(now, 0, entry.duration);
-    source.onended = () => { source.disconnect(); gain.disconnect(); };
+    source.onended = () => {
+        source.disconnect();
+        gain.disconnect();
+        releasePooledGain(gain);
+    };
 }
 
 /** Dispatch table mapping instrument value keys to their synthesis functions. */
