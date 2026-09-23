@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.19.1 — 2026-09-23
+
+### Fixed
+- **No sound on iOS** (Safari and Chrome — both WebKit on iOS). iOS kept the audio session in `'auto'`, so WebAudio stayed silent and the hardware volume keys controlled the ringer. On the **Enable Audio** gesture the app now, synchronously: sets `navigator.audioSession.type = 'playback'` (Safari iOS 16.4+) to route to the media channel and ignore the mute switch, resumes the context unconditionally, and plays a short very-low-gain noise burst (a one-sample silent buffer is not always enough for iOS to start the session). Confirmed on an iPhone (iOS 18.7 / Safari 26.6.1).
+
 ## v1.19.0 — 2026-09-21
 
 ### Changed
