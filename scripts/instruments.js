@@ -109,19 +109,28 @@ export const instrumentCatalog = [
  * Short sounds just start the source and let it auto-stop, so we only need
  * one buffer and create new BufferSource nodes from it.
  */
-let _noiseBuffer = null;
+// Noise buffer, cached PER AudioContext. Instruments are rendered both offline
+// (pre-render) and on the live context, and some mobile browsers do not allow a
+// buffer created by one context to be played by another — using a shared buffer
+// born in the OfflineAudioContext made noise instruments (shaker, hi-hats,
+// claps, …) silent on those devices while oscillator instruments still sounded.
+// Keying by context keeps each render self-contained.
+const _noiseBuffers = new WeakMap();
 
 function acquireNoiseSource(state) {
-    if (!state.audioCtx) return null;
-    if (!_noiseBuffer) {
+    const ctx = state.audioCtx;
+    if (!ctx) return null;
+    let buffer = _noiseBuffers.get(ctx);
+    if (!buffer) {
         const duration = 1.0;
-        const bufferSize = Math.floor(state.audioCtx.sampleRate * duration);
-        _noiseBuffer = state.audioCtx.createBuffer(1, bufferSize, state.audioCtx.sampleRate);
-        const data = _noiseBuffer.getChannelData(0);
+        const bufferSize = Math.floor(ctx.sampleRate * duration);
+        buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        _noiseBuffers.set(ctx, buffer);
     }
-    const newSource = state.audioCtx.createBufferSource();
-    newSource.buffer = _noiseBuffer;
+    const newSource = ctx.createBufferSource();
+    newSource.buffer = buffer;
     newSource.onended = () => newSource.disconnect();
     return newSource;
 }
