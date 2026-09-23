@@ -1254,6 +1254,10 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
                 }
             }
         }
+        // Test-only hook: the frame profiler sets window.__paProbe to sample the
+        // master-cycle phase per frame and detect periodic (measure-boundary)
+        // hitches. Inert unless the probe opts in.
+        if (window.__paProbe) window.__paCyclePhase = cycleProgress;
 
         // (Header text moved into the cached static layer — see ensureStaticLayers.)
 
@@ -1513,6 +1517,14 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         // Master-cycle timeline layer: rebuilt only when the playing master
         // cycle (or meter/pattern state) changes, then blitted. The playhead
         // is drawn live on top every frame.
+        //
+        // Layer B is rasterized into a scratch buffer sized to just the band the
+        // timeline actually occupies (not the full canvas), so the once-per-cycle
+        // rebuild clears, rasterizes, and blits only that band instead of the
+        // whole scene — which previously dropped a frame at every measure
+        // boundary. The band's vertical extent is derived from the timeline's
+        // draw geometry (ticks ±18, master dots above, grouping triangles above
+        // and below), so it tracks voice-count changes.
         let sigB = _cachedSigB;
         if (baseSig !== _sigBaseForB || masterCurrentCycle !== _sigCycleForB) {
             sigB = `${baseSig}_${masterCurrentCycle}`;
@@ -1520,26 +1532,49 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             _sigBaseForB = baseSig;
             _sigCycleForB = masterCurrentCycle;
         }
-        if (sigB !== _layerBSig || !_layerB) {
-            _layerB = _ensureScratchLayer(_layerB, canvas.width, canvas.height);
-            const o = _layerB.getContext('2d');
-            // Layer B is transparent (blitted over opaque layer A), so a
-            // reused buffer must be cleared before the redraw.
-            o.clearRect(0, 0, _layerB.width, _layerB.height);
-            // Per-cycle counter of the meter legend: drawn here because it
-            // changes once per playing master cycle, like the timeline.
-            if (state.masterPhraseCycles > 1) {
-                o.font = 'bold 13px sans-serif';
-                const wTitle = textWidth(o, `Master Cycle (${state.mainTeeth} pulses per cycle)`);
-                o.font = '11px sans-serif';
-                o.fillStyle = '#ff9100';
-                o.textAlign = 'left';
-                o.fillText(`Cycle ${masterCurrentCycle + 1} of ${state.masterPhraseCycles}`, canvas.width / 2 + wTitle / 2 + 6, 31);
+        // Vertical extents of the timeline's content, in canvas coordinates.
+        let upExtent = 18;   // tick marks (and the "MASTER CYCLE TIMELINE" label at -14)
+        let downExtent = 18;
+        upExtent = Math.max(upExtent, 18 + 4, (masterVoiceCount - 1) * 10 + 4);
+        (lanes.grouping || []).forEach((lane) => {
+            const gv = lane.voices.length;
+            if (gv > 0) {
+                const reach = 28 + (gv - 1) * 10 + 4;
+                upExtent = Math.max(upExtent, reach);
+                downExtent = Math.max(downExtent, reach);
             }
+        });
+        const bandTop = Math.max(0, Math.floor(timelineY - upExtent));
+        const bandBottom = Math.min(canvas.height, Math.ceil(timelineY + downExtent));
+        const bandHeight = Math.max(1, bandBottom - bandTop);
+
+        if (sigB !== _layerBSig || !_layerB || _layerB.width !== canvas.width || _layerB.height !== bandHeight) {
+            _layerB = _ensureScratchLayer(_layerB, canvas.width, bandHeight);
+            const o = _layerB.getContext('2d');
+            // The scratch buffer is transparent and persistent between rebuilds,
+            // so it must be cleared before the redraw.
+            o.clearRect(0, 0, _layerB.width, _layerB.height);
+            // The band lives at [bandTop, bandBottom); shift draw coordinates so
+            // the timeline's canvas-space Y values land inside the buffer.
+            o.save();
+            o.translate(0, -bandTop);
             drawMasterCycleTimeline(o, state, lanes, timelineX, timelineY, timelineWidth, 0, currentStep, stepSize, false);
+            o.restore();
             _layerBSig = sigB;
         }
-        ctx.drawImage(_layerB, 0, 0);
+        ctx.drawImage(_layerB, 0, bandTop);
+
+        // Per-cycle counter of the meter legend: changes once per playing master
+        // cycle, so it is drawn live (a single text draw) rather than baked into
+        // the timeline band — it sits up by the header, far from the timeline.
+        if (state.masterPhraseCycles > 1) {
+            ctx.font = 'bold 13px sans-serif';
+            const wTitle = textWidth(ctx, `Master Cycle (${state.mainTeeth} pulses per cycle)`);
+            ctx.font = '11px sans-serif';
+            ctx.fillStyle = '#ff9100';
+            ctx.textAlign = 'left';
+            ctx.fillText(`Cycle ${masterCurrentCycle + 1} of ${state.masterPhraseCycles}`, canvas.width / 2 + wTitle / 2 + 6, 31);
+        }
 
         // Master-cycle playhead line — drawn live per frame
         const playheadX = timelineX + cycleProgress * timelineWidth;

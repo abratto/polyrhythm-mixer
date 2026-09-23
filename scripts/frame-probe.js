@@ -125,13 +125,17 @@ async function run() {
     const lanes = await page.evaluate(() => document.querySelectorAll('#groupingLanesContainer .grouping-lane-row').length);
 
     // Instrument rAF callbacks: capture both the wall-clock delta between
-    // frames and the JS self-time of each callback (the drawing work).
+    // frames and the JS self-time of each callback (the drawing work). Each
+    // delta is also paired with the master-cycle phase at that frame, so a
+    // periodic spike at the measure boundary can be detected.
     await page.evaluate(() => {
+        window.__paProbe = true;
         const raf = window.requestAnimationFrame.bind(window);
-        window.__frameStats = { deltas: [], self: [] };
+        window.__frameStats = { deltas: [], self: [], phase: [] };
         let last = null;
         window.requestAnimationFrame = (cb) => raf((now) => {
-            if (last !== null) window.__frameStats.deltas.push(now - last);
+            const phase = window.__paCyclePhase != null ? window.__paCyclePhase : null;
+            if (last !== null) { window.__frameStats.deltas.push(now - last); window.__frameStats.phase.push(phase); }
             last = now;
             const t0 = performance.now();
             cb(now);
@@ -142,19 +146,41 @@ async function run() {
     const sample = async () => {
         const stats = await page.evaluate(() => {
             const s = window.__frameStats;
-            window.__frameStats = { deltas: [], self: [] };
+            window.__frameStats = { deltas: [], self: [], phase: [] };
             return s;
         });
         const self = [...stats.self].sort((a, b) => a - b);
         const deltas = [...stats.deltas].sort((a, b) => a - b);
         const pick = (arr, p) => (arr.length ? arr[Math.min(arr.length - 1, Math.floor((p / 100) * arr.length))] : 0);
+
+        // Measure-boundary spike detector: compare frame deltas whose
+        // master-cycle phase sits within a small window of the cycle start
+        // (phase near 0 or 1, i.e. crossing the boundary) against all other
+        // samples. A periodic rebuild at the measure boundary shows up as a
+        // boundary delta well above the elsewhere distribution.
+        let bMax = 0, bN = 0, oMax = 0, oN = 0;
+        const oDeltas = [];
+        for (let i = 0; i < stats.deltas.length; i++) {
+            const ph = stats.phase[i];
+            const d = stats.deltas[i];
+            if (ph == null) continue;
+            // Window straddling the 0/1 boundary (width 0.12 of the cycle).
+            const near = ph < 0.06 || ph > 0.94;
+            if (near) { if (d > bMax) bMax = d; bN++; }
+            else { if (d > oMax) oMax = d; oN++; oDeltas.push(d); }
+        }
+        oDeltas.sort((a, b) => a - b);
+        const elsewhereP95 = pick(oDeltas, 95);
+
         return {
             n: self.length,
             selfP50: pick(self, 50),
             selfP95: pick(self, 95),
             selfMax: self[self.length - 1] || 0,
             deltaP95: pick(deltas, 95),
-            deltaMax: deltas[deltas.length - 1] || 0
+            deltaMax: deltas[deltas.length - 1] || 0,
+            boundaryMax: bMax,
+            elsewhereP95
         };
     };
 
@@ -168,7 +194,7 @@ async function run() {
     }
 
     console.log(`frame-probe: CPU throttle ×${CPU_RATE}, pointer-coarse=${coarse}, meter=${meter}, groupingLanes=${lanes}, samples/mode≈${SAMPLES}`);
-    console.log('mode    n    cbP50   cbP95   cbMax   Δp95    Δmax   (ms; cb = rAF callback JS self-time)');
+    console.log('mode    n    cbP50   cbP95   cbMax   Δp95    Δmax    Δbound  ΔelseΔp95   (ms; cb = rAF callback JS self-time)');
     for (const r of results) {
         console.log(
             String(r.mode).padEnd(8),
@@ -177,7 +203,9 @@ async function run() {
             r.selfP95.toFixed(1).padEnd(8),
             r.selfMax.toFixed(1).padEnd(8),
             r.deltaP95.toFixed(1).padEnd(8),
-            r.deltaMax.toFixed(1)
+            r.deltaMax.toFixed(1).padEnd(8),
+            r.boundaryMax.toFixed(1).padEnd(8),
+            r.elsewhereP95.toFixed(1)
         );
     }
 
