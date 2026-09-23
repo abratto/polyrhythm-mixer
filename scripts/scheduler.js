@@ -105,9 +105,32 @@ let _schedulerTimer = null;
 // it only means pattern/volume edits are heard up to this much later.
 const LOOKAHEAD_SECONDS = 0.12;
 
+// While the tab is hidden, Chrome/Firefox clamp setTimeout to ~1s. With the
+// normal 120ms horizon that leaves ~0.9s of unscheduled playback after each
+// wake-up, so hits drop out (audible on a locked tablet). Raise the horizon
+// past the clamp so each wake-up still commits a full second of hits. This
+// trades edit latency for dropout resistance: edits made while the tab is
+// hidden are heard up to this much later. Restored to normal on resume.
+const HIDDEN_LOOKAHEAD_SECONDS = 1.5;
+
+/**
+ * The scheduling horizon currently in effect. Raised while the document is
+ * hidden (see HIDDEN_LOOKAHEAD_SECONDS) so timer clamping cannot starve the
+ * audio graph, and restored on visibility.
+ */
+let _lookaheadSeconds = LOOKAHEAD_SECONDS;
+
+if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('visibilitychange', () => {
+        _lookaheadSeconds = document.hidden ? HIDDEN_LOOKAHEAD_SECONDS : LOOKAHEAD_SECONDS;
+    });
+}
+
 // Reseed (drop the missed steps) only when a stall exceeds this. Time-based so
 // the behaviour is consistent across meters and tempos — a fixed step count is
-// ~150ms at dense meters but ~1.8s at sparse ones.
+// ~150ms at dense meters but ~1.8s at sparse ones. Scaled with the horizon:
+// while hidden a stall only counts as "missed" once it exceeds the raised
+// lookahead (otherwise every clamped wake-up would reseed and skip hits).
 const MAX_CATCH_UP_SECONDS = 0.25;
 
 /**
@@ -128,8 +151,8 @@ export function startAudioScheduler(state, lanes, channels, globalVolumeSource) 
     const stepDuration = stepSize / rps;
     const quarterDuration = 60 / state.tempo;
     const elapsed = state.audioCtx.currentTime - state.audioStartTime;
-    state.lastScheduledStep = Math.floor((elapsed + LOOKAHEAD_SECONDS) / stepDuration);
-    state.lastScheduledQuarter = Math.floor((elapsed + LOOKAHEAD_SECONDS) / quarterDuration);
+    state.lastScheduledStep = Math.floor((elapsed + _lookaheadSeconds) / stepDuration);
+    state.lastScheduledQuarter = Math.floor((elapsed + _lookaheadSeconds) / quarterDuration);
     state.lastScheduledActive = { master: -1 };
 
 
@@ -163,17 +186,20 @@ export function startAudioScheduler(state, lanes, channels, globalVolumeSource) 
 
         const now = state.audioCtx.currentTime;
         const elapsed = now - state.audioStartTime;
-        const targetStep = Math.floor((elapsed + LOOKAHEAD_SECONDS) / stepDuration);
-        const targetQuarter = Math.floor((elapsed + LOOKAHEAD_SECONDS) / quarterDuration);
+        const targetStep = Math.floor((elapsed + _lookaheadSeconds) / stepDuration);
+        const targetQuarter = Math.floor((elapsed + _lookaheadSeconds) / quarterDuration);
         const globalVolume = currentGlobalVolume();
 
         // A throttled tab or a long main-thread stall can leave many expired
         // events behind. Resume from the current clock position instead of
         // collapsing every missed hit into an audible burst. Stalls shorter
         // than the lookahead are already pre-scheduled, so this only trips on
-        // genuinely large gaps.
+        // genuinely large gaps. The threshold tracks the active lookahead so a
+        // hidden-tab wake-up (with its raised horizon) doesn't reseed and skip
+        // the hits it just committed.
+        const catchUpLimit = Math.max(MAX_CATCH_UP_SECONDS, _lookaheadSeconds + 0.1);
         const catchUpSteps = targetStep - state.lastScheduledStep;
-        if (catchUpSteps > 0 && catchUpSteps * stepDuration > MAX_CATCH_UP_SECONDS) {
+        if (catchUpSteps > 0 && catchUpSteps * stepDuration > catchUpLimit) {
             state.lastScheduledStep = targetStep;
             state.lastScheduledQuarter = targetQuarter;
             state.lastScheduledActive = { master: -1 };
