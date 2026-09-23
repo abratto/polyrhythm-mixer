@@ -91,8 +91,20 @@ function processTriggers(state, lanes, active, channels) {
  */
 function getGearSprite(teeth, rInner, rOuter, color, isMobile) {
     const key = `${teeth}_${rInner.toFixed(2)}_${rOuter.toFixed(2)}_${color}_${isMobile}`;
-    if (_gearSpriteCache.has(key)) return _gearSpriteCache.get(key);
-    if (_gearSpriteCache.size >= GEAR_SPRITE_CACHE_MAX) _gearSpriteCache.clear();
+    const cached = _gearSpriteCache.get(key);
+    if (cached !== undefined) {
+        // Mark most-recently-used: Map preserves insertion order, so re-insert
+        // moves the key to the end and the front stays the eviction candidate.
+        _gearSpriteCache.delete(key);
+        _gearSpriteCache.set(key, cached);
+        return cached;
+    }
+    // Evict the least-recently-used entry instead of flushing the whole cache,
+    // which would force a burst of re-renders into a single frame.
+    if (_gearSpriteCache.size >= GEAR_SPRITE_CACHE_MAX) {
+        const oldest = _gearSpriteCache.keys().next().value;
+        _gearSpriteCache.delete(oldest);
+    }
 
     const pad = 20;
     const size = Math.ceil((rOuter + pad) * 2);
