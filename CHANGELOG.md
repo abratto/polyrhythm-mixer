@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.19.0 — 2026-09-21
+
+### Changed
+- **Batá slaps (low / middle / high)** were rebuilt from the dry, click-only chachá strike back into a fuller coupled model, now fully tunable: a fast body, three inharmonic shell overtones, a micro-delayed **enú coupling** bloom, and a rawhide crack. Frequencies follow the matched batá registers — **Iyá ~320 Hz, Itótele ~440 Hz, Okónkolo ~580 Hz** — with attack cutoffs aligned to spec (Iyá keeps energy below 1 kHz; Okónkolo sits at ~3–4 kHz). The low slap was additionally retuned to read as a crack rather than a low thud.
+- **Handclap** was rebuilt for realism on a four-layer model: a **micro-transient flutter** of 3 sub-impacts over ~6 ms (the fingers/heel never land at once), a cupped-palm "pop", a low triangle for mass, and a short room tail. Each sub-impact has a soft ~1 ms attack and per-hit frequency jitter, and each layer reads from an independent noise offset to avoid comb-filtering. The clap is **live-synthesized** (not pre-rendered) so the per-hit jitter can vary.
+- **Default instruments** on a fresh load are now **Handclap** for the rhythm-tracks voice and both grouping voices (previously Bass Drum (Kick) and two Woodblock Clacks).
+
 ## v1.18.2 — 2026-09-21
 
 ### Fixed
