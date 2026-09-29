@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.19.3 — 2026-09-29
+
+### Changed
+- **Batá high (Okónkolo) tuning:** body decay lengthened from 0.25 s to 0.34 s and overtone decay from 0.10 s to 0.20 s, so the enú tone rings a little longer.
+
 ## v1.19.2 — 2026-09-28
 
 ### Fixed
