@@ -197,9 +197,17 @@ export function startAudioScheduler(state, lanes, channels, globalVolumeSource) 
         // genuinely large gaps. The threshold tracks the active lookahead so a
         // hidden-tab wake-up (with its raised horizon) doesn't reseed and skip
         // the hits it just committed.
+        //
+        // The reseed requires catching up by MORE THAN ONE step: at slow
+        // tempos a single legitimate step already exceeds the time threshold
+        // (e.g. 6×4 at 40 BPM has stepDuration = 0.5 s > 0.25 s limit), so a
+        // `catchUpSteps > 0` test reseeds on every normal advance — setting
+        // lastScheduledStep = targetStep before the loop and swallowing every
+        // hit (the "silent below ~80 BPM" bug). One step of catch-up is always
+        // just the next scheduled hit, never a stall.
         const catchUpLimit = Math.max(MAX_CATCH_UP_SECONDS, _lookaheadSeconds + 0.1);
         const catchUpSteps = targetStep - state.lastScheduledStep;
-        if (catchUpSteps > 0 && catchUpSteps * stepDuration > catchUpLimit) {
+        if (catchUpSteps > 1 && catchUpSteps * stepDuration > catchUpLimit) {
             state.lastScheduledStep = targetStep;
             state.lastScheduledQuarter = targetQuarter;
             state.lastScheduledActive = { master: -1 };

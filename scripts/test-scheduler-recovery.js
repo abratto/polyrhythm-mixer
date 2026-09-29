@@ -70,4 +70,71 @@ try {
     assert.deepEqual(shifted, [3, 7, 11], 'phase 3 of a 4-pulse group should land on 3, 7, 11.');
 }
 
+// Slow-tempo single-step scheduling. At 40 BPM with mainTeeth = 12 the step
+// duration is 0.5 s — longer than the 0.25 s catch-up limit — so a catch-up
+// test keyed only on elapsed time reseeds on EVERY normal single-step advance
+// (setting lastScheduledStep = targetStep before the loop) and swallows every
+// hit: the "silent below ~80 BPM" bug. A normal one-step advance must always
+// schedule; only multi-step stalls may reseed.
+{
+    let tickFn = null;
+    const originalSetTimeout2 = globalThis.setTimeout;
+    globalThis.setTimeout = (cb) => { tickFn = cb; return 1; };
+    globalThis.clearTimeout = () => {};
+
+    try {
+        const audioCtx = { currentTime: 0, destination: {} };
+        const state = {
+            audioClockActive: true,
+            audioCtx,
+            audioStartTime: 0,
+            playing: true,
+            tempo: 40,            // stepDuration = 0.5 s > MAX_CATCH_UP_SECONDS
+            mainAngle: 0,
+            mainTeeth: 12,
+            masterPhraseSteps: 12,
+            phaseA: 0,
+            phaseB: 0,
+            followPlayhead: { master: true },
+            visibleCycle: { master: 0 }
+        };
+        const lanes = { master: { voices: [] }, grouping: [], Awheel: { selected: [] }, Bwheel: { selected: [] } };
+        const channels = { masterVoices: [], Awheel: null, Bwheel: null, driver: null };
+
+        startAudioScheduler(state, lanes, channels, 1);
+
+        // One normal step advance (0.45 s < 0.5 s step). scheduleStepAudio sets
+        // lastScheduledActive.master when it runs; -1 means the step was swallowed.
+        audioCtx.currentTime = 0.45;
+        tickFn();
+        assert.equal(state.lastScheduledActive.master, 1,
+            'A single step at a slow tempo must be scheduled, not swallowed by the catch-up reseed.');
+
+        audioCtx.currentTime = 0.95;
+        tickFn();
+        assert.equal(state.lastScheduledActive.master, 2, 'Scheduling must keep advancing at slow tempo.');
+
+        // A genuine multi-step stall (5 s = 10 steps) must still reseed and drop
+        // the burst instead of collapsing it into one audible clump. The reseed
+        // resets lastScheduledActive to { master: -1 } and jumps
+        // lastScheduledStep straight to the target without scheduling the gap.
+        audioCtx.currentTime += 5;
+        tickFn();
+        assert.equal(state.lastScheduledActive.master, -1,
+            'A long stall must reseed without replaying the missed steps.');
+        assert.equal(state.lastScheduledStep, 12,
+            'The reseed must jump step tracking to the current clock position.');
+
+        // …and scheduling resumes normally from the new position.
+        audioCtx.currentTime += 0.45;
+        tickFn();
+        assert.equal(state.lastScheduledActive.master, 13 % 12,
+            'Scheduling must resume after a stall reseed.');
+
+        stopAudioScheduler();
+    } finally {
+        globalThis.setTimeout = originalSetTimeout2;
+    }
+}
+
 console.log('Scheduler recovery checks passed.');

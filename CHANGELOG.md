@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.19.2 — 2026-09-28
+
+### Fixed
+- **Playback went silent below ~80 BPM** (exact cutoff depended on the meter). The scheduler's stall-recovery reseed compared catch-up *time* against a fixed 0.25 s limit, but at slow tempos a single legitimate step already exceeds that (6×4 at 40 BPM has a 0.5 s step), so every normal advance was treated as a stall: step tracking was jumped to the target before the scheduling loop ran, swallowing every hit forever. The reseed now requires catching up by **more than one step**, which is the only case that can be a real stall. Verified in a headless-browser probe (90→40 BPM drag: 0 hits pre-fix, steady hits post-fix) and covered by a regression test asserting single steps schedule at slow tempos while genuine multi-step stalls still drop.
+
 ## v1.19.1 — 2026-09-23
 
 ### Fixed
