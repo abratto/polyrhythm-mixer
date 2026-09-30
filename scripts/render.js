@@ -8,7 +8,7 @@
  * The master wheel completes one full rotation every 4 beats (one "measure"),
  * so the visual speed is: radiansPerSecond = BPM × π/2 / 60.
  */
-import { getActivePhraseStep, getActiveWheelStep, getMeshedWheelAngle } from './math.js';
+import { getActivePhraseStep, getMeshedWheelAngle } from './math.js';
 import { updateVoiceStepsForCycle } from './lanes.js';
 
 /** Cache for pre-rendered gear body Path2D objects, keyed by tooth count + radii. */
@@ -41,17 +41,29 @@ function computePatternChecksum(lanes) {
     };
     addLane(lanes.master.voices, 3);
     (lanes.grouping || []).forEach((lane, li) => addLane(lane.voices, 5 + li * 2));
-    for (let i = 0; i < lanes.Awheel.selected.length; i++) if (lanes.Awheel.selected[i]) h = (h + (i + 1) * 11) | 0;
-    for (let i = 0; i < lanes.Bwheel.selected.length; i++) if (lanes.Bwheel.selected[i]) h = (h + (i + 1) * 13) | 0;
     return h;
 }
 
-/** Cheap fingerprint of the master-wheel A/B dot pattern (phase included). */
-function computeDotsSignature(state, lanes) {
-    let h = 0;
-    for (let i = 0; i < lanes.Awheel.selected.length; i++) if (lanes.Awheel.selected[i]) h = (h + (i + 1) * 31) | 0;
-    for (let i = 0; i < lanes.Bwheel.selected.length; i++) if (lanes.Bwheel.selected[i]) h = (h + (i + 1) * 37) | 0;
-    return `${h}_${state.phaseA}_${state.phaseB}`;
+/** Cheap fingerprint of the canonical A/B pulse (derived from meter state). */
+function computeDotsSignature(state) {
+    return `${state.A}_${state.B}_${state.phaseA}_${state.phaseB}`;
+}
+
+/** Fills the scratch masks with the canonical meter pulse: tooth t is an
+    A-onset when t % teethA === 0, a B-onset when t % teethB === 0 (phases are
+    fixed at 0). This replaces the removed editable wheel lanes — the canvas
+    always shows the authoritative structure of the current meter pair. */
+function _fillCanonicalPulseMasks(state) {
+    if (_scratchA.length < state.mainTeeth) {
+        _scratchA = new Uint8Array(state.mainTeeth);
+        _scratchB = new Uint8Array(state.mainTeeth);
+    }
+    _scratchA.fill(0);
+    _scratchB.fill(0);
+    for (let t = 0; t < state.mainTeeth; t++) {
+        if (t % state.teethA === 0) _scratchA[(t + state.phaseA) % state.mainTeeth] = 1;
+        if (t % state.teethB === 0) _scratchB[(t + state.phaseB) % state.mainTeeth] = 1;
+    }
 }
 
 /**
@@ -78,10 +90,6 @@ function processTriggers(state, lanes, active, channels) {
         }
         state.lastActive[key] = active[key];
     });
-
-    if (lanes.Awheel.selected[((active.master % state.mainTeeth) + state.mainTeeth) % state.mainTeeth] && !lanes.Awheel.channel?.silenced) state.flash.A = 12;
-
-    if (lanes.Bwheel.selected[((active.master % state.mainTeeth) + state.mainTeeth) % state.mainTeeth] && !lanes.Bwheel.channel?.silenced) state.flash.B = 12;
 }
 
 /**
@@ -180,18 +188,7 @@ let _masterDotsSig = '';
  * instead of stroking up to mainTeeth spokes + dots every frame.
  */
 function getMasterDotsSprite(state, lanes, rMainInner, markerRadius, dotRadius, isMobile, dotsSig) {
-    if (_scratchA.length < state.mainTeeth) {
-        _scratchA = new Uint8Array(state.mainTeeth);
-        _scratchB = new Uint8Array(state.mainTeeth);
-    }
-    _scratchA.fill(0);
-    _scratchB.fill(0);
-    lanes.Awheel.selected.forEach((on, i) => {
-        if (on) _scratchA[(i + state.phaseA) % state.mainTeeth] = 1;
-    });
-    lanes.Bwheel.selected.forEach((on, i) => {
-        if (on) _scratchB[(i + state.phaseB) % state.mainTeeth] = 1;
-    });
+    _fillCanonicalPulseMasks(state);
 
     const sig = `${state.mainTeeth}_${rMainInner.toFixed(2)}_${markerRadius.toFixed(2)}_${dotRadius.toFixed(2)}_${isMobile}_${dotsSig}`;
     if (_masterDotsSig === sig && _masterDotsSprite) return _masterDotsSprite;
@@ -917,18 +914,19 @@ function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width, cycleProgr
         }
     });
 
-    // Wheel lane steps (diamonds, offset above/below axis)
-    lanes.Awheel.selected.forEach((on, i) => {
-        if (!on) return;
+    // Canonical meter pulse steps (diamonds, offset above/below axis) —
+    // derived from meter state, matching the gear dots.
+    for (let i = 0; i < state.mainTeeth; i++) {
+        if (i % state.teethA !== 0) continue;
         const step = (i + state.phaseA) % state.mainTeeth;
         drawTimelineMarker(ctx, startX + step * pixelPerTooth, y - 14, '#ff6b8f', 'diamond', 4);
-    });
+    }
 
-    lanes.Bwheel.selected.forEach((on, i) => {
-        if (!on) return;
+    for (let i = 0; i < state.mainTeeth; i++) {
+        if (i % state.teethB !== 0) continue;
         const step = (i + state.phaseB) % state.mainTeeth;
         drawTimelineMarker(ctx, startX + step * pixelPerTooth, y + 14, '#6ef2ff', 'diamond', 4);
-    });
+    }
 
     // Grouping lane steps (triangles, alternating above/below, one row per voice)
     (lanes.grouping || []).forEach((lane, li) => {
@@ -1316,13 +1314,21 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             state.flash.driver = 12;
         }
 
-        // Flash the A and B wheel reference dots once per full rotation
-        if (channels && channels.Awheel && !channels.Awheel.silenced) {
+        // Flash the A and B gear reference dots once per full side-wheel
+        // rotation, gated on the corresponding grouping lane having an
+        // unsilenced selected onset (the pulse lives there now — the old wheel
+        // channels are gone).
+        const wheelAudible = (li) => {
+            const lane = (lanes.grouping || [])[li];
+            if (!lane) return true;
+            return lane.voices.some(v => !v.channel?.silenced && v.selected.some(Boolean));
+        };
+        if (wheelAudible(0)) {
             const aRot = Math.floor(angles.A / (2 * Math.PI));
             const prevARot = Math.floor(prevAngleA / (2 * Math.PI));
             if (aRot !== prevARot) state.flash.A = 12;
         }
-        if (channels && channels.Bwheel && !channels.Bwheel.silenced) {
+        if (wheelAudible(1)) {
             const bRot = Math.floor(angles.B / (2 * Math.PI));
             const prevBRot = Math.floor(prevAngleB / (2 * Math.PI));
             if (bRot !== prevBRot) state.flash.B = 12;
@@ -1341,8 +1347,6 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
                     const lane = grouping[i];
                     out[lane.cycleKey] = getActivePhraseStep(s, lane.phase || 0, state.mainTeeth / lane.groupCount, lane.count());
                 }
-                out.Awheel = getActiveWheelStep(s, state.phaseA, state.teethA, state.A);
-                out.Bwheel = getActiveWheelStep(s, state.phaseB, state.teethB, state.B);
                 return out;
             };
 
@@ -1398,7 +1402,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         // happens when one of them actually changes.
         if (_frameNo % 4 === 0) {
             _cachedPatternChecksum = computePatternChecksum(lanes);
-            _cachedDotsSig = computeDotsSignature(state, lanes);
+            _cachedDotsSig = computeDotsSignature(state);
             let voiceCounts = String(lanes.master.voices.length);
             for (const lane of (lanes.grouping || [])) voiceCounts += '.' + lane.voices.length;
             _cachedVoiceCounts = voiceCounts;

@@ -15,7 +15,7 @@
 import { lcm } from './math.js';
 import { serializeGroupingLanes, restoreGroupingLanes } from './grouping-lanes.js';
 
-const SHARE_VERSION = 5;
+const SHARE_VERSION = 6;
 
 // Meter values accepted on restore. Keep in sync with the #rhythmA / #rhythmB
 // option lists in index.html so shared/saved rhythms don't silently downgrade
@@ -182,9 +182,7 @@ function serializeState({ state, ui, lanes, channels }) {
         },
         p: {
             m: lanes.master.voices.map((v, i) => serializeVoice(v, channels.masterVoices[i])),
-            gl: serializeGroupingLanes(serializeVoice),
-            aw: { s: selectedIndexes(lanes.Awheel.selected) },
-            bw: { s: selectedIndexes(lanes.Bwheel.selected) }
+            gl: serializeGroupingLanes(serializeVoice)
         },
         c: {
             driver: {
@@ -192,18 +190,6 @@ function serializeState({ state, ui, lanes, channels }) {
                 v: channels.driver.volume,
                 u: channels.driver.muted ? 1 : 0,
                 o: channels.driver.soloed ? 1 : 0
-            },
-            awheel: {
-                s: channels.Awheel.sound,
-                v: channels.Awheel.volume,
-                u: channels.Awheel.muted ? 1 : 0,
-                o: channels.Awheel.soloed ? 1 : 0
-            },
-            bwheel: {
-                s: channels.Bwheel.sound,
-                v: channels.Bwheel.volume,
-                u: channels.Bwheel.muted ? 1 : 0,
-                o: channels.Bwheel.soloed ? 1 : 0
             }
         }
     };
@@ -336,6 +322,76 @@ function migrateV4toV5(payload) {
 }
 
 /**
+ * Migrates v5 payloads (wheel lanes) to v6 (wheel lanes removed).
+ * The Meter A/B wheel patterns ride onto the linked A/B grouping lanes:
+ * onset-aligned hits merge into voice 1 (which already carries the canonical
+ * pulse); any hits NOT on a group onset — possible because the wheels were
+ * tooth-editable — are preserved as an extra voice at tooth positions
+ * (voice step s → tooth s × teethX, with the lane's offset folded in).
+ * The wheel channel's instrument/mix settings land on voice 1's channel.
+ */
+function migrateV5toV6(payload) {
+    const m = payload.m;
+    const p = payload.p;
+    const c = payload.c;
+    if (m && p && Array.isArray(p.gl)) {
+        const mainTeeth = lcm(m.A, m.B);
+        const teethFor = (lk) => lk === 'A' ? mainTeeth / m.A : mainTeeth / m.B;
+        const wheels = { A: p.aw, B: p.bw };
+        const wheelChannels = { A: c?.awheel, B: c?.bwheel };
+        // Pre-v5 lanes didn't record a link; lane order is [A, B] from the
+        // v4→v5 migration, so fall back to position when lk is missing.
+        const laneFor = (lk) =>
+            p.gl.find(entry => entry && entry.lk === lk)
+            || p.gl[lk === 'A' ? 0 : 1];
+
+        ['A', 'B'].forEach(lk => {
+            const wheel = wheels[lk];
+            const wheelSel = Array.isArray(wheel?.s) ? wheel.s : [];
+            const lane = laneFor(lk);
+            if (!lane) return;
+            lane.lk = lane.lk || lk;
+            const teeth = teethFor(lk);
+            const groupCount = Number.isInteger(lane.g) ? lane.g : m[lk];
+            const phase = Number.isInteger(lane.ph) ? lane.ph : 0;
+            const cycleTeeth = teeth * groupCount;
+
+            // Fold the wheel pattern into tooth positions, then split into
+            // onset-aligned (→ voice 1) and off-onset extras (→ new voice).
+            const onsetSteps = [];
+            const extraTeeth = [];
+            wheelSel.forEach(tooth => {
+                const rel = ((tooth - phase) % cycleTeeth + cycleTeeth) % cycleTeeth;
+                if (rel % teeth === 0) onsetSteps.push(rel / teeth);
+                else extraTeeth.push(tooth % cycleTeeth);
+            });
+
+            if (!Array.isArray(lane.v)) lane.v = [];
+            if (onsetSteps.length) {
+                if (!lane.v[0]) lane.v[0] = { s: [] };
+                const merged = new Set([...(lane.v[0].s || []), ...onsetSteps]);
+                lane.v[0].s = [...merged].sort((x, y) => x - y);
+            }
+            const chState = wheelChannels[lk];
+            if (chState && lane.v[0]) {
+                if (typeof chState.s === 'string' && chState.s) lane.v[0].i = chState.s;
+                if (typeof chState.v === 'number') lane.v[0].v = chState.v;
+                if (chState.u) lane.v[0].u = 1;
+                if (chState.o) lane.v[0].o = 1;
+            }
+            if (extraTeeth.length) {
+                lane.v.push({ s: extraTeeth.map(t => Math.floor(t / teeth)) });
+            }
+        });
+    }
+
+    if (p) { delete p.aw; delete p.bw; }
+    if (c) { delete c.awheel; delete c.bwheel; }
+    payload.v = 6;
+    return payload;
+}
+
+/**
  * Runs the appropriate migration functions based on the payload version.
  * Throws if the payload is invalid or from a future (unsupported) version.
  */
@@ -362,6 +418,11 @@ function migratePayload(payload) {
     // v4 → v5 (fixed A/B phrase lanes → dynamic grouping lanes)
     if (payload.v === 4) {
         payload = migrateV4toV5(payload);
+    }
+
+    // v5 → v6 (wheel lanes removed; patterns fold into the linked grouping lanes)
+    if (payload.v === 5) {
+        payload = migrateV5toV6(payload);
     }
 
     // Reject payloads from future versions
@@ -494,30 +555,11 @@ function restoreFromPayload(payload, deps) {
                 }
             });
         }
-
-        // Single-voice lanes — old saved rhythms (v < 4) stored group-level wheel
-        // indices rather than tooth-level positions. Convert on the fly as safety net.
-        if (payload.p.aw) {
-            const aws = payload.p.aw.s;
-            if (Array.isArray(aws) && aws.length > 0 && payload.v < 4) {
-                payload.p.aw.s = aws.map(g => (g * state.teethA + state.phaseA) % state.mainTeeth);
-            }
-            applySelectedIndexes(lanes.Awheel.selected, payload.p.aw.s);
-        }
-        if (payload.p.bw) {
-            const bws = payload.p.bw.s;
-            if (Array.isArray(bws) && bws.length > 0 && payload.v < 4) {
-                payload.p.bw.s = bws.map(g => (g * state.teethB + state.phaseB) % state.mainTeeth);
-            }
-            applySelectedIndexes(lanes.Bwheel.selected, payload.p.bw.s);
-        }
     }
 
-     // Restore fixed channel state
+    // Restore fixed channel state
     const fixedChannelMap = {
-        driver: 'driver',
-        awheel: 'Awheel',
-        bwheel: 'Bwheel'
+        driver: 'driver'
     };
     if (payload.c && typeof payload.c === 'object') {
         Object.entries(fixedChannelMap).forEach(([payloadKey, channelKey]) => {

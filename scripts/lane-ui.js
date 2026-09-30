@@ -3,7 +3,8 @@
  *
  * Owns the fixed lane groups and the shared lane-building machinery:
  *   - master: the master wheel sequence (one step per tooth), multi-voice
- *   - Awheel / Bwheel: pulse lanes showing equal placements within one cycle
+ *   - master: the full-cycle phrase lane
+ *   - grouping lanes: equal divisions of the master cycle (grouping-lanes.js)
  *
  * The dynamic Rhythm Tracks grouping lanes are built by grouping-lanes.js,
  * which reuses the multi-voice rendering here (`buildLane`). This module also
@@ -156,7 +157,7 @@ function resetLaneVoices(lane) {
 /**
  * Creates the lane configuration objects. Multi-voice lanes (master and the
  * grouping lanes built by grouping-lanes.js) have a `voices` array; the
- * single-voice pulse lanes (Awheel, Bwheel) have a flat structure.
+ * Multi-voice phrase lanes hold a voices[] array; see grouping-lanes.js.
  */
 export function createLanes(ui, state) {
     return {
@@ -186,56 +187,6 @@ export function createLanes(ui, state) {
             onRemoveVoice: null,
             stepsPerCycle: () => state.mainTeeth,
             totalCycles: () => state.masterPhraseCycles
-        },
-        Awheel: {
-            container: ui.meterAWheelGrid,
-            clearBtn: ui.clearAWheelBtn,
-            className: 'meterA-wheel-btn',
-            stepId: 'meterA-wheel-step',
-            count: () => state.A,
-            grouping: true,
-            groupSize: () => state.teethA,
-            allowLaneEdit: false,
-            label: () => 'Meter A Pulse',
-            kind: 'pulse',
-            description: () => `${state.A} groups of ${state.teethA} pulses out of ${state.mainTeeth} pulses per cycle`,
-            titleEl: null,
-            descriptionEl: ui.aWheelDescription,
-            infoBtn: ui.aWheelInfoBtn,
-            textForStep: i => i + 1,
-            isBeat: i => isOnQuarter((i * state.mainTeeth / state.A + state.phaseA) % state.mainTeeth, state.mainTeeth),
-            isBar: i => (i % state.A) === 0,
-            beatPeriod: () => quarterBeatPeriod(state.A),
-            selected: [],
-            buttons: [],
-            isMultiVoice: false,
-            color: '#ff6b8f',
-            channelPrefix: 'Awheel'
-        },
-        Bwheel: {
-            container: ui.meterBWheelGrid,
-            clearBtn: ui.clearBWheelBtn,
-            className: 'meterB-wheel-btn',
-            stepId: 'meterB-wheel-step',
-            count: () => state.B,
-            grouping: true,
-            groupSize: () => state.teethB,
-            allowLaneEdit: false,
-            label: () => 'Meter B Pulse',
-            kind: 'pulse',
-            description: () => `${state.B} groups of ${state.teethB} pulses out of ${state.mainTeeth} pulses per cycle`,
-            titleEl: null,
-            descriptionEl: ui.bWheelDescription,
-            infoBtn: ui.bWheelInfoBtn,
-            textForStep: i => i + 1,
-            isBeat: i => isOnQuarter((i * state.mainTeeth / state.B + state.phaseB) % state.mainTeeth, state.mainTeeth),
-            isBar: i => (i % state.B) === 0,
-            beatPeriod: () => quarterBeatPeriod(state.B),
-            selected: [],
-            buttons: [],
-            isMultiVoice: false,
-            color: '#6ef2ff',
-            channelPrefix: 'Bwheel'
         }
     };
 }
@@ -307,27 +258,20 @@ function ensureGroupNudgeControl(lane, state) {
 
 /**
  * Resets all lane patterns to their defaults:
- *   - Master and phrase lanes start empty (all voices)
- *   - Wheel lanes start fully active (every step triggers)
- *   - First step of the first master and phrase voices is enabled by default
+ *   - Master lane voices start empty
+ *   - First step of the first master voice is enabled by default
+ *   - Grouping lane defaults (including the canonical meter pulse on the
+ *     linked A/B lanes) are owned by grouping-lanes.js.
  */
 export function resetPatterns(state, lanes) {
     lanes.master.voices.forEach(v => {
         v.selected = new Array(state.masterPhraseSteps).fill(false);
         v.nudgeOffset = 0;
     });
-    lanes.Awheel.selected = new Array(state.mainTeeth).fill(false);
-    lanes.Bwheel.selected = new Array(state.mainTeeth).fill(false);
-    for (let g = 0; g < state.A; g++) {
-        lanes.Awheel.selected[(g * state.teethA + state.phaseA) % state.mainTeeth] = true;
-    }
-    for (let g = 0; g < state.B; g++) {
-        lanes.Bwheel.selected[(g * state.teethB + state.phaseB) % state.mainTeeth] = true;
-    }
 
     if (lanes.master.voices[0]?.selected.length > 0) lanes.master.voices[0].selected[0] = true;
 
-    state.lastActive = { master: -1, Awheel: -1, Bwheel: -1 };
+    state.lastActive = { master: -1 };
 }
 
 /**
@@ -359,9 +303,6 @@ export function resizeAllLanes(state, lanes) {
             copyCyclePattern(v, state.mainTeeth, oldLen);
         }
     });
-    resizeSingleLane(lanes.Awheel, state.mainTeeth);
-    resizeSingleLane(lanes.Bwheel, state.mainTeeth);
-
     if (lanes.master.voices[0]?.selected.length > 0) lanes.master.voices[0].selected[0] = true;
 }
 
@@ -377,17 +318,6 @@ function copyCyclePattern(voice, cycleLength, skipBefore = 0) {
             voice.selected[dest] = voice.selected[src];
         }
     }
-}
-
-/** Resizes a single-voice pulse lane's selection (Awheel / Bwheel). */
-function resizeSingleLane(lane, newLength) {
-    const old = lane.selected;
-    const resized = new Array(newLength).fill(false);
-    const copyCount = Math.min(old.length, newLength);
-    for (let i = 0; i < copyCount; i++) {
-        resized[i] = old[i];
-    }
-    lane.selected = resized;
 }
 
 /** Adds a new voice to a multi-voice lane. */
@@ -1128,11 +1058,7 @@ const _pulseRailControllers = [];
 /** Wires collapse toggles onto the static pulse-section rails. */
 export function wirePulseRailCollapses({ defaultCollapsed = true } = {}) {
     const defs = [
-        { id: 'meterAWheelRail', label: 'Meter A Pulse controls' },
-        { id: 'meterBWheelRail', label: 'Meter B Pulse controls' },
-        // The Master Beat 4/4 click-track grid is a sibling of the rail and must
-        // stay visible at all times (like the Meter A/B step strips), so collapsing
-        // the rail only hides its own controls — not the reference grid.
+        // The Master Beat 4/4 click-track rail: collapsing hides its controls.
         { id: 'masterBeatControls', label: 'Master Beat controls' }
     ];
     _pulseRailControllers.length = 0;
@@ -1165,7 +1091,7 @@ export function registerRailLanes(lanes) {
 export function setAllRailsCollapsed(val) {
     _pulseRailControllers.forEach(set => set(val));
     if (_railLanes) {
-        const laneList = [_railLanes.master, _railLanes.Awheel, _railLanes.Bwheel, ...(_railLanes.grouping || [])];
+        const laneList = [_railLanes.master, ...(_railLanes.grouping || [])];
         laneList.forEach(lane => {
             (lane?._voiceRailCtrls || []).forEach(set => set(val));
         });
@@ -1278,8 +1204,6 @@ function applyLaneMixState(lane) {
 export function applyMixVisuals(lanes) {
     reflectLaneMix(lanes.master);
     (lanes.grouping || []).forEach(lane => reflectLaneMix(lane));
-    reflectLaneMixSingle(lanes.Awheel);
-    reflectLaneMixSingle(lanes.Bwheel);
 }
 
 /**
@@ -1289,7 +1213,7 @@ export function applyMixVisuals(lanes) {
  */
 export function buildAllLanes(lanes, state) {
     registerRailLanes(lanes);
-    [lanes.master, lanes.Awheel, lanes.Bwheel].forEach(lane => buildLane(lane, state));
+    buildLane(lanes.master, state);
 }
 
 function removeCurrentClass(button) {
@@ -1464,10 +1388,8 @@ function createSoloMuteControls(channel, idSolo, idMute, { solo = true } = {}) {
 }
 
 /**
- * Mounts Solo/Mute for the single-channel lanes whose buttons live in the lane
- * toolbar (Meter A/B Pulse → Awheel/Bwheel channels) plus the master wheel's
- * `driver` channel on the Master lane header. Multi-voice lanes get theirs per
- * voice inside buildVoiceButtons.
+ * Mounts Solo/Mute for the master wheel's `driver` channel in the Master Beat
+ * rail. Multi-voice lanes get theirs per voice inside buildVoiceButtons.
  */
 export function wireLaneMixButtons(lanes, channels) {
     const mountFor = (lane) =>
@@ -1479,11 +1401,6 @@ export function wireLaneMixButtons(lanes, channels) {
         if (mount.querySelector(`#${idSolo}`)) return; // already wired
         mount.appendChild(createSoloMuteControls(channel, idSolo, idMute));
     };
-
-    // Wheel lanes + master beat: Solo/Mute live in the lane's left-rail mix-group,
-    // matching the phrase-lane voice rows.
-    add(lanes.Awheel, channels.Awheel, 'soloAWheel', 'muteAWheel', '.mix-group');
-    add(lanes.Bwheel, channels.Bwheel, 'soloBWheel', 'muteBWheel', '.mix-group');
 
     // 'driver' is the master wheel (the Master Beat reference). Its instrument,
     // volume, and solo/mute are colocated in the Master Beat rail.
@@ -1740,9 +1657,7 @@ function markSingleVoiceCurrentButtons(lane, previous, next, state, masterPulse)
 export function markCurrentButtons(state, lanes, active, previousActive = null) {
     const mappings = [
         ['master', lanes.master, active.master],
-        ...(lanes.grouping || []).map(lane => [lane.cycleKey, lane, active[lane.cycleKey]]),
-        ['Awheel', lanes.Awheel, active.Awheel],
-        ['Bwheel', lanes.Bwheel, active.Bwheel]
+        ...(lanes.grouping || []).map(lane => [lane.cycleKey, lane, active[lane.cycleKey]])
     ];
 
     const prev = previousActive || state.lastActive;

@@ -415,9 +415,6 @@
             width: 3px;
             border-radius: 3px;
         }
-        .pulses-section::before {
-            background: linear-gradient(180deg, #ff6b8f, #6ef2ff);
-        }
         .phrases-section::before {
             background: linear-gradient(180deg, #ff9100, #ff3366 50%, #00e5ff);
         }
@@ -523,6 +520,12 @@
             flex-direction: column;
             gap: 10px;
         }
+        .grouping-empty-hint {
+            font-size: 11px;
+            font-weight: 600;
+            color: #8a8a99;
+            padding: 8px 4px;
+        }
         .grouping-lane-row {
             border-left: 3px solid var(--lane-accent, #666);
             padding-left: 8px;
@@ -594,6 +597,28 @@
             gap: 8px;
             margin: 4px 0 8px;
             font-size: 13px;
+        }
+        /* The meter selects + beat-scheme summary ride inline in the Rhythm
+           Tracks heading (the old Beat Scheme section is gone). */
+        .beat-scheme-inline {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 6px;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+        .beat-scheme-inline .pulse-select-line {
+            margin: 0;
+        }
+        .beat-scheme-inline .beat-scheme-summary {
+            font-size: 12px;
+            font-weight: 700;
+            color: #b8b8c5;
+        }
+        .beat-scheme-inline select {
+            padding: 4px 6px;
+            font-weight: 700;
         }
         .pulse-select-line .pulse-select-name {
             font-weight: 700;
@@ -792,11 +817,6 @@
         .mix-row .voice-mix-controls {
             margin-left: 0;
         }
-        /* Wheel lanes (Meter A/B Pulse) mount Solo/Mute directly in the rail mix-group
-           (no mix-row wrapper), so keep them left-justified like the other rails. */
-        .wheel-rail .voice-mix-controls {
-            margin-left: 0;
-        }
         .lane-info-btn {
             align-items: center;
             background: #20202c;
@@ -837,21 +857,6 @@
             min-height: 32px;
             align-items: center;
             box-sizing: border-box;
-        }
-        /* Pulse-grouping lanes (Meter A/B wheels) place their cells directly in
-           the .sequencer-container, without the inner .voice-steps wrapper the
-           phrase lanes use. Give these grids the same fixed-step + horizontal
-           scroll treatment as the phrase lanes: steps keep a constant width and
-           the lane scrolls when there are more than fit, instead of overflowing
-           the mixer. */
-        .pulses-section .sequencer-container {
-            flex: 1 1 0;
-            min-width: 0;
-            overflow-x: auto;
-        }
-        .pulses-section .sequencer-container .step-btn {
-            flex: 1 1 24px;
-            min-width: 24px;
         }
         .step-btn {
             flex: 1;
@@ -906,9 +911,7 @@
         }
         .step-btn.master-btn.active { background-color: #ff9100; border-color: #ffffff; color: #000; box-shadow: 0 0 6px #ff9100; }
         .step-btn.meterA-btn.active { background-color: #ff3366; border-color: #ffffff; color: #fff; box-shadow: 0 0 6px #ff3366; }
-        .step-btn.meterA-wheel-btn.active { background-color: #ff6b8f; border-color: #ffffff; color: #fff; box-shadow: 0 0 6px #ff6b8f; }
         .step-btn.meterB-btn.active { background-color: #00e5ff; border-color: #ffffff; color: #000; box-shadow: 0 0 6px #00e5ff; }
-        .step-btn.meterB-wheel-btn.active { background-color: #6ef2ff; border-color: #ffffff; color: #000; box-shadow: 0 0 6px #6ef2ff; }
         .step-btn.current {
             border-color: #ffea00 !important;
             box-shadow: 0 0 8px #ffea00;
@@ -967,9 +970,7 @@
         }
         .mixer-strip.ch-custom { border-top-color: #ff9100; }
         .mixer-strip.ch-a { border-top-color: #ff3366; }
-        .mixer-strip.ch-a-wheel { border-top-color: #ff6b8f; }
         .mixer-strip.ch-b { border-top-color: #00e5ff; }
-        .mixer-strip.ch-b-wheel { border-top-color: #6ef2ff; }
         .mixer-strip.voice-master { border-top-color: #ff9100; }
         .mixer-strip.voice-a { border-top-color: #ff3366; }
         .mixer-strip.voice-b { border-top-color: #00e5ff; }
@@ -1885,14 +1886,8 @@
         #masterGrid .voice-instrument-select {
             color: #ffd9a8 !important;
         }
-        /* Polyrhythm Beat Scheme section: the A/B wheel and Master Beat instrument
-           dropdowns take their meter's phrase-length dropdown text color. */
-        #meterAWheelRail .lane-instrument-select {
-            color: #ffd3e2 !important;
-        }
-        #meterBWheelRail .lane-instrument-select {
-            color: #d2f7ff !important;
-        }
+        /* The Master Beat instrument dropdown takes its phrase-length dropdown
+           text color, matching the other fixed rails. */
         #masterBeatControls .lane-instrument-select {
             color: #ffd9a8 !important;
         }
@@ -1915,13 +1910,11 @@
            follow-playhead keeps the view in sync, so a visible scrollbar is
            just visual noise — and with multiple voices it stacks one bar per
            row (the "superimposed" bars). Scrolling still works. */
-        .voice-steps,
-        .pulses-section .sequencer-container {
+        .voice-steps {
             scrollbar-width: none;
             -ms-overflow-style: none;
         }
-        .voice-steps::-webkit-scrollbar,
-        .pulses-section .sequencer-container::-webkit-scrollbar {
+        .voice-steps::-webkit-scrollbar {
             display: none;
         }
         /* Multi-voice sequencer containers stack rows vertically */
@@ -2060,20 +2053,6 @@
                 min-height: 42px;
                 height: 42px;
                 font-size: 12px;
-            }
-            /* The Meter A/B pulse lanes wrap like the rhythm tracks instead of
-               staying a single horizontal scroll strip, so every pulse stays
-               visible on a narrow portrait screen. */
-            .pulses-section .sequencer-container {
-                flex: 0 0 auto;
-                flex-wrap: wrap;
-                gap: 6px;
-                overflow-x: visible;
-                align-items: stretch;
-            }
-            .pulses-section .sequencer-container .step-btn {
-                flex: 1 1 40px;
-                min-width: 40px;
             }
             /* Keep the Master Beat strip a single flex row (its 4/4 overlay
                needs a linear row), but let its cells shrink so all four quarter

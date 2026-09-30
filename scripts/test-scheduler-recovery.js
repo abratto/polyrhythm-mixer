@@ -32,11 +32,9 @@ try {
     };
     const lanes = {
         master: { voices: [] },
-        grouping: [],
-        Awheel: { selected: [] },
-        Bwheel: { selected: [] }
+        grouping: []
     };
-    const channels = { masterVoices: [], groupingVoices: [], Awheel: null, Bwheel: null, driver: null };
+    const channels = { masterVoices: [], groupingVoices: [], driver: null };
 
     startAudioScheduler(state, lanes, channels, 1);
     assert.ok(scheduledTick, 'Scheduler should queue its next tick.');
@@ -98,8 +96,8 @@ try {
             followPlayhead: { master: true },
             visibleCycle: { master: 0 }
         };
-        const lanes = { master: { voices: [] }, grouping: [], Awheel: { selected: [] }, Bwheel: { selected: [] } };
-        const channels = { masterVoices: [], Awheel: null, Bwheel: null, driver: null };
+        const lanes = { master: { voices: [] }, grouping: [] };
+        const channels = { masterVoices: [], driver: null };
 
         startAudioScheduler(state, lanes, channels, 1);
 

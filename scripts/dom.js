@@ -68,24 +68,16 @@ export function getDomRefs() {
 
         // Sequencer grid containers for each lane
         masterGrid: document.getElementById('masterGrid'),
-        meterAWheelGrid: document.getElementById('meterAWheelGrid'),
-        meterBWheelGrid: document.getElementById('meterBWheelGrid'),
 
         // Add voice buttons for multi-voice lanes
         addMasterVoiceBtn: document.getElementById('addMasterVoiceBtn'),
 
         // Clear buttons for each lane's sequencer
         clearMasterBtn: document.getElementById('clearMasterBtn'),
-        clearAWheelBtn: document.getElementById('clearAWheelBtn'),
-        clearBWheelBtn: document.getElementById('clearBWheelBtn'),
 
         // Lane explanation toggles and copy
         masterInfoBtn: document.getElementById('masterInfoBtn'),
-        aWheelInfoBtn: document.getElementById('aWheelInfoBtn'),
-        bWheelInfoBtn: document.getElementById('bWheelInfoBtn'),
         masterDescription: document.getElementById('masterDescription'),
-        aWheelDescription: document.getElementById('aWheelDescription'),
-        bWheelDescription: document.getElementById('bWheelDescription'),
 
         // Visualization explanation toggle
         vizInfoBtn: document.getElementById('vizInfoBtn'),

@@ -230,7 +230,6 @@ async function run() {
                 masterVolInLane: !!document.querySelector('#volDriver'),
                 masterClickSound: selectValue('#soundDriver'),
                 masterClickMute: muteText('#muteDriver'),
-                BWheelSolo: document.querySelector('#soloBWheel')?.classList.contains('soloed') ?? false,
                 masterVoice1Sound: selectValue('#sound_master_0'),
                 masterVoice2Sound: selectValue('#sound_master_1'),
                 AVoice1Sound: selectValue(gl(1, 1, '.voice-instrument-select')),
@@ -297,12 +296,14 @@ async function run() {
         const initial = await snapshot();
 
         assert(same(initial.active.master1, [0]), 'Master voice 1 should start on pulse 1.', initial.active.master1);
-        assert(same(initial.active.A1, [0]), 'Grouping lane 1 voice 1 should start on step 1.', initial.active.A1);
-        assert(same(initial.active.B1, [0]), 'Grouping lane 2 voice 1 should start on step 1.', initial.active.B1);
+        assert(same(initial.active.A1, [0, 1, 2, 3, 4, 5]), 'Meter A grouping lane voice 1 should start with the canonical 6-pulse (every onset).', initial.active.A1);
+        assert(same(initial.active.B1, [0, 1, 2, 3]), 'Meter B grouping lane voice 1 should start with the canonical 4-pulse (every onset).', initial.active.B1);
         assert(initial.grouping.length === 2 && initial.grouping[0].g === '6' && initial.grouping[1].g === '4',
             'Rhythm Tracks should default to two grouping lanes for the chosen polyrhythm (6 and 4).', initial.grouping);
         assert(initial.mixer.masterVolInLane, 'Master wheel volume fader should be colocated in the Master lane toolbar.', initial.mixer);
-        assert(initial.voiceLabels.master1 === 'Handclap' && initial.voiceLabels.A1 === 'Handclap' && initial.voiceLabels.B1 === 'Handclap', 'Voice rows should display their default mixer instruments.', initial.voiceLabels);
+        assert(await page.locator('#meterAWheelGrid').count() === 0 && await page.locator('#meterBWheelGrid').count() === 0,
+            'The Meter A/B wheel lanes should be gone — the pulse lives in the grouping lanes.');
+        assert(initial.voiceLabels.master1 === 'Handclap' && initial.voiceLabels.A1 === 'Percussion Shaker' && initial.voiceLabels.B1 === 'Percussion Shaker', 'Voice rows should display their default mixer instruments.', initial.voiceLabels);
         assert(initial.helpLeads.length === 5, 'Help modal should expose five bold lead sentences.', initial.helpLeads);
         assert(await page.locator('#resetBtn').textContent() === 'Reset Mixer', 'Reset button should clearly describe full mixer reset.');
         const bataOptions = await page.locator('#soundDriver option').evaluateAll(options => options
@@ -355,8 +356,6 @@ async function run() {
             meterA: document.querySelector('#rhythmA')?.value ?? null,
             meterB: document.querySelector('#rhythmB')?.value ?? null,
             masterSteps: document.querySelectorAll('#masterGrid .voice-row:nth-child(1) .step-btn').length,
-            pulseA: document.querySelectorAll('#meterAWheelGrid .step-btn').length,
-            pulseB: document.querySelectorAll('#meterBWheelGrid .step-btn').length,
             groupingValues: Array.from(document.querySelectorAll('#groupingLanesContainer .grouping-count-select')).map(s => s.value),
             groupingBoxes: Array.from(document.querySelectorAll('#groupingLanesContainer .grouping-lane-row')).map(r => r.querySelectorAll('.sequencer-container > .voice-row:nth-child(1) .step-btn').length)
         }));
@@ -365,7 +364,7 @@ async function run() {
         await setSelect('#rhythmB', 18);
         const twelveAgainstEighteen = await groupingFrameSnapshot();
         assert(same(twelveAgainstEighteen, {
-            meterA: '12', meterB: '18', masterSteps: 36, pulseA: 36, pulseB: 36,
+            meterA: '12', meterB: '18', masterSteps: 36,
             groupingValues: ['12', '18'], groupingBoxes: [12, 18]
         }), '12 against 18 should be accepted and show 12- and 18-group lanes.', twelveAgainstEighteen);
 
@@ -373,7 +372,7 @@ async function run() {
         await setSelect('#rhythmB', 18);
         const seventeenAgainstEighteen = await groupingFrameSnapshot();
         assert(same(seventeenAgainstEighteen, {
-            meterA: '17', meterB: '18', masterSteps: 306, pulseA: 306, pulseB: 306,
+            meterA: '17', meterB: '18', masterSteps: 306,
             groupingValues: ['17', '18'], groupingBoxes: [17, 18]
         }), 'Higher 18-based meter pairs should also rebuild beyond the old 240-step limit.', seventeenAgainstEighteen);
 
@@ -382,7 +381,7 @@ async function run() {
         await setSelect('#rhythmB', 18);
         const twentyFourAgainstEighteen = await groupingFrameSnapshot();
         assert(same(twentyFourAgainstEighteen, {
-            meterA: '24', meterB: '18', masterSteps: 72, pulseA: 72, pulseB: 72,
+            meterA: '24', meterB: '18', masterSteps: 72,
             groupingValues: ['24', '18'], groupingBoxes: [24, 18]
         }), '24 against 18 should build the 72-pulse frame with 24- and 18-group lanes.', twentyFourAgainstEighteen);
 
@@ -409,6 +408,29 @@ async function run() {
         assert(groupingPerLane.options.includes('1'), 'Grouping dropdown should offer a single group (1).', groupingPerLane.options);
         assert(same(groupingPerLane.after, ['12', '18']), 'Changing one grouping lane should not affect the others.', groupingPerLane);
 
+        // --- Grouping lifecycle: any lane can be deleted; the meter re-asserts it ---
+        // Delete both linked lanes (the grouping list can go empty), then pick a
+        // new meter: the linked A/B lanes must reappear, pre-tapped with the pulse.
+        await page.locator('#groupingLanesContainer .grouping-lane-row:nth-child(2) .remove-voice-btn').click();
+        await page.locator('#groupingLanesContainer .grouping-lane-row:nth-child(1) .remove-voice-btn').click();
+        const emptyState = await page.evaluate(() => ({
+            lanes: document.querySelectorAll('#groupingLanesContainer .grouping-lane-row').length,
+            hint: document.querySelector('.grouping-empty-hint')?.textContent ?? null
+        }));
+        assert(emptyState.lanes === 0 && !!emptyState.hint, 'Deleting both groupings should show the empty-state hint.', emptyState);
+        await setSelect('#rhythmA', 5);
+        const reasserted = await groupingFrameSnapshot();
+        assert(same(reasserted.groupingValues, ['5', '18']), 'Picking a new meter should recreate the linked A/B grouping lanes.', reasserted);
+        const reassertedActive = await snapshot();
+        assert(same(reassertedActive.active.A1, [0, 1, 2, 3, 4]), 'The recreated Meter A lane should be pre-tapped with the 5-pulse.', reassertedActive.active);
+        // + Voice should add the smallest unused grouping (5 and 18 taken → divisors of 90: 1,2,3,6,9...), not a duplicate.
+        await page.locator('#groupingLanesContainer .add-voice-btn').click();
+        const addedValues = (await groupingFrameSnapshot()).groupingValues;
+        assert(addedValues.length === 3 && addedValues[2] === '1', 'Adding a grouping should pick the smallest unused grouping.', addedValues);
+
+        // Restore the 12×18 frame the following reset assertion expects.
+        await setSelect('#rhythmA', 12);
+
         await page.locator('#resetBtn').click();
         await page.waitForFunction(() => document.querySelector('#rhythmA')?.value === '6' && document.querySelector('#rhythmB')?.value === '4');
         assert(
@@ -432,8 +454,6 @@ async function run() {
             return {
                 masterCt: currentClassCount('#masterGrid'),
                 groupingCt: currentClassCount('#groupingLanesContainer'),
-                AwheelIdx: currentBtnIndex('#meterAWheelGrid'),
-                BwheelIdx: currentBtnIndex('#meterBWheelGrid'),
                 masterIdx: currentBtnIndex('#masterGrid'),
                 grouping0Idx: groupingIdx(1),
                 grouping1Idx: groupingIdx(2)
@@ -444,8 +464,6 @@ async function run() {
 
         assert(hl1.masterCt >= 1, 'At least one master step button should be highlighted');
         assert(hl1.groupingCt >= 2, 'Grouping lanes should highlight a current step.', hl1);
-        assert(hl1.AwheelIdx >= 0, 'A-wheel step button should be highlighted', hl1);
-        assert(hl1.BwheelIdx >= 0, 'B-wheel step button should be highlighted', hl1);
         assert(hl1.grouping0Idx >= 0 && hl1.grouping1Idx >= 0, 'Every grouping lane should highlight its current group.', hl1);
 
         // Wait more and verify the highlighted step has advanced
@@ -520,12 +538,10 @@ async function run() {
         // accidentally re-added.
         const masterSoloCount = await page.locator('#soloDriver').count();
         assert(masterSoloCount === 1, 'Master beat should have a colocated Solo button in the beat-scheme controls', `found ${masterSoloCount}`);
-        // Pulse-section rails now default to collapsed; expand them so the colocated
+        // Pulse-section rail now defaults to collapsed; expand it so the colocated
         // Solo/Mute controls are reachable.
         await expandAllRails();
         await testSolo('soloDriver');
-        await testSolo('soloAWheel');
-        await testSolo('soloBWheel');
         // Voice channels: add one, test solo, remove
         await page.locator('#addMasterVoiceBtn').click();
         await page.waitForTimeout(300);
@@ -617,7 +633,7 @@ async function run() {
         await page.waitForFunction(() => JSON.parse(localStorage.getItem('alans-polyrhythm-mixer-saved-rhythms') || '[]').some(item => String(item.name || '').startsWith('Regression Save ')));
 
         const savedPayload = await page.evaluate(({ key, name }) => JSON.parse(localStorage.getItem(key)).find(item => item.name === name)?.payload, { key: SAVED_RHYTHMS_KEY, name: testName });
-        assert(savedPayload?.v === 5, 'Saved rhythm should use the current payload version.', savedPayload);
+        assert(savedPayload?.v === 6, 'Saved rhythm should use the current payload version.', savedPayload);
         assert(savedPayload?.m?.masterVolume === 72, 'Saved rhythm should include Master Volume.', savedPayload?.m);
         assert(savedPayload?.p?.gl?.[1]?.v?.[0]?.o === 1, 'Saved rhythm should include the second grouping lane\'s solo state.', savedPayload?.p?.gl?.[1]);
         assert(savedPayload?.p?.gl?.[0]?.ph === 1, 'Saved rhythm should include the first grouping lane\'s pulse offset.', savedPayload?.p?.gl?.[0]);
@@ -670,13 +686,18 @@ async function run() {
         await page.waitForFunction(() => document.querySelector('#savedRhythmsModal')?.classList.contains('hidden'));
         const legacySaved = await snapshot();
         assert(legacySaved.meters.A === '3' && legacySaved.meters.B === '4' && legacySaved.meters.tempo === '96', 'Legacy saved payload should migrate meter settings.', legacySaved);
-        assert(same(legacySaved.active.master1, [0]) && same(legacySaved.active.A1, [0, 2]) && same(legacySaved.active.B1, [0, 3]), 'Legacy saved payload should migrate patterns.', legacySaved.active);
+        assert(same(legacySaved.active.master1, [0]), 'Legacy saved payload should migrate the master pattern.', legacySaved.active);
+        // The wheel lanes are gone: their patterns fold into the linked grouping
+        // lanes' voice 1 — aw [0,1,2] = A onsets 0,1,2 and bw [0..3] = B onsets,
+        // merged with the migrated phrase patterns ap [0,2] / bp [0,3].
+        assert(same(legacySaved.active.A1, [0, 1, 2]), 'Legacy saved payload should fold the A wheel into grouping lane 1.', legacySaved.active);
+        assert(same(legacySaved.active.B1, [0, 1, 2, 3]), 'Legacy saved payload should fold the B wheel into grouping lane 2.', legacySaved.active);
 
         await page.goto(legacyShareUrl, { waitUntil: 'networkidle' });
         await waitForApp();
         const legacyShared = await snapshot();
         assert(legacyShared.meters.A === '3' && legacyShared.meters.B === '4' && legacyShared.meters.tempo === '96', 'Legacy share URL should migrate meter settings.', legacyShared);
-        assert(same(legacyShared.active.master1, [0]) && same(legacyShared.active.A1, [0, 2]) && same(legacyShared.active.B1, [0, 3]), 'Legacy share URL should migrate patterns.', legacyShared.active);
+        assert(same(legacyShared.active.master1, [0]) && same(legacyShared.active.A1, [0, 1, 2]) && same(legacyShared.active.B1, [0, 1, 2, 3]), 'Legacy share URL should migrate patterns and fold wheel pulses into the grouping lanes.', legacyShared.active);
 
         // --- Master phrase cycle count round-trips through share (regression:
         //     the restore clamp once capped masterPhrase at 4, but the selector

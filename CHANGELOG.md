@@ -1,5 +1,10 @@
 # Changelog
+## v1.20.0 — 2026-09-29
 
+### Changed
+- **The Polyrhythm Beat Scheme section is gone; the polyrhythm now lives in Rhythm Tracks.** The Meter A/B wheel lanes duplicated the grouping lanes (same onsets, tooth resolution) while being independently editable — so the audible pulse could silently disagree with the selected meters. The Meter A/B dropdowns and the beat-scheme summary now sit inline in the Rhythm Tracks heading; the two linked grouping lanes start pre-tapped with the canonical pulse (Percussion Shaker) and are ordinary, editable voices from there. The default groove is one clap cleaner — the wheel pulse and the grouping step-1 default no longer double the same onsets. The canvas visualizations are unchanged and now derive the pulse from meter state directly, so they always show the authoritative structure.
+- **Grouping lifecycle, made predictable.** Any grouping lane can be deleted (all of them, even — an empty-state hint explains how to get back). Picking a polyrhythm re-asserts the skeleton: missing linked A/B lanes are recreated pre-tapped with the pulse, ahead of your lanes; lanes you customized are never clobbered. + Voice adds the smallest unused grouping instead of duplicating an existing one.
+- Share/save payloads bump to **v6**: old wheel patterns fold into the linked grouping lanes' first voice (off-grid wheel hits survive as an extra voice), and wheel instrument/mute/solo settings carry over.
 ## v1.19.3 — 2026-09-29
 
 ### Changed

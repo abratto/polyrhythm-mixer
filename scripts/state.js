@@ -52,7 +52,7 @@ export function createState(ui) {
         flash: { driver: 0, custom: 0, A: 0, B: 0 },
         // Tracks the previously active step index per lane to detect transitions.
         // Grouping lanes add a `<cycleKey>: index` entry at runtime.
-        lastActive: { master: -1, Awheel: -1, Bwheel: -1 },
+        lastActive: { master: -1 },
         // Which cycle is currently displayed in each multi-cycle lane
         visibleCycle: { master: 0 },
         // Whether each multi-cycle lane auto-follows the playhead (false = pinned/manual)

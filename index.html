@@ -18,7 +18,7 @@
                 <div class="modal-help-item"><strong>Tap steps and add voices.</strong> Click boxes in any lane to toggle hits. <strong>+ Voice</strong> layers extra rhythms in the Master or any grouping lane. <strong>Nudge</strong> shifts one voice; <strong>Nudge Group</strong> shifts the whole lane.</div>
                 <div class="modal-help-item"><strong>Build groupings.</strong> In <strong>Rhythm Tracks</strong>, each voice lane is one equal division of the master cycle (6 against 4 → a 6-group and a 4-group lane). <strong>+ Voice</strong> adds a lane; each lane's <strong>Grouping</strong> menu is scoped to that lane. Each box is split into its pulses — the highlighted segment is the start, moved with <strong>Offset</strong>.</div>
                 <div class="modal-help-item"><strong>Extend with phrase lengths.</strong> Set a grouping lane's or the Master <strong>Phrase Length</strong> to 2–8 cycles for longer repeating patterns. When a lane has multiple cycles, use <strong>Cycle ◀</strong> / <strong>▶</strong> to browse — the label shows <strong>AUTO</strong> (follows the playhead) or <strong>PIN</strong> (manual view).</div>
-                <div class="modal-help-item"><strong>Mix and share.</strong> In the <strong>Sound Mixer</strong>, swap instruments, solo, mute, and adjust volume per channel. <strong>Save</strong> stores rhythms locally; <strong>Share</strong> copies a link; <strong>Reset Mixer</strong> restores defaults.</div>
+                <div class="modal-help-item"><strong>Mix and share.</strong> Each voice's <strong>▸</strong> rail holds its instrument, volume, solo, and mute; the Master Beat click has its own. <strong>Save</strong> stores rhythms locally; <strong>Share</strong> copies a link; <strong>Reset Mixer</strong> restores defaults.</div>
             </div>
             <div class="modal-actions">
                 <button id="closeHelpModalBtn" class="modal-close-btn">Got It</button>
@@ -111,7 +111,7 @@
             <p><strong>Align.</strong> Three lanes share one measure laid out left to right: the 4/4 beat on top, then Meter A and Meter B. Vertical connectors mark every tick where two meters fire together, and the counter below states how many pulses remain until the <strong>next alignment</strong> — the moment an ensemble player counts down to.</p>
             <p><strong>Voice.</strong> The polyrhythm spoken aloud, after the Anlo Ewe hand-rhythm tradition (C. K. Ladzekpo). The measure becomes a spoken line: <strong>Kpla</strong> on every coincidence — both meters striking together, both hands; <strong>Ka</strong> on each lone Meter A pulse — the strong hand; <strong>Tu</strong> on each lone Meter B pulse — the weak hand. The K in Kpla is nearly silent to western ears, so it sounds like <strong>"Pla"</strong>. The big word is the syllable to say right now; the line below shows the full spoken sequence for the cycle. Say the words in time and your hands tap out the polyrhythm.</p>
             <p><strong>Shapes.</strong> Each meter's pulses joined into a closed polygon on its ring — a hexagon for 6, a square for 4, star shapes for odd meters. Stacked in one dial, the polygons show the structural geometry of the ratio at a glance.</p>
-            <p><strong>Master Cycle Timeline.</strong> The same single measure, laid out left to right: dots = Master voice hits, ◆ = Meter A/B pulse positions, ▲/▼ = phrase-lane hits, white line = playhead.</p>
+            <p><strong>Master Cycle Timeline.</strong> The same single measure, laid out left to right: dots = Master voice hits, ◆ = Meter A/B pulse positions (from the current meter pair), ▲/▼ = grouping-lane hits, white line = playhead.</p>
             <p><strong>Full Pattern Timeline.</strong> Every cycle of the whole pattern chained end to end, so you can see the complete repeating loop and how the meters realign across cycles — especially useful with longer phrase lengths.</p>
         </div>
         <div id="canvasContainer">
@@ -127,99 +127,58 @@
             <button id="collapseAllRailsBtn" type="button" class="rail-all-btn">Collapse all</button>
         </div>
 
-        <section class="lane-group-section pulses-section">
+        <section class="lane-group-section phrases-section">
             <div class="lane-group-heading">
-                Polyrhythm Beat Scheme <span id="beatSchemeSummary" class="beat-scheme-summary"></span>
-               
+                Rhythm Tracks
+                <span class="beat-scheme-inline">
+                    <span class="pulse-select-line meter-a-select">
+                        <span class="pulse-select-name" style="color: #ff3366;">Meter A</span>
+                        <select id="rhythmA">
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6" selected>6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                            <option value="12">12</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17">17</option>
+                            <option value="18">18</option>
+                            <option value="24">24</option>
+                        </select>
+                    </span>
+                    <span id="beatSchemeSummary" class="beat-scheme-summary"></span>
+                    <span class="pulse-select-line meter-b-select">
+                        <span class="pulse-select-name" style="color: #00e5ff;">Meter B</span>
+                        <select id="rhythmB">
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4" selected>4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                            <option value="12">12</option>
+                            <option value="13">13</option>
+                            <option value="14">14</option>
+                            <option value="15">15</option>
+                            <option value="16">16</option>
+                            <option value="17">17</option>
+                            <option value="18">18</option>
+                            <option value="24">24</option>
+                        </select>
+                    </span>
+                </span>
             </div>
 
-             <div class="matrix-row" style="--lane-accent: #ff6b8f;">
-                   <div class="pulse-select-line meter-a-select">
-                      <span class="pulse-select-name" style="color: #ff6b8f;">Meter A</span>
-                      <select id="rhythmA">
-                          <option value="2">2</option>
-                          <option value="3">3</option>
-                          <option value="4">4</option>
-                          <option value="5">5</option>
-                          <option value="6" selected>6</option>
-                          <option value="7">7</option>
-                          <option value="8">8</option>
-                          <option value="9">9</option>
-                          <option value="10">10</option>
-                          <option value="12">12</option>
-                          <option value="13">13</option>
-                          <option value="14">14</option>
-                          <option value="15">15</option>
-                          <option value="16">16</option>
-                          <option value="17">17</option>
-                          <option value="18">18</option>
-                          <option value="24">24</option>
-                       </select>
-                        <button id="aWheelInfoBtn" class="lane-info-btn" aria-label="Show Meter A pulse explanation" aria-expanded="false" aria-controls="aWheelDescription">?</button>
-                    </div>
-                    <div id="aWheelDescription" class="lane-description" hidden></div>
-                  <div class="voice-row">
-                 <div class="lane-label-area wheel-rail" id="meterAWheelRail">
-                    <div class="voice-control-group identity-group">
-                        <span class="voice-label">Voice 1</span>
-                    </div>
-                    <div class="voice-control-group mix-group">
-                        <div class="mix-row lane-volume">
-                            <span class="lane-volume-label">Vol</span>
-                            <input type="range" id="volAWheel" class="volume-fader" min="0" max="1" step="0.05" value="0.45">
-                        </div>
-                    </div>
-                    <div class="voice-control-group pattern-group">
-                        <button id="clearAWheelBtn" class="clear-btn">Clear</button>
-                    </div>
-                </div>
-                <div id="meterAWheelGrid" class="sequencer-container"></div>
-                </div>
-             </div>
-
-            <div class="matrix-row" style="--lane-accent: #6ef2ff;">
-                <div class="pulse-select-line meter-b-select">
-                    <span class="pulse-select-name" style="color: #6ef2ff;">Meter B</span>
-                    <select id="rhythmB">
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4" selected>4</option>
-                        <option value="5">5</option>
-                        <option value="6">6</option>
-                        <option value="7">7</option>
-                        <option value="8">8</option>
-                        <option value="9">9</option>
-                        <option value="10">10</option>
-                        <option value="12">12</option>
-                        <option value="13">13</option>
-                        <option value="14">14</option>
-                        <option value="15">15</option>
-                        <option value="16">16</option>
-                        <option value="17">17</option>
-                        <option value="18">18</option>
-                        <option value="24">24</option>
-                    </select>
-                    <button id="bWheelInfoBtn" class="lane-info-btn" aria-label="Show Meter B pulse explanation" aria-expanded="false" aria-controls="bWheelDescription">?</button>
-                </div>
-                <div id="bWheelDescription" class="lane-description" hidden></div>
-                <div class="voice-row">
-                <div class="lane-label-area wheel-rail" id="meterBWheelRail">
-                    <div class="voice-control-group identity-group">
-                        <span class="voice-label">Voice 1</span>
-                    </div>
-                    <div class="voice-control-group mix-group">
-                        <div class="mix-row lane-volume">
-                            <span class="lane-volume-label">Vol</span>
-                            <input type="range" id="volBWheel" class="volume-fader" min="0" max="1" step="0.05" value="0.35">
-                        </div>
-                    </div>
-                    <div class="voice-control-group pattern-group">
-                        <button id="clearBWheelBtn" class="clear-btn">Clear</button>
-                    </div>
-                </div>
-                <div id="meterBWheelGrid" class="sequencer-container"></div>
-                </div>
-            </div>
             <div class="voice-row master-beat-voice-row">
                 <div id="masterBeatControls" class="lane-label-area master-beat-rail">
                     <div class="voice-control-group identity-group">
@@ -234,10 +193,6 @@
                     </div>
                 </div>
             </div>
-        </section>
-
-        <section class="lane-group-section phrases-section">
-            <div class="lane-group-heading">Rhythm Tracks</div>
 
             <div class="matrix-row master-pattern-row" style="--lane-accent: #ff9100;">
                 <div class="lane-toolbar">
@@ -268,7 +223,7 @@
 
             <div class="grouping-lanes-heading">
                 <span class="grouping-lanes-title">Groupings</span>
-                <span class="grouping-lanes-sub">Equal divisions of the master cycle</span>
+                <span class="grouping-lanes-sub">Equal divisions of the master cycle — the Meter A and Meter B lanes start tapped with the polyrhythm pulse</span>
             </div>
 
             <div id="groupingLanesContainer" class="grouping-lanes"></div>

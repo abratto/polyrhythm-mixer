@@ -31,9 +31,7 @@ const STARTING_MIXER_STATE = {
     tempo: 90,
     masterVolume: 80,
     fixedChannels: {
-        driver: { sound: 'kick', volume: 0.6, muted: false },
-        Awheel: { sound: 'shaker', volume: 0.45, muted: false },
-        Bwheel: { sound: 'shaker', volume: 0.35, muted: false }
+        driver: { sound: 'kick', volume: 0.6, muted: false }
     }
 };
 
@@ -51,10 +49,6 @@ setMixChannels(channels);
 // a reference to its audio channel; refreshSilenced() computes the effective
 // "silenced" flag and calls this callback so lanes can dim/suppress.
 channels.onMixChange = () => applyMixVisuals(lanes, channels);
-
-// Single-voice wheel lanes also map to a mixer channel (the fixed Awheel/Bwheel strips).
-lanes.Awheel.channel = channels.Awheel;
-lanes.Bwheel.channel = channels.Bwheel;
 
 // Rhythm Tracks grouping lanes — dynamic list replacing the fixed A/B Phrase
 // lanes. Created before derived state exists, then re-validated once mainTeeth
@@ -125,11 +119,10 @@ function initVoiceChannels() {
 }
 
 /**
- * Creates the fixed (single-voice) instrument selectors inline in their lanes:
- * the master wheel sound in the Master lane header, and the Meter A/B wheel
- * sounds in each wheel lane's toolbar. Created once; they live outside the
- * rebuilt grid so they persist across meter/phrase changes (unlike the
- * per-voice selectors, which are rebuilt with each voice row).
+ * Creates the fixed instrument selector for the Master Beat click track.
+ * Created once; it lives outside the rebuilt grid so it persists across
+ * meter/phrase changes (unlike the per-voice selectors, which are rebuilt
+ * with each voice row).
  */
 function createFixedLaneInstrumentSelects() {
     // Instruments live in each lane's left rail (identity-group), consistent with the
@@ -138,9 +131,7 @@ function createFixedLaneInstrumentSelects() {
         document.getElementById(railId)?.querySelector('.identity-group') || null;
 
     const defs = [
-        { id: 'soundDriver', channel: channels.driver, mount: railIdentity('masterBeatControls'), color: '#ff9100' },
-        { id: 'soundAWheel', channel: channels.Awheel, mount: railIdentity('meterAWheelRail'), color: '#ff6b8f' },
-        { id: 'soundBWheel', channel: channels.Bwheel, mount: railIdentity('meterBWheelRail'), color: '#6ef2ff' }
+        { id: 'soundDriver', channel: channels.driver, mount: railIdentity('masterBeatControls'), color: '#ff9100' }
     ];
 
     defs.forEach(({ id, channel, mount, color }) => {
@@ -175,21 +166,10 @@ function rebuildSystem(resetWheels = false) {
     updateDerivedState(state);
     updatePhaseUI(state, ui);
     resizeAllLanes(state, lanes);
-    if (resetWheels) {
-        // Recalculate wheel lane onset positions when the polyrhythm grouping
-        // changes (mainTeeth shifts, so old per-tooth positions are invalid).
-        // Phrase-cycle changes don't affect mainTeeth — skip to preserve patterns.
-        lanes.Awheel.selected.fill(false);
-        lanes.Bwheel.selected.fill(false);
-        for (let g = 0; g < state.A; g++) {
-            lanes.Awheel.selected[(g * state.teethA + state.phaseA) % state.mainTeeth] = true;
-        }
-        for (let g = 0; g < state.B; g++) {
-            lanes.Bwheel.selected[(g * state.teethB + state.phaseB) % state.mainTeeth] = true;
-        }
-    }
-    // Re-validate grouping lanes against the new frame (linked A/B lanes follow
-    // their meter; extras snap to a valid divisor).
+    // Re-validate grouping lanes against the new frame. When the meter changes
+    // (resetWheels), the linked A/B lanes follow their meter and their voice 1
+    // is re-derived as the canonical pulse by syncGroupingLanesToFrame — this
+    // replaces the old editable wheel lanes' re-derivation.
     syncGroupingLanesToFrame();
     buildAllLanes(lanes, state);
     refreshSilenced(channels);
@@ -260,16 +240,14 @@ function resetMixerToStartingState() {
     state.visibleCycle = { master: 0 };
 
     resetFixedChannel(channels.driver, STARTING_MIXER_STATE.fixedChannels.driver);
-    resetFixedChannel(channels.Awheel, STARTING_MIXER_STATE.fixedChannels.Awheel);
-    resetFixedChannel(channels.Bwheel, STARTING_MIXER_STATE.fixedChannels.Bwheel);
 
     resetLaneVoicesToSingle(lanes.master);
 
     // Collapse every voice's rail controls on reset (matches the default load state).
     lanes.master.voices.forEach(v => { v.railCollapsed = true; });
 
-    // Re-collapse the static pulse-section rails (Meter A/B Pulse + Master Beat click
-    // track) so reset matches the default collapsed load state.
+    // Re-collapse the Master Beat click-track rail so reset matches the default
+    // collapsed load state.
     collapsePulseRails();
 
     updateDerivedState(state);

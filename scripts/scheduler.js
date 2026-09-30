@@ -86,13 +86,8 @@ function scheduleStepAudio(state, lanes, channels, stepIndex, hitTime, globalVol
         });
     }
 
-    if (lanes.Awheel.selected[((stepIndex % state.mainTeeth) + state.mainTeeth) % state.mainTeeth]) {
-        if (channels.Awheel) playSingleChannel(state, channels.Awheel, globalVolume, hitTime);
-    }
-
-    if (lanes.Bwheel.selected[((stepIndex % state.mainTeeth) + state.mainTeeth) % state.mainTeeth]) {
-        if (channels.Bwheel) playSingleChannel(state, channels.Bwheel, globalVolume, hitTime);
-    }
+    // The canonical meter pulse rides on the linked A/B grouping lanes (voice 1
+    // pre-tapped on every onset) — there are no separate wheel lanes anymore.
 }
 
 

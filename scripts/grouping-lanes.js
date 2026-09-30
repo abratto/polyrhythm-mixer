@@ -21,7 +21,7 @@ import { buildLane } from './lanes.js';
 
 const COLORS = ['#ff3366', '#00e5ff', '#ff9100', '#8be28b', '#c07ae6', '#ffd166', '#f4845f', '#7bdff2'];
 const MAX_CYCLES = 8;
-const DEFAULT_SOUND = 'clap';
+const DEFAULT_SOUND = 'shaker';
 
 let _deps = null;
 let _nextId = 0;
@@ -137,8 +137,13 @@ export function addGroupingVoice(lane) {
     if (!_deps) return null;
     const voice = makeVoice();
     voice.selected = new Array(lane.count()).fill(false);
-    // Match the old phrase-lane default: the first voice starts on step 1.
-    if (lane.voices.length === 0 && voice.selected.length > 0) voice.selected[0] = true;
+    // First voice on a linked A/B lane carries the canonical meter pulse (every
+    // group onset) — the role the removed wheel lanes played. Other lanes keep
+    // the old phrase-lane default: the first voice starts on step 1.
+    if (lane.voices.length === 0 && voice.selected.length > 0) {
+        if (lane.linked === 'A' || lane.linked === 'B') voice.selected.fill(true);
+        else voice.selected[0] = true;
+    }
     const voiceIndex = lane.voices.length;
     lane.voices.push(voice);
 
@@ -170,12 +175,15 @@ function resizeLaneVoices(lane, { fillNew = false } = {}) {
     });
 }
 
-/** Resets a lane's voices to the default pattern (first voice on step 1). */
+/** Resets a lane's voices to the default pattern. Linked A/B lanes carry the
+    canonical meter pulse (every group onset of voice 1 — the role the removed
+    Meter A/B wheel lanes used to play); other lanes start with step 1 tapped. */
 function resetLaneVoicesToDefault(lane) {
     const length = lane.count();
+    const isPulseLane = lane.linked === 'A' || lane.linked === 'B';
     lane.voices.forEach((voice, i) => {
-        voice.selected = new Array(length).fill(false);
-        if (i === 0 && length > 0) voice.selected[0] = true;
+        voice.selected = new Array(length).fill(isPulseLane && i === 0);
+        if (!isPulseLane && i === 0 && length > 0) voice.selected[0] = true;
         voice.nudgeOffset = 0;
     });
 }
@@ -386,6 +394,12 @@ export function buildGroupingLanes() {
     const { lanes, container } = _deps;
     container.innerHTML = '';
     lanes.grouping.forEach((lane, index) => renderLaneRow(lane, index));
+    if (lanes.grouping.length === 0) {
+        const hint = document.createElement('div');
+        hint.className = 'grouping-empty-hint';
+        hint.textContent = 'No groupings — add one below, or pick a meter to restore the polyrhythm pulse.';
+        container.appendChild(hint);
+    }
     // A single + Voice at the bottom of the list adds a new grouping lane —
     // mirroring the Master lane's one + Voice button.
     appendAddVoiceButton(container);
@@ -414,12 +428,17 @@ function ensureCycleKeys(deps) {
     });
 }
 
-/** Adds a new grouping lane (defaults to a mid-size valid grouping). */
+/** Adds a new grouping lane (defaults to the smallest valid grouping not
+    already present, so it adds a new rhythm rather than duplicating one). */
 export function addGroupingLane(groupCount = null) {
     if (!_deps) return null;
     const { state, lanes } = _deps;
     const valid = divisorsForGroups(state.mainTeeth);
-    const count = valid.includes(groupCount) ? groupCount : nearestValue(valid, state.B);
+    const used = new Set(lanes.grouping.map(l => l.groupCount));
+    const smallestUnused = valid.find(d => !used.has(d));
+    const count = valid.includes(groupCount)
+        ? groupCount
+        : (smallestUnused ?? nearestValue(valid, state.B));
     const lane = makeLane(state, { groupCount: count, linked: null });
     lanes.grouping.push(lane);
     ensureCycleKeys(_deps);
@@ -427,11 +446,12 @@ export function addGroupingLane(groupCount = null) {
     return lane;
 }
 
-/** Removes a grouping lane by index (never removes the last lane). */
+/** Removes a grouping lane by index. Any lane may be removed — the linked A/B
+    lanes reappear (pre-tapped with the pulse) the next time the meter changes. */
 export function removeGroupingLane(index) {
     if (!_deps) return;
     const { lanes, state } = _deps;
-    if (lanes.grouping.length <= 1 || index < 0 || index >= lanes.grouping.length) return;
+    if (index < 0 || index >= lanes.grouping.length) return;
     const [removed] = lanes.grouping.splice(index, 1);
     delete state.followPlayhead[removed.cycleKey];
     delete state.visibleCycle[removed.cycleKey];
@@ -456,6 +476,17 @@ export function syncGroupingLanesToFrame() {
     // changed. This avoids tearing down all grouping lanes when an unrelated
     // control (e.g. Master Phrase Length) triggers a system rebuild.
     let changed = frame !== _lastSyncedFrame;
+
+    // The meter pair always asserts its skeleton: if a linked lane was deleted,
+    // picking a polyrhythm recreates it (pre-tapped with the canonical pulse)
+    // ahead of the user lanes. Insert B first so A lands ahead of it.
+    ['B', 'A'].forEach(lk => {
+        if (lanes.grouping.some(l => l.linked === lk)) return;
+        const lane = makeLane(state, { groupCount: state[lk], linked: lk, color: lk === 'A' ? COLORS[0] : COLORS[1] });
+        lanes.grouping.unshift(lane);
+        resetLaneVoicesToDefault(lane);
+        changed = true;
+    });
 
     lanes.grouping.forEach(lane => {
         const previous = lane.groupCount;

@@ -11,8 +11,9 @@ import { instrumentCatalog } from './instruments.js';
 
 /**
  * Creates channel objects that hold the state and DOM references for each
- * audio lane. Fixed channels (driver, Awheel, Bwheel) have static
- * DOM elements. Multi-voice channels (master, A, B) have dynamic voice arrays.
+ * audio lane. The fixed channel (driver — the Master Beat click track) has
+ * static DOM elements. Multi-voice channels (master, grouping lanes) have
+ * dynamic voice arrays.
  */
 export function createChannels() {
     return {
@@ -27,30 +28,6 @@ export function createChannels() {
             soloed: false,
             silenced: false,
             gainScale: 0.6
-        },
-        Awheel: {
-            soundEl: document.getElementById('soundAWheel'),
-            volEl: document.getElementById('volAWheel'),
-            muteEl: document.getElementById('muteAWheel'),
-            soloEl: document.getElementById('soloAWheel'),
-            sound: 'shaker',
-            volume: 0.45,
-            muted: false,
-            soloed: false,
-            silenced: false,
-            gainScale: 0.5
-        },
-        Bwheel: {
-            soundEl: document.getElementById('soundBWheel'),
-            volEl: document.getElementById('volBWheel'),
-            muteEl: document.getElementById('muteBWheel'),
-            soloEl: document.getElementById('soloBWheel'),
-            sound: 'shaker',
-            volume: 0.35,
-            muted: false,
-            soloed: false,
-            silenced: false,
-            gainScale: 0.4
         },
         // Multi-voice channels — populated dynamically
         masterVoices: [],
@@ -142,12 +119,10 @@ export function addVoiceChannel(channels, prefix, container, voiceIndex) {
  */
 export function populateMenus(channels) {
     const defaults = {
-        driver: 'shaker',
-        Awheel: 'shaker',
-        Bwheel: 'shaker'
+        driver: 'shaker'
     };
 
-    const fixedChannels = ['driver', 'Awheel', 'Bwheel'];
+    const fixedChannels = ['driver'];
     fixedChannels.forEach(name => {
         const channel = channels[name];
         if (!channel || !channel.soundEl) return;
@@ -207,7 +182,7 @@ export function bindSoloMute(channel, channels) {
 
 /** Attaches input/click handlers to each fixed channel's volume fader and mute button. */
 export function wireChannels(channels) {
-    const fixedChannels = ['driver', 'Awheel', 'Bwheel'];
+    const fixedChannels = ['driver'];
     fixedChannels.forEach(name => {
         const channel = channels[name];
         if (!channel) return;
@@ -238,8 +213,6 @@ export function refreshSilenced(channels) {
     const anySolo = isAnyChannelSoloed(channels);
     const all = [
         channels.driver,
-        channels.Awheel,
-        channels.Bwheel,
         ...(channels.masterVoices || []),
         ...(channels.groupingVoices || [])
     ];
@@ -252,9 +225,7 @@ export function refreshSilenced(channels) {
 
 /** Returns true if any channel in the mixer has solo enabled. */
 export function isAnyChannelSoloed(channels) {
-    for (const key of ['driver', 'Awheel', 'Bwheel']) {
-        if (channels[key]?.soloed) return true;
-    }
+    if (channels.driver?.soloed) return true;
     for (const key of ['masterVoices', 'groupingVoices']) {
         if ((channels[key] || []).some(ch => ch?.soloed)) return true;
     }
