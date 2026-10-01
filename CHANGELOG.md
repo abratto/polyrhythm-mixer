@@ -1,4 +1,13 @@
 # Changelog
+## v1.22.0 — 2026-10-01
+
+### Added
+- **Clock visualization mode.** Added a new visualization tab that presents the active polyrhythm as four synchronized counters: Meter A, Meter B, a 4/4 beat reference, and the shared master pulse.
+
+### Changed
+- **Clock correspondences now flash on real A/B coincidences.** The Clock view highlights only the moments where Meter A and Meter B actually land together within the cycle, rather than flashing on a broader cycle-start cue.
+- **Visualization coverage updated for the new mode.** The mode picker copy and smoke coverage now include Clock alongside the existing visualizations.
+
 ## v1.21.0 — 2026-10-01
 
 ### Added

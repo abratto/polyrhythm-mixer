@@ -726,6 +726,105 @@ function drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, mast
 
 }
 
+// ── Clock view: old-school digital counters ────────────────────────────
+// One measure shown as four synchronized counters (left→right):
+// Meter A, Meter B, 4/4 reference beat, and master pulse grid. Each field
+// counts 1..N at its own cadence and resets at the cycle boundary.
+function drawClockView(ctx, state, cx, cy, dialR, isMobile) {
+    const measureProgress = (((state.mainAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) / (2 * Math.PI);
+    const countUp = (n) => ((Math.floor(measureProgress * n) % n) + n) % n + 1;
+    // Flash whenever Meter A and Meter B strike together on the same master
+    // pulse (e.g. 6:4 -> pulses 1 and 7 in a 12-pulse cycle).
+    const pulsePos = measureProgress * state.mainTeeth;
+    const pulseIndex = ((Math.floor(pulsePos) % state.mainTeeth) + state.mainTeeth) % state.mainTeeth;
+    const sincePulse = pulsePos - Math.floor(pulsePos);
+    const isCoincidencePulse = (pulseIndex % state.teethA === 0) && (pulseIndex % state.teethB === 0);
+    const coincideWindow = 0.24;
+    const coincideFlash = isCoincidencePulse && sincePulse < coincideWindow
+        ? (1 - (sincePulse / coincideWindow))
+        : 0;
+
+    const fields = [
+        { label: `A (${state.A})`, value: countUp(state.A), color: '#ff6b8f' },
+        { label: `B (${state.B})`, value: countUp(state.B), color: '#6ef2ff' },
+        { label: '4/4', value: countUp(4), color: '#ffb347' },
+        { label: `Pulse (${state.mainTeeth})`, value: countUp(state.mainTeeth), color: '#f5f5f7' }
+    ];
+
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const boxW = isMobile ? 96 : 118;
+    const boxH = isMobile ? 96 : 112;
+    const gap = isMobile ? 14 : 18;
+    const colonW = isMobile ? 14 : 18;
+    const totalW = fields.length * boxW + (fields.length - 1) * (gap + colonW);
+    const startX = cx - totalW / 2;
+    const y = cy - boxH * 0.52;
+
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Subtle panel behind the full digital display.
+    const panelPadX = isMobile ? 18 : 24;
+    const panelPadY = isMobile ? 18 : 20;
+    const panelX = startX - panelPadX;
+    const panelY = y - panelPadY;
+    const panelW = totalW + panelPadX * 2;
+    const panelH = boxH + panelPadY * 2 + (isMobile ? 26 : 30);
+    ctx.fillStyle = 'rgba(8, 14, 12, 0.78)';
+    ctx.strokeStyle = 'rgba(138, 255, 201, 0.35)';
+    ctx.lineWidth = 2;
+    ctx.fillRect(panelX, panelY, panelW, panelH);
+    ctx.strokeRect(panelX + 1, panelY + 1, panelW - 2, panelH - 2);
+    if (coincideFlash > 0.03) {
+        const glow = 0.10 + 0.14 * coincideFlash;
+        ctx.fillStyle = `rgba(196, 255, 229, ${glow.toFixed(3)})`;
+        ctx.fillRect(panelX + 1, panelY + 1, panelW - 2, panelH - 2);
+    }
+
+    let x = startX;
+    fields.forEach((field, i) => {
+        // Individual digit cell
+        ctx.fillStyle = 'rgba(5, 10, 9, 0.88)';
+        ctx.strokeStyle = 'rgba(170, 255, 220, 0.28)';
+        ctx.lineWidth = 1.5;
+        ctx.fillRect(x, y, boxW, boxH);
+        ctx.strokeRect(x + 0.5, y + 0.5, boxW - 1, boxH - 1);
+
+        // Top glass sheen for old-school digital feel.
+        const gloss = ctx.createLinearGradient(x, y, x, y + boxH * 0.45);
+        gloss.addColorStop(0, 'rgba(170, 255, 220, 0.18)');
+        gloss.addColorStop(1, 'rgba(170, 255, 220, 0.00)');
+        ctx.fillStyle = gloss;
+        ctx.fillRect(x + 1, y + 1, boxW - 2, boxH * 0.45);
+
+        // Counter value
+        ctx.fillStyle = field.color;
+        ctx.font = `bold ${isMobile ? 46 : 58}px monospace`;
+        ctx.globalAlpha = 0.94 + 0.06 * coincideFlash;
+        ctx.shadowBlur = (isMobile ? 8 : 10) + 8 * coincideFlash;
+        ctx.shadowColor = field.color;
+        ctx.fillText(pad2(field.value), x + boxW / 2, y + boxH / 2 + 3);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+
+        // Field label
+        ctx.fillStyle = field.color;
+        ctx.font = `bold ${isMobile ? 10 : 11}px sans-serif`;
+        ctx.fillText(field.label, x + boxW / 2, y + boxH + (isMobile ? 11 : 13));
+
+        if (i < fields.length - 1) {
+            const colonX = x + boxW + gap + colonW / 2;
+            ctx.fillStyle = 'rgba(196, 255, 229, 0.85)';
+            ctx.font = `bold ${isMobile ? 34 : 40}px monospace`;
+            ctx.fillText(':', colonX, y + boxH / 2 + 1);
+            x += boxW + gap + colonW;
+        }
+    });
+
+    ctx.restore();
+}
+
 
 
 
@@ -1610,6 +1709,8 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             ctx.arc(cx, cy, isMobile ? 3 : 4, 0, 2 * Math.PI);
             ctx.fill();
             ctx.restore();
+        } else if (state.vizMode === 'clock') {
+            drawClockView(ctx, state, cx, cy, dialR, isMobile);
         } else if (state.vizMode === 'align') {
             drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile);
         } else if (state.vizMode === 'voice') {
