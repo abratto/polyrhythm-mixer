@@ -303,6 +303,29 @@ async function run() {
         assert(initial.mixer.masterVolInLane, 'Master wheel volume fader should be colocated in the Master lane toolbar.', initial.mixer);
         assert(await page.locator('#meterAWheelGrid').count() === 0 && await page.locator('#meterBWheelGrid').count() === 0,
             'The Meter A/B wheel lanes should be gone — the pulse lives in the grouping lanes.');
+        const initialBeatGeometry = await page.evaluate(() => {
+            const rect = (sel) => {
+                const el = document.querySelector(sel);
+                if (!el) return null;
+                const r = el.getBoundingClientRect();
+                return { left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width) };
+            };
+            return {
+                beat: rect('.master-beat-grid .voice-steps'),
+                phrase: rect('#masterGrid .voice-row .voice-steps'),
+                subtitle: document.querySelector('#masterBeatControls .master-beat-sub')?.textContent?.trim() ?? null
+            };
+        });
+        assert(
+            same(initialBeatGeometry.beat, initialBeatGeometry.phrase),
+            'The Master Beat pulse track should share the exact same horizontal span as the Master phrase track.',
+            initialBeatGeometry
+        );
+        assert(
+            initialBeatGeometry.subtitle === '4/4 reference · 4 equal beats of 3 pulses each',
+            'For 6 against 4, the Master Beat subtitle should state the integer pulse spacing per beat.',
+            initialBeatGeometry.subtitle
+        );
         assert(initial.voiceLabels.master1 === 'Handclap' && initial.voiceLabels.A1 === 'Percussion Shaker' && initial.voiceLabels.B1 === 'Percussion Shaker', 'Voice rows should display their default mixer instruments.', initial.voiceLabels);
         assert(initial.helpLeads.length === 5, 'Help modal should expose five bold lead sentences.', initial.helpLeads);
         assert(await page.locator('#resetBtn').textContent() === 'Reset Mixer', 'Reset button should clearly describe full mixer reset.');
@@ -384,6 +407,18 @@ async function run() {
             meterA: '24', meterB: '18', masterSteps: 72,
             groupingValues: ['24', '18'], groupingBoxes: [24, 18]
         }), '24 against 18 should build the 72-pulse frame with 24- and 18-group lanes.', twentyFourAgainstEighteen);
+
+        await setSelect('#rhythmA', 3);
+        await setSelect('#rhythmB', 5);
+        const fractionalBeatSubtitle = await page.locator('#masterBeatControls .master-beat-sub').textContent();
+        assert(
+            fractionalBeatSubtitle?.trim() === '4/4 reference · 4 equal beats across 15 pulses (3.75 pulses per beat)',
+            'For 3 against 5, the Master Beat subtitle should explain the fractional beat spacing over the LCM pulse grid.',
+            fractionalBeatSubtitle
+        );
+
+        await setSelect('#rhythmA', 24);
+        await setSelect('#rhythmB', 18);
 
         // The share/restore clamp must accept 24 rather than silently downgrading it.
         await page.evaluate(() => { globalThis.CompressionStream = undefined; });

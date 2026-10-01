@@ -1,4 +1,9 @@
 # Changelog
+## v1.20.1 — 2026-09-30
+
+### Changed
+- **Master Beat strip clarified and aligned.** The Master Beat reference now shares the same pulse-track span as the Master phrase row, so the quarter-beat overlay sits directly on top of the true pulse grid instead of drifting a few pixels left/right. The strip also now states the beat spacing explicitly: integer cases read e.g. `4 equal beats of 3 pulses each`, while fractional cases such as 3 against 5 read `4 equal beats across 15 pulses (3.75 pulses per beat)`. The pulse boxes under the overlay were given more contrast so the 4-beat division is easier to read against the underlying beat scheme.
+
 ## v1.20.0 — 2026-09-29
 
 ### Changed

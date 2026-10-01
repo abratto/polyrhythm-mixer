@@ -854,6 +854,15 @@ let _mbWakeTimer = null;
 let _mbLastQuarter = null;
 let _mbLastHit = null;
 
+function formatMasterBeatSubtitle(mainTeeth) {
+    const pulsesPerBeat = mainTeeth / 4;
+    if (Number.isInteger(pulsesPerBeat)) {
+        return `4/4 reference · 4 equal beats of ${pulsesPerBeat} pulse${pulsesPerBeat === 1 ? '' : 's'} each`;
+    }
+    const decimal = pulsesPerBeat.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+    return `4/4 reference · 4 equal beats across ${mainTeeth} pulses (${decimal} pulses per beat)`;
+}
+
 function buildMasterBeatReference(lane, state) {
     // The Master Beat rail (#masterBeatControls) holds the label/instrument/volume/
     // solo/mute; this returns only the reference step grid to sit beside it.
@@ -870,6 +879,9 @@ function buildMasterBeatReference(lane, state) {
     const totalCycles = 1;
     const total = stepsPerCycle;
     const mainTeeth = state.mainTeeth;
+
+    const subtitle = document.querySelector('#masterBeatControls .master-beat-sub');
+    if (subtitle) subtitle.textContent = formatMasterBeatSubtitle(mainTeeth);
 
     // The pulse grid: one cell per master tick, uniformly dimmed. The 4/4 meter
     // itself is drawn by the accurate overlay below (positioned at true fractional

@@ -711,14 +711,15 @@
         .voice-steps .master-beat-cell {
             pointer-events: none;
             cursor: default;
-            background: #181820;
-            border: 1px solid #26262f;
+            background: rgba(24, 24, 32, 0.92);
+            border: 1px solid rgba(78, 78, 96, 0.7);
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
         }
         .voice-steps .master-beat-cell.teeth {
-            opacity: 0.45;
+            opacity: 0.78;
         }
         /* Accurate 4/4 meter overlay for the Master Beat strip. Bands are
            positioned in JS at their true q/4 time-fractions (measured from the
@@ -727,21 +728,21 @@
         .master-beat-grid .voice-steps {
             position: relative;
         }
-        /* The Master Beat grid must line up cell-for-cell with the Meter A/B
-           pulse rows. Those rows place .step-btn cells DIRECTLY in their
-           .sequencer-container (no inner panel), so we strip the .voice-steps-column
-           padding/border here — otherwise the cells start ~11px to the right of
-           the A/B cells and the grid can collapse (no intrinsic width). */
+        /* The Master Beat grid must line up cell-for-cell with the Master
+           phrase lane. That means keeping the same step-column shell
+           (padding + border) as the phrase rows, so the pulse cells start and
+           end on the same x coordinates as the master phrase cells. */
         .voice-steps-column.master-beat-grid {
-            padding: 0;
-            border: none;
-            background: none;
+            padding: 8px 10px;
+            border: 1px solid #23232f;
+            background: #0e1118;
+            border-radius: 6px;
             width: 100%;
             flex: 1 1 auto;
             box-sizing: border-box;
         }
         .master-beat-grid .voice-steps {
-            background: rgba(255, 145, 0, 0.05);
+            background: rgba(255, 145, 0, 0.03);
             border-radius: 6px;
         }
         .master-beat-quarters {
@@ -756,11 +757,11 @@
             bottom: -3px;
             box-sizing: border-box;
             border-left: 2px solid rgba(255, 145, 0, 0.55);
-            background: rgba(255, 145, 0, 0.04);
+            background: rgba(255, 145, 0, 0.025);
         }
         .mb-quarter.mb-quarter-downbeat {
             border-left: 2px solid #ffce7a;
-            background: rgba(255, 206, 122, 0.09);
+            background: rgba(255, 206, 122, 0.06);
             box-shadow: -1px 0 6px rgba(255, 206, 122, 0.45);
         }
         .mb-quarter-label {
