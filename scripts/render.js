@@ -335,6 +335,65 @@ function getDialSprite(state, dialR, isMobile) {
     return _dialSprite;
 }
 
+/** Draws a rotating dot-ring around a fixed hand at 12 o'clock. */
+function drawOrbitRing(ctx, N, r, cx, cy, color, dotR, mainAngle, isMobile, numberLabels = false) {
+    if (!Number.isFinite(N) || N <= 0) return;
+    const period = (2 * Math.PI) / N;
+    // Flash window around the fixed 12 o'clock hand. Larger rings with fewer
+    // dots get a wider crossing window; dense rings get a tighter one.
+    const flashWindow = Math.min(0.16, Math.max(0.035, period * 0.35));
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.fillStyle = color;
+
+    for (let k = 0; k < N; k++) {
+        const a = -Math.PI / 2 - (k * 2 * Math.PI) / N - mainAngle;
+        const x = r * Math.cos(a);
+        const y = r * Math.sin(a);
+        // Angular distance from the dot to the fixed 12 o'clock line.
+        const delta = a + Math.PI / 2;
+        const absDelta = Math.abs(Math.atan2(Math.sin(delta), Math.cos(delta)));
+        const hitIntensity = absDelta < flashWindow ? (1 - (absDelta / flashWindow)) : 0;
+        const glow = 1.8 * hitIntensity;
+        const radius = dotR + glow;
+
+        if (hitIntensity > 0.03) {
+            ctx.globalAlpha = 0.45 + 0.45 * hitIntensity;
+            ctx.beginPath();
+            ctx.arc(x, y, radius + (isMobile ? 1.5 : 2.5), 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+
+        // Keep non-crossing dots visibly present but unlit.
+        ctx.globalAlpha = 0.28 + 0.72 * hitIntensity;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        if (hitIntensity > 0.45) {
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(x, y, Math.max(1.5, dotR * 0.55), 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.fillStyle = color;
+        }
+
+        if (numberLabels) {
+            ctx.fillStyle = '#0a0a10';
+            ctx.font = `bold ${Math.max(8, Math.round(dotR + 1))}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(String(k + 1), x, y + 0.5);
+            ctx.fillStyle = color;
+        }
+    }
+
+    ctx.restore();
+}
+
 
 /**
  * Shared top block for every round view: the master-cycle line (with the
@@ -1506,6 +1565,51 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             drawRingFlash(ctx, state.A, dial.rMeterA, cx, cy, '#ff6b8f', 8.5, state.mainAngle, isMobile);
             drawRingFlash(ctx, state.B, dial.rMeterB, cx, cy, '#6ef2ff', 8.5, state.mainAngle, isMobile);
             drawRingFlash(ctx, 4, dial.rBeat, cx, cy, '#ff9100', 8.5, state.mainAngle, isMobile);
+        } else if (state.vizMode === 'orbit') {
+            // ── Orbit view: fixed hand, rotating pulse dots ──
+            const rTicks = dialR * DIAL_RING_FRACTIONS.master;
+            const rMeterA = dialR * DIAL_RING_FRACTIONS.A;
+            const rMeterB = dialR * DIAL_RING_FRACTIONS.B;
+            const rBeat = dialR * DIAL_RING_FRACTIONS.beat;
+
+            // Orbit keeps only the guide rings fixed; pulse dots themselves move.
+            const ringStroke = (r, color) => {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = isMobile ? 1.5 : 2;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+                ctx.stroke();
+            };
+            ringStroke(rTicks, 'rgba(255,255,255,0.30)');
+            ringStroke(rMeterA, 'rgba(255,51,102,0.55)');
+            ringStroke(rMeterB, 'rgba(0,229,255,0.55)');
+            ringStroke(rBeat, 'rgba(255,145,0,0.60)');
+
+            // Fixed reference hand at 12 o'clock (top). Dots orbit beneath it.
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.strokeStyle = 'rgba(255,255,255,0.70)';
+            ctx.lineWidth = isMobile ? 1.25 : 1.75;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, -rTicks);
+            ctx.stroke();
+            ctx.restore();
+
+            // Rotating pulse rings: their crossing rate at the fixed hand is
+            // what produces each meter's cadence.
+            drawOrbitRing(ctx, state.mainTeeth, rTicks, cx, cy, 'rgba(255,255,255,0.92)', 3.5, state.mainAngle, isMobile, false);
+            drawOrbitRing(ctx, state.A, rMeterA, cx, cy, '#ff3366', 8.5, state.mainAngle, isMobile, false);
+            drawOrbitRing(ctx, state.B, rMeterB, cx, cy, '#00e5ff', 8.5, state.mainAngle, isMobile, false);
+            drawOrbitRing(ctx, 4, rBeat, cx, cy, '#ff9100', 8.5, state.mainAngle, isMobile, false);
+
+            // Fixed hand pivot.
+            ctx.save();
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(cx, cy, isMobile ? 3 : 4, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.restore();
         } else if (state.vizMode === 'align') {
             drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile);
         } else if (state.vizMode === 'voice') {

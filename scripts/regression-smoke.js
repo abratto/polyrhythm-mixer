@@ -787,8 +787,8 @@ async function run() {
         assert(recoveredHighlight, 'After a main-thread stall, the step highlight should recover on the next frame.');
 
         // --- Visualization mode switcher ---
-        // --- Visualization mode switcher (five views) ---
-        const vizModes = ['gears', 'rings', 'align', 'voice', 'shapes'];
+        // --- Visualization mode switcher (six views) ---
+        const vizModes = ['gears', 'rings', 'orbit', 'align', 'voice', 'shapes'];
         for (const mode of vizModes) {
             await page.locator(`#vizMode${mode[0].toUpperCase()}${mode.slice(1)}`).click();
             for (const m of vizModes) {

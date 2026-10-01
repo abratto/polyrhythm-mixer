@@ -34,6 +34,7 @@ export function getDomRefs() {
         // Visualization mode switcher (gears / rings / align / phase / shapes)
         vizModeGearsBtn: document.getElementById('vizModeGears'),
         vizModeRingsBtn: document.getElementById('vizModeRings'),
+        vizModeOrbitBtn: document.getElementById('vizModeOrbit'),
         vizModeAlignBtn: document.getElementById('vizModeAlign'),
         vizModeVoiceBtn: document.getElementById('vizModeVoice'),
         vizModeShapesBtn: document.getElementById('vizModeShapes'),

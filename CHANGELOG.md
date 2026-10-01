@@ -1,4 +1,14 @@
 # Changelog
+## v1.21.0 — 2026-10-01
+
+### Added
+- **Orbit visualization mode.** Added a new visualization tab where the hand stays fixed at 12 o'clock and each meter's dots orbit at their own rate. This presents the polyrhythm as rotating layers that repeatedly meet the same reference line.
+
+### Changed
+- **Orbit now uses moving dots only.** Removed fixed pulse dots/number marks from Orbit so the view emphasizes motion and crossing behavior.
+- **Crossing flash is geometry-locked.** Orbit dot flashes now trigger only when a dot reaches the 12 o'clock line (including shared downbeat alignment), instead of flashing from a broader rhythm-phase window.
+- **Idle dot visibility improved.** Increased non-flashing Orbit dot brightness slightly to keep each ring readable while preserving clear contrast at the crossing flash.
+
 ## v1.20.1 — 2026-09-30
 
 ### Changed
