@@ -35,6 +35,7 @@ export function getDomRefs() {
         vizModeGearsBtn: document.getElementById('vizModeGears'),
         vizModeRingsBtn: document.getElementById('vizModeRings'),
         vizModeOrbitBtn: document.getElementById('vizModeOrbit'),
+        vizModeClockBtn: document.getElementById('vizModeClock'),
         vizModeAlignBtn: document.getElementById('vizModeAlign'),
         vizModeVoiceBtn: document.getElementById('vizModeVoice'),
         vizModeShapesBtn: document.getElementById('vizModeShapes'),
