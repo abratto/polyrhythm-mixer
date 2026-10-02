@@ -516,14 +516,16 @@ if (stickyBarToggle && stickyBar) {
 
 // Visualization mode switcher: gears (mechanical), rings (clock face),
 // orbit (fixed hand + rotating pulse dots), clock (digital counters),
-// align (coincidence map),
+// phase (Lissajous/phase diagram), phase3d (master-beat depth), align (coincidence map),
 // voice (spoken), shapes (star polygons).
-if (ui.vizModeGearsBtn && ui.vizModeRingsBtn) {
+if ([ui.vizModeGearsBtn, ui.vizModeRingsBtn, ui.vizModeOrbitBtn, ui.vizModeClockBtn, ui.vizModePhaseBtn, ui.vizModePhase3dBtn, ui.vizModeAlignBtn, ui.vizModeVoiceBtn, ui.vizModeShapesBtn].every(Boolean)) {
     const vizModeButtons = [
         { btn: ui.vizModeGearsBtn, mode: 'gears' },
         { btn: ui.vizModeRingsBtn, mode: 'rings' },
         { btn: ui.vizModeOrbitBtn, mode: 'orbit' },
         { btn: ui.vizModeClockBtn, mode: 'clock' },
+        { btn: ui.vizModePhaseBtn, mode: 'phase' },
+        { btn: ui.vizModePhase3dBtn, mode: 'phase3d' },
         { btn: ui.vizModeAlignBtn, mode: 'align' },
         { btn: ui.vizModeVoiceBtn, mode: 'voice' },
         { btn: ui.vizModeShapesBtn, mode: 'shapes' }

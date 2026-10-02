@@ -31,11 +31,13 @@ export function getDomRefs() {
         // Follow-playhead toggle for scrollable sequence lanes
         followScrollBtn: document.getElementById('followScrollBtn'),
 
-        // Visualization mode switcher (gears / rings / align / phase / shapes)
+        // Visualization mode switcher (gears / rings / orbit / clock / phase / align / voice / shapes)
         vizModeGearsBtn: document.getElementById('vizModeGears'),
         vizModeRingsBtn: document.getElementById('vizModeRings'),
         vizModeOrbitBtn: document.getElementById('vizModeOrbit'),
         vizModeClockBtn: document.getElementById('vizModeClock'),
+        vizModePhaseBtn: document.getElementById('vizModePhase'),
+        vizModePhase3dBtn: document.getElementById('vizModePhase3d'),
         vizModeAlignBtn: document.getElementById('vizModeAlign'),
         vizModeVoiceBtn: document.getElementById('vizModeVoice'),
         vizModeShapesBtn: document.getElementById('vizModeShapes'),

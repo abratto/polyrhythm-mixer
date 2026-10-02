@@ -1,4 +1,15 @@
 # Changelog
+## v1.23.0 — 2026-10-02
+
+### Added
+- **Phase visualization mode.** Added a 2D phase-space view that maps Meter A and Meter B onto a shared looping path, with per-meter live counters and a visible 4/4 reference beat overlay.
+- **3D phase visualization mode.** Added a second phase view that projects the same shared cycle into a 3D phase space, including fixed A/B/4 beat counters for easier reading while the figure rotates.
+
+### Changed
+- **Phase views were refined for readability.** The 2D and 3D layouts were enlarged, re-centered, and re-spaced; overlapping beat labels are merged when multiple beats land on the same point; counters were simplified to remove denominators and leading zeros.
+- **The visualization chooser and control layout now behave correctly on phones.** Mobile CSS was tightened so the rhythm selectors, visualization tabs, sticky controls, and help `?` buttons stay within the app boundary on narrow portrait screens, with improved tap-target sizing.
+- **Phase rendering and timeline drawing were cleaned up before release.** The 3D phase view now reuses cached geometry instead of rebuilding it every frame, and the master-cycle timeline no longer shows a duplicated marker set.
+
 ## v1.22.0 — 2026-10-01
 
 ### Added

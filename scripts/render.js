@@ -394,6 +394,463 @@ function drawOrbitRing(ctx, N, r, cx, cy, color, dotR, mainAngle, isMobile, numb
     ctx.restore();
 }
 
+// ── Phase view: orthogonal oscillators / Lissajous curve ───────────────
+// Meter A bounces along the x-axis, Meter B along the y-axis. Their combined
+// position traces the phase curve of the ratio across one measure.
+let _phaseSprite = null;
+let _phaseSig = '';
+
+function getPhaseSprite(state, plotSize, isMobile) {
+    const margin = isMobile ? 12 : 14;
+    const sig = `${state.A}_${state.B}_${plotSize.toFixed(2)}_${margin}_${isMobile}`;
+    if (_phaseSig === sig && _phaseSprite) return _phaseSprite;
+
+    const box = Math.ceil(plotSize + margin * 2);
+    const off = document.createElement('canvas');
+    off.width = box;
+    off.height = box;
+    const g = off.getContext('2d');
+
+    const plotX = margin;
+    const plotY = margin;
+    const plotRight = plotX + plotSize;
+    const plotBottom = plotY + plotSize;
+
+    g.fillStyle = 'rgba(7, 11, 16, 0.84)';
+    g.fillRect(0, 0, box, box);
+
+    g.strokeStyle = 'rgba(255,255,255,0.16)';
+    g.lineWidth = isMobile ? 1.25 : 1.5;
+    g.strokeRect(plotX, plotY, plotSize, plotSize);
+    g.strokeStyle = 'rgba(255,255,255,0.08)';
+    g.lineWidth = 1;
+    for (const frac of [0.25, 0.5, 0.75]) {
+        const gx = plotX + plotSize * frac;
+        const gy = plotY + plotSize * frac;
+        g.beginPath();
+        g.moveTo(gx, plotY);
+        g.lineTo(gx, plotBottom);
+        g.stroke();
+        g.beginPath();
+        g.moveTo(plotX, gy);
+        g.lineTo(plotRight, gy);
+        g.stroke();
+    }
+
+    const samples = Math.max(180, Math.round(plotSize * 1.6));
+    g.save();
+    g.beginPath();
+    for (let i = 0; i <= samples; i++) {
+        const t = (i / samples) * 2 * Math.PI;
+        const x = plotX + ((Math.cos(t * state.A) + 1) / 2) * plotSize;
+        const y = plotY + (1 - ((Math.cos(t * state.B) + 1) / 2)) * plotSize;
+        if (i === 0) g.moveTo(x, y);
+        else g.lineTo(x, y);
+    }
+    g.strokeStyle = 'rgba(255,255,255,0.28)';
+    g.lineWidth = isMobile ? 2.25 : 2.75;
+    g.stroke();
+    g.strokeStyle = '#6ef2ff';
+    g.globalAlpha = 0.20;
+    g.lineWidth = isMobile ? 4.5 : 5.5;
+    g.stroke();
+    g.restore();
+
+    _phaseSprite = { canvas: off, half: box / 2, margin, plotSize };
+    _phaseSig = sig;
+    return _phaseSprite;
+}
+
+function drawPhaseView(ctx, state, cx, cy, dialR, isMobile) {
+    const plotSize = Math.min(isMobile ? 168 : 206, Math.round(dialR * 1.24));
+    const sprite = getPhaseSprite(state, plotSize, isMobile);
+    const originX = cx - sprite.half;
+    const originY = cy - sprite.half - (isMobile ? 7 : 9);
+    const plotX = originX + sprite.margin;
+    const plotY = originY + sprite.margin;
+    const plotRight = plotX + sprite.plotSize;
+    const plotBottom = plotY + sprite.plotSize;
+
+    ctx.drawImage(sprite.canvas, originX, originY);
+
+    const xPhase = (Math.cos(state.mainAngle * state.A) + 1) / 2;
+    const yPhase = (Math.cos(state.mainAngle * state.B) + 1) / 2;
+    const pointX = plotX + xPhase * sprite.plotSize;
+    const pointY = plotY + (1 - yPhase) * sprite.plotSize;
+    const xBallY = plotBottom - (isMobile ? 12 : 14);
+    const yBallX = plotX + (isMobile ? 12 : 14);
+    const xBallX = pointX;
+    const yBallY = pointY;
+    const measureProgress = (((state.mainAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) / (2 * Math.PI);
+    const countUp = (n) => ((Math.floor(measureProgress * n) % n) + n) % n + 1;
+    const aCount = countUp(state.A);
+    const bCount = countUp(state.B);
+    const aCounter = `A ${aCount}`;
+    const bCounter = `B ${bCount}`;
+    const beatCount = countUp(4);
+    const beatPhase = measureProgress * 4;
+    const activeBeatIdx = ((Math.floor(beatPhase) % 4) + 4) % 4;
+    const activeBeatGlow = 1 - (beatPhase - Math.floor(beatPhase));
+
+    ctx.save();
+    ctx.lineWidth = isMobile ? 1.25 : 1.5;
+    ctx.setLineDash([6, 6]);
+    ctx.strokeStyle = 'rgba(255,107,143,0.28)';
+    ctx.beginPath();
+    ctx.moveTo(xBallX, xBallY);
+    ctx.lineTo(pointX, pointY);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(110,242,255,0.28)';
+    ctx.beginPath();
+    ctx.moveTo(yBallX, yBallY);
+    ctx.lineTo(pointX, pointY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.40)';
+    ctx.beginPath();
+    ctx.moveTo(pointX, plotY);
+    ctx.lineTo(pointX, plotBottom);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(plotX, pointY);
+    ctx.lineTo(plotRight, pointY);
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = isMobile ? 0 : 18;
+    ctx.shadowColor = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(pointX, pointY, isMobile ? 5.25 : 6.5, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    const drawBall = (x, y, fill, label) => {
+        ctx.fillStyle = fill;
+        ctx.shadowBlur = isMobile ? 0 : 12;
+        ctx.shadowColor = fill;
+        ctx.beginPath();
+        ctx.arc(x, y, isMobile ? 8 : 9.5, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = isMobile ? 1 : 1.25;
+        ctx.stroke();
+        ctx.fillStyle = '#0a0a10';
+        ctx.font = `bold ${isMobile ? 9 : 10}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, x, y + 0.5);
+    };
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.20)';
+    ctx.lineWidth = 1.25;
+    ctx.beginPath();
+    ctx.moveTo(plotX, xBallY);
+    ctx.lineTo(plotRight, xBallY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(yBallX, plotY);
+    ctx.lineTo(yBallX, plotBottom);
+    ctx.stroke();
+
+    drawBall(xBallX, xBallY, '#ff6b8f', 'A');
+    drawBall(yBallX, yBallY, '#6ef2ff', 'B');
+
+    // 4/4 beat schema overlaid on the same phase curve: four fixed landmarks
+    // show where each quarter beat maps into A/B phase space.
+    const beatMarkers = [];
+    for (let k = 0; k < 4; k++) {
+        const t = (k / 4) * 2 * Math.PI;
+        const bx = plotX + ((Math.cos(t * state.A) + 1) / 2) * sprite.plotSize;
+        const by = plotY + (1 - ((Math.cos(t * state.B) + 1) / 2)) * sprite.plotSize;
+        beatMarkers.push({ x: bx, y: by, beat: k + 1, idx: k });
+    }
+
+    // Merge overlapping quarter-beat landmarks into one marker with a compact
+    // combined label (e.g. 2/4) so timing remains explicit without extra dots.
+    const beatGroups = [];
+    const overlapPx = isMobile ? 7 : 8;
+    for (const marker of beatMarkers) {
+        let group = null;
+        for (const candidate of beatGroups) {
+            if (Math.hypot(candidate.x - marker.x, candidate.y - marker.y) <= overlapPx) {
+                group = candidate;
+                break;
+            }
+        }
+        if (!group) {
+            group = { x: marker.x, y: marker.y, beats: [], indices: [] };
+            beatGroups.push(group);
+        }
+        group.beats.push(marker.beat);
+        group.indices.push(marker.idx);
+    }
+
+    beatGroups.forEach((group) => {
+        const isActive = group.indices.includes(activeBeatIdx);
+        if (isActive && activeBeatGlow > 0.05) {
+            ctx.save();
+            ctx.globalAlpha = 0.18 + 0.22 * activeBeatGlow;
+            ctx.fillStyle = '#ffb347';
+            ctx.beginPath();
+            ctx.arc(group.x, group.y, (isMobile ? 13.5 : 16) + 3.5 * activeBeatGlow, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        const label = group.beats.length > 1
+            ? group.beats.join('/')
+            : String(group.beats[0]);
+
+        ctx.fillStyle = '#ff9100';
+        ctx.beginPath();
+        ctx.arc(group.x, group.y, isMobile ? 7.25 : 8.5, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = isMobile ? 1 : 1.25;
+        ctx.stroke();
+        ctx.fillStyle = '#0a0a10';
+        ctx.font = `bold ${group.beats.length > 1 ? (isMobile ? 8 : 9) : (isMobile ? 9 : 10)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, group.x, group.y + 0.5);
+    });
+
+    // Axis-aligned live counters: A runs on x-axis, B runs on y-axis.
+    ctx.fillStyle = 'rgba(7, 11, 16, 0.90)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.20)';
+    ctx.lineWidth = 1.25;
+    ctx.font = `bold ${isMobile ? 10 : 11}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const aCounterW = isMobile ? 78 : 92;
+    const aCounterH = isMobile ? 18 : 20;
+    const aCounterX = cx - aCounterW / 2;
+    const aCounterY = plotBottom + (isMobile ? 10 : 12);
+    ctx.fillRect(aCounterX, aCounterY, aCounterW, aCounterH);
+    ctx.strokeRect(aCounterX + 0.5, aCounterY + 0.5, aCounterW - 1, aCounterH - 1);
+    ctx.fillStyle = '#ff6b8f';
+    ctx.fillText(aCounter, cx, aCounterY + aCounterH / 2 + 0.5);
+
+    const bCounterW = isMobile ? 78 : 92;
+    const bCounterH = isMobile ? 18 : 20;
+    const bCounterX = plotX - (isMobile ? 24 : 28);
+    const bCounterY = (plotY + plotBottom) / 2;
+    ctx.save();
+    ctx.translate(bCounterX, bCounterY);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillStyle = 'rgba(7, 11, 16, 0.90)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.20)';
+    ctx.fillRect(-bCounterW / 2, -bCounterH / 2, bCounterW, bCounterH);
+    ctx.strokeRect(-bCounterW / 2 + 0.5, -bCounterH / 2 + 0.5, bCounterW - 1, bCounterH - 1);
+    ctx.fillStyle = '#6ef2ff';
+    ctx.fillText(bCounter, 0, 0.5);
+    ctx.restore();
+
+    ctx.fillStyle = '#ff6b8f';
+    ctx.font = `bold ${isMobile ? 10 : 11}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`A (${state.A})`, xBallX, xBallY + (isMobile ? 12 : 13));
+    ctx.fillStyle = '#6ef2ff';
+    ctx.fillText(`B (${state.B})`, yBallX, yBallY - (isMobile ? 12 : 13));
+    ctx.fillStyle = '#ffb347';
+    ctx.font = `bold ${isMobile ? 9 : 10}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`4/4 beat ${beatCount}`, (plotX + plotRight) / 2, plotY - (isMobile ? 11 : 13));
+
+    ctx.restore();
+}
+
+// ── Phase 3D view: A/B plane plus master-beat depth ────────────────────
+// Extends the phase diagram into a projected 3D space where the 4/4 master
+// beat becomes depth, so the current ratio draws a spatial path instead of a
+// flat curve.
+let _phase3dGeom = null;
+let _phase3dGeomSig = '';
+
+function projectPhase3D(x, y, z, centerX, centerY, scale) {
+    const yaw = -Math.PI / 5;
+    const pitch = Math.PI / 6;
+    const x0 = (x - 0.5) * 2;
+    const y0 = (y - 0.5) * 2;
+    const z0 = (z - 0.5) * 2;
+
+    const cosYaw = Math.cos(yaw);
+    const sinYaw = Math.sin(yaw);
+    const x1 = x0 * cosYaw + z0 * sinYaw;
+    const z1 = -x0 * sinYaw + z0 * cosYaw;
+
+    const cosPitch = Math.cos(pitch);
+    const sinPitch = Math.sin(pitch);
+    const y1 = y0 * cosPitch - z1 * sinPitch;
+
+    return {
+        x: centerX + x1 * scale,
+        y: centerY - y1 * scale,
+        depth: z1,
+    };
+}
+
+function getPhase3DGeometry(state, centerX, centerY, scale, plotSize) {
+    const sig = `${state.A}_${state.B}_${centerX.toFixed(2)}_${centerY.toFixed(2)}_${scale.toFixed(3)}_${plotSize.toFixed(2)}`;
+    if (_phase3dGeom && _phase3dGeomSig === sig) return _phase3dGeom;
+
+    const samples = Math.max(160, Math.round(plotSize * 1.3));
+    const rawCorners = [
+        [0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0],
+        [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1],
+    ].map(([x, y, z]) => projectPhase3D(x, y, z, centerX, centerY, scale));
+
+    const rawPath = [];
+    for (let i = 0; i <= samples; i++) {
+        const t = (i / samples) * 2 * Math.PI;
+        const x = (Math.cos(t * state.A) + 1) / 2;
+        const y = (Math.cos(t * state.B) + 1) / 2;
+        const z = (Math.cos(t * 4) + 1) / 2;
+        rawPath.push(projectPhase3D(x, y, z, centerX, centerY, scale));
+    }
+
+    const bounds = [{ x: centerX, y: centerY }].concat(rawCorners, rawPath);
+    const minX = Math.min(...bounds.map((pt) => pt.x));
+    const maxX = Math.max(...bounds.map((pt) => pt.x));
+    const minY = Math.min(...bounds.map((pt) => pt.y));
+    const maxY = Math.max(...bounds.map((pt) => pt.y));
+    const shiftX = centerX - (minX + maxX) / 2;
+    const shiftY = centerY - (minY + maxY) / 2;
+    const shift = (pt) => ({ x: pt.x + shiftX, y: pt.y + shiftY, depth: pt.depth });
+
+    _phase3dGeom = {
+        centerPoint: { x: centerX + shiftX, y: centerY + shiftY },
+        shiftX,
+        shiftY,
+        corners: rawCorners.map(shift),
+        path: rawPath.map(shift),
+    };
+    _phase3dGeomSig = sig;
+    return _phase3dGeom;
+}
+
+function drawPhase3DView(ctx, state, cx, cy, dialR, isMobile) {
+    const plotSize = Math.min(isMobile ? 194 : 244, Math.round(dialR * 1.18));
+    const scale = plotSize * 0.33;
+    const centerX = cx;
+    const centerY = cy + (isMobile ? 4 : 8);
+    const measureProgress = (((state.mainAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) / (2 * Math.PI);
+    const countUp = (n) => ((Math.floor(measureProgress * n) % n) + n) % n + 1;
+    const aCount = countUp(state.A);
+    const bCount = countUp(state.B);
+    const beatCount = countUp(4);
+
+    const ax = (Math.cos(state.mainAngle * state.A) + 1) / 2;
+    const ay = (Math.cos(state.mainAngle * state.B) + 1) / 2;
+    const az = (Math.cos(state.mainAngle * 4) + 1) / 2;
+    const geom = getPhase3DGeometry(state, centerX, centerY, scale, plotSize);
+    const shift = (pt) => ({ x: pt.x + geom.shiftX, y: pt.y + geom.shiftY });
+    const p = shift(projectPhase3D(ax, ay, az, centerX, centerY, scale));
+    const px = shift(projectPhase3D(ax, 0, 0, centerX, centerY, scale));
+    const py = shift(projectPhase3D(0, ay, 0, centerX, centerY, scale));
+    const pz = shift(projectPhase3D(0, 0, az, centerX, centerY, scale));
+    const centerPoint = geom.centerPoint;
+    const spx = px;
+    const spy = py;
+    const spz = pz;
+    const sp = p;
+    const path = geom.path;
+    const corners = geom.corners;
+
+    const ball = (pt, fill, label, radius = (isMobile ? 7.5 : 9), fontPx = (isMobile ? 9 : 10)) => {
+        ctx.save();
+        ctx.fillStyle = fill;
+        ctx.shadowBlur = isMobile ? 0 : 12;
+        ctx.shadowColor = fill;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, radius, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = isMobile ? 1 : 1.25;
+        ctx.stroke();
+        ctx.fillStyle = '#0a0a10';
+        ctx.font = `bold ${fontPx}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, pt.x, pt.y + 0.5);
+        ctx.restore();
+    };
+
+    const line = (a, b, color, width = 1.5) => {
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+        ctx.restore();
+    };
+
+    const drawCornerCounter = (corner, value, color) => {
+        const dx = corner.x - centerPoint.x;
+        const dy = corner.y - centerPoint.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const ux = dx / len;
+        const uy = dy / len;
+        const anchorX = corner.x + ux * (isMobile ? 16 : 20);
+        const anchorY = corner.y + uy * (isMobile ? 16 : 20);
+        const boxW = isMobile ? 28 : 34;
+        const boxH = isMobile ? 18 : 22;
+
+        ctx.save();
+        ctx.translate(anchorX, anchorY);
+        ctx.fillStyle = 'rgba(7, 11, 16, 0.90)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.20)';
+        ctx.lineWidth = 1.1;
+        ctx.fillRect(-boxW / 2, -boxH / 2, boxW, boxH);
+        ctx.strokeRect(-boxW / 2 + 0.5, -boxH / 2 + 0.5, boxW - 1, boxH - 1);
+        ctx.fillStyle = color;
+        ctx.font = `bold ${isMobile ? 10 : 12}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(value), 0, 0.5);
+        ctx.restore();
+    };
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+    ctx.lineWidth = isMobile ? 1.25 : 1.5;
+    [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]].forEach(([a, b]) => line(corners[a], corners[b], 'rgba(255,255,255,0.16)', isMobile ? 1.25 : 1.5));
+    ctx.strokeStyle = 'rgba(110,242,255,0.38)';
+    ctx.lineWidth = isMobile ? 2.25 : 2.75;
+    ctx.beginPath();
+    path.forEach((pt, i) => {
+        if (i === 0) ctx.moveTo(pt.x, pt.y);
+        else ctx.lineTo(pt.x, pt.y);
+    });
+    ctx.stroke();
+    ctx.restore();
+
+    line(centerPoint, spx, 'rgba(255,107,143,0.35)', 1.75);
+    line(centerPoint, spy, 'rgba(110,242,255,0.35)', 1.75);
+    line(centerPoint, spz, 'rgba(255,145,0,0.35)', 1.75);
+    line(spx, sp, 'rgba(255,107,143,0.22)', 1.25);
+    line(spy, sp, 'rgba(110,242,255,0.22)', 1.25);
+    line(spz, sp, 'rgba(255,145,0,0.22)', 1.25);
+
+    drawCornerCounter(corners[1], aCount, '#ff6b8f');
+    drawCornerCounter(corners[3], bCount, '#6ef2ff');
+    drawCornerCounter(corners[4], beatCount, '#ff9100');
+
+    ball(spx, '#ff6b8f', 'A');
+    ball(spy, '#6ef2ff', 'B');
+    ball(spz, '#ff9100', '4', isMobile ? 9.5 : 12, isMobile ? 10 : 12);
+    ball(sp, '#ffffff', '');
+}
+
+// ── Shapes view: star polygons ──────────────────────────────────────────
 
 /**
  * Shared top block for every round view: the master-cycle line (with the
@@ -1086,19 +1543,9 @@ function drawMasterCycleTimeline(ctx, state, lanes, startX, y, width, cycleProgr
         drawTimelineMarker(ctx, startX + step * pixelPerTooth, y + 14, '#6ef2ff', 'diamond', 4);
     }
 
-    // Grouping lane steps (triangles, alternating above/below, one row per voice)
-    (lanes.grouping || []).forEach((lane, li) => {
-        const dir = li % 2 === 0 ? -1 : 1;
-        lane.voices.forEach((voice, vi) => {
-            const yOffset = 28 + vi * 10;
-            const groupSize = state.mainTeeth / lane.groupCount;
-            voice.selected.forEach((on, i) => {
-                if (!on) return;
-                const step = ((i * groupSize) + (lane.phase || 0)) % state.mainTeeth;
-                drawTimelineMarker(ctx, startX + step * pixelPerTooth, y + dir * yOffset, lane.color, 'up', 4);
-            });
-        });
-    });
+    // Grouping-lane markers are intentionally omitted here: this timeline is
+    // the canonical cycle view, and drawing both canonical A/B pulses and
+    // grouping markers duplicates meter information visually.
 
     // Playhead line — drawn live per frame (it moves continuously)
     if (includePlayhead) {
@@ -1711,6 +2158,10 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             ctx.restore();
         } else if (state.vizMode === 'clock') {
             drawClockView(ctx, state, cx, cy, dialR, isMobile);
+        } else if (state.vizMode === 'phase') {
+            drawPhaseView(ctx, state, cx, cy, dialR, isMobile);
+        } else if (state.vizMode === 'phase3d') {
+            drawPhase3DView(ctx, state, cx, cy, dialR, isMobile);
         } else if (state.vizMode === 'align') {
             drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile);
         } else if (state.vizMode === 'voice') {
@@ -1744,8 +2195,8 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         // rebuild clears, rasterizes, and blits only that band instead of the
         // whole scene — which previously dropped a frame at every measure
         // boundary. The band's vertical extent is derived from the timeline's
-        // draw geometry (ticks ±18, master dots above, grouping triangles above
-        // and below), so it tracks voice-count changes.
+        // draw geometry (ticks ±18, master dots above), so it tracks content
+        // changes without redrawing the full canvas.
         let sigB = _cachedSigB;
         if (baseSig !== _sigBaseForB || masterCurrentCycle !== _sigCycleForB) {
             sigB = `${baseSig}_${masterCurrentCycle}`;
@@ -1757,14 +2208,6 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         let upExtent = 18;   // tick marks (and the "MASTER CYCLE TIMELINE" label at -14)
         let downExtent = 18;
         upExtent = Math.max(upExtent, 18 + 4, (masterVoiceCount - 1) * 10 + 4);
-        (lanes.grouping || []).forEach((lane) => {
-            const gv = lane.voices.length;
-            if (gv > 0) {
-                const reach = 28 + (gv - 1) * 10 + 4;
-                upExtent = Math.max(upExtent, reach);
-                downExtent = Math.max(downExtent, reach);
-            }
-        });
         const bandTop = Math.max(0, Math.floor(timelineY - upExtent));
         const bandBottom = Math.min(canvas.height, Math.ceil(timelineY + downExtent));
         const bandHeight = Math.max(1, bandBottom - bandTop);
