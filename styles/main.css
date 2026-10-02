@@ -1213,10 +1213,16 @@
             border: 1px solid #3a3a4c;
             border-radius: 6px;
             margin: 0 10px 10px 14px;
-            overflow: hidden;
+            overflow-x: auto;
+            overflow-y: hidden;
+            max-width: 100%;
             vertical-align: middle;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
         }
+        .viz-mode-toggle::-webkit-scrollbar { display: none; }
         .viz-mode-btn {
+            flex: 0 0 auto;
             background: #20202c;
             border: none;
             color: #a1a1aa;
@@ -1452,7 +1458,8 @@
             }
             .secondary-actions button {
                 font-size: 11px;
-                padding: 8px 4px;
+                padding: 10px 6px;
+                min-height: 42px;
             }
 
             .utility-row {
@@ -1508,6 +1515,39 @@
             .lane-toolbar {
                 flex-wrap: wrap;
             }
+            .lane-group-heading {
+                flex-wrap: wrap;
+                align-items: flex-start;
+            }
+            .lane-group-heading .beat-scheme-inline {
+                flex: 1 1 100%;
+                width: 100%;
+                margin-left: 0;
+                margin-top: 4px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .lane-group-heading .beat-scheme-inline .pulse-select-line {
+                flex: 1 1 140px;
+                min-width: 0;
+                justify-content: space-between;
+            }
+            .lane-group-heading .beat-scheme-inline .beat-scheme-summary {
+                flex: 1 1 100%;
+                order: 3;
+            }
+            .lane-group-heading .beat-scheme-inline select {
+                width: auto;
+                max-width: 100%;
+                min-width: 0;
+            }
+            .viz-mode-toggle {
+                display: flex;
+                width: calc(100% - 24px);
+                margin: 0 12px 10px;
+                box-sizing: border-box;
+            }
             .lane-actions {
                 width: 100%;
                 flex-wrap: wrap;
@@ -1526,7 +1566,14 @@
             .lane-label-area {
                 min-width: 0;
                 flex-wrap: wrap !important;
-                overflow-x: visible !important;
+                overflow-x: hidden !important;
+            }
+            .pulse-select-line {
+                flex-wrap: wrap;
+                min-width: 0;
+            }
+            .pulse-select-line .lane-info-btn {
+                margin-left: 0;
             }
             .short-lane {
                 display: grid;
@@ -2001,16 +2048,26 @@
         }
 
         @media (max-width: 720px) {
+            .sticky-bar {
+                gap: 8px;
+                padding: 10px;
+            }
             .transport-controls {
                 flex-wrap: wrap;
+                gap: 10px;
             }
             .bar-group {
                 flex-wrap: wrap;
             }
             .transport-btn {
-                height: 36px;
+                min-height: 42px;
+                padding: 10px 14px;
                 line-height: 1;
                 white-space: nowrap;
+            }
+            .sticky-bar-toggle {
+                width: 40px;
+                height: 40px;
             }
             .voice-row {
                 align-items: stretch;
@@ -2020,7 +2077,14 @@
             .lane-label-area {
                 min-width: 0;
                 flex-wrap: wrap !important;
-                overflow-x: visible !important;
+                overflow-x: hidden !important;
+            }
+            .pulse-select-line {
+                flex-wrap: wrap;
+                min-width: 0;
+            }
+            .pulse-select-line .lane-info-btn {
+                margin-left: 0;
             }
             .voice-nudge-control {
                 align-self: flex-start;
@@ -2386,4 +2450,28 @@
         /* Keep the info "?" button circular despite the shared border-radius. */
         .lane-info-btn {
             border-radius: 50%;
+        }
+
+        @media (max-width: 720px) {
+            /* Keep all help "?" controls inside their parent row/card on phones. */
+            .lane-actions,
+            .lane-view-actions,
+            .lane-title-group,
+            .pulse-select-line {
+                min-width: 0;
+            }
+            .lane-info-btn {
+                margin-left: 0 !important;
+                flex: 0 0 auto;
+            }
+            /* Mobile tap focus can leave the desktop glow active; remove the
+               outer halo so "?" buttons never visibly bleed past the edge. */
+            .lane-info-btn,
+            .lane-info-btn:hover,
+            .lane-info-btn[aria-expanded="true"],
+            .lane-info-btn:active,
+            .lane-info-btn:focus-visible {
+                box-shadow: inset 3px 0 0 0 var(--lane-accent, #ff9100),
+                            0 1px 2px rgba(0, 0, 0, 0.45);
+            }
         }
