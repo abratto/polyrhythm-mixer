@@ -1,4 +1,18 @@
 # Changelog
+## v1.25.0 — 2026-10-03
+
+### Added
+- **Theme system rebuilt on CSS variables.** Every theme is now a small palette of custom properties (`--bg`, `--panel-*`, `--btn-*`, `--step-*`, `--accent-a/b/c`, `--playhead`, …) instead of a block of hardcoded overrides, so the whole app recolors from one small block per theme.
+- **A theme dropdown.** The transport-bar toggle is now a `<select>` with the full list, and the choice persists to localStorage (legacy `cyberpunk`/`tokyo` values still resolve).
+- **Seven African-diaspora flag themes** — Ghana, Cuba, Dominican Republic, Haiti, Puerto Rico, Jamaica, and Nigeria — mapping each flag's colors onto the Master / Meter A / Meter B accents with dark `color-mix` tints for the chrome.
+- **Flag-colored title.** "Alan's Polyrhythm Mixer" is now a clipped left-to-right gradient echoing each theme's (or flag's) stripe order.
+
+### Changed
+- **Grouping lane colors follow the theme.** Each grouping lane now resolves its accent from a `--glane-N` token; flag themes supply primary/secondary/tertiary colors plus light/dark tints, while Original/Cyberpunk/Tokyo keep the original neon palette.
+- **Original theme restored as an option.** The base scheme (dark chrome with orange/pink/cyan accents) is selectable again; Cyberpunk remains the default.
+- **Fixed a latent bug** where the sequencer panel's inline background silently overrode every theme's panel color.
+- **Mobile fixes.** The collapse/expand toggle is pinned to the top-right so it no longer overlaps or jumps when controls hide/show, and the grouping sub-playhead is no longer hidden on narrow screens (the wrap-aware playhead logic already steps it aside when a row actually wraps).
+
 ## v1.24.1 — 2026-10-03
 
 ### Changed
