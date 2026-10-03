@@ -1,8 +1,65 @@
+        /* ---- Theme tokens (CSS custom properties) ----
+           The base styles below read their colors from these variables. Each
+           theme overrides the variables under body[data-theme="…"], so a theme
+           is a small palette rather than a block of hardcoded overrides. The
+           default values are the app's original dark scheme. */
+        :root {
+            --bg: #09090b;
+            --fg: #e4e4e7;
+            --panel-bg: #141419;
+            --panel-border: #27273a;
+            --panel-fg: #e4e4e7;
+
+            --btn-bg: #2a2a36;
+            --btn-border: #3a3a4c;
+            --btn-fg: #e5e5ea;
+            --btn-active-bg: #ff9100;
+            --btn-active-border: #ff9100;
+            --btn-active-fg: #000000;
+
+            --chip-bg: linear-gradient(180deg, #3a3a46 0%, #2c2c38 100%);
+            --chip-border: #4a4a57;
+            --chip-fg: #ececf5;
+
+            --input-bg: #1e1e24;
+            --input-border: #2d2d3d;
+            --input-fg: #ffffff;
+
+            --step-bg: #1e1e24;
+            --step-border: #2d2d3d;
+            --step-fg: #71717a;
+            --beat-mark: #a9a9c4;
+            --bar-mark: #d6d6ec;
+            --step-alt: rgba(255, 255, 255, 0.07);
+
+            --accent-a: #ff9100;
+            --accent-b: #ff3366;
+            --accent-c: #00e5ff;
+            --accent-a-fg: #000000;
+            --accent-b-fg: #ffffff;
+            --accent-c-fg: #000000;
+
+            --readout: #a1a1aa;
+            --playhead: #ffea00;
+            --current: #ffea00;
+
+            --glane-1: #ff2ea6;
+            --glane-2: #00e5ff;
+            --glane-3: #b4ff39;
+            --glane-4: #ff7a00;
+            --glane-5: #8a7dff;
+            --glane-6: #ff4d6d;
+            --glane-7: #39ffd4;
+            --glane-8: #7df9ff;
+
+            --title-gradient: linear-gradient(to right, #ff9100, #ff3366, #00e5ff);
+        }
+
         body {
             margin: 0;
             padding: 20px;
-            background-color: #09090b;
-            color: #e4e4e7;
+            background: var(--bg);
+            color: var(--fg);
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
             display: flex;
             flex-direction: column;
@@ -12,17 +69,21 @@
         h1 {
             margin: 0 0 15px 0;
             font-size: 22px;
+            font-weight: 800;
             letter-spacing: 1.5px;
-            color: #ffffff;
             text-transform: uppercase;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
             text-align: center;
+            background: var(--title-gradient);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
         }
         .rack-unit {
-            background: #141419;
+            background: var(--panel-bg);
             padding: 16px 20px;
             border-radius: 8px;
-            border: 1px solid #27273a;
+            border: 1px solid var(--panel-border);
             box-shadow: 0 8px 20px rgba(0,0,0,0.7);
             margin-bottom: 12px;
             max-width: 1440px;
@@ -61,27 +122,49 @@
             gap: 8px;
         }
         .transport-btn {
-            background: #2a2a36;
-            color: #e5e5ea;
-            border: 1px solid #3a3a4c;
+            background: var(--btn-bg);
+            color: var(--btn-fg);
+            border: 1px solid var(--btn-border);
             border-radius: 6px;
             padding: 8px 14px;
             font-size: 13px;
             font-weight: 700;
             cursor: pointer;
         }
-        .transport-btn:hover { background: #343447; }
+        .transport-btn:hover { background: var(--btn-border); }
         .transport-btn.active {
-            background: #ff9100;
-            border-color: #ff9100;
-            color: #000;
+            background: var(--btn-active-bg);
+            border-color: var(--btn-active-border);
+            color: var(--btn-active-fg);
         }
         .transport-readout {
             font-size: 12px;
-            color: #a1a1aa;
+            color: var(--readout);
             padding: 0 6px;
             font-variant-numeric: tabular-nums;
             white-space: nowrap;
+        }
+        .theme-picker {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        .theme-select-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--readout);
+            white-space: nowrap;
+        }
+        .theme-select {
+            min-width: 0;
+            max-width: 170px;
+            padding: 8px 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--btn-fg);
         }
         .secondary-actions {
             display: grid;
@@ -93,6 +176,9 @@
         .secondary-actions button {
             width: 100%;
             min-width: 0;
+            background: var(--btn-bg);
+            border: 1px solid var(--btn-border);
+            color: var(--btn-fg);
         }
         .action-row > button { width: auto; }
         .polyrhythm-controls {
@@ -211,7 +297,7 @@
         .tempo-value {
             font-size: 16px;
             font-weight: 800;
-            color: #ff9100;
+            color: var(--accent-a);
             font-variant-numeric: tabular-nums;
             min-width: 36px;
             text-align: right;
@@ -307,9 +393,9 @@
         select, input[type="range"], button {
             padding: 8px 12px;
             border-radius: 6px;
-            border: 1px solid #2d2d3d;
-            background-color: #1e1e24;
-            color: #fff;
+            border: 1px solid var(--input-border);
+            background-color: var(--input-bg);
+            color: var(--input-fg);
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
@@ -317,25 +403,25 @@
         }
         select:focus, button:focus {
             outline: none;
-            border-color: #ff9100;
+            border-color: var(--accent-a);
         }
         button:hover {
-            background-color: #2b2b3a;
+            background-color: var(--btn-border);
         }
         #audioBtn {
             white-space: nowrap;
             text-transform: uppercase;
         }
         #helpBtn {
-            background-color: #2a2a36;
-            color: #fff;
+            background-color: var(--btn-bg);
+            color: var(--input-fg);
             font-weight: 700;
             min-width: 90px;
             text-transform: uppercase;
         }
         .clear-btn {
-            background-color: #272735;
-            border: 1px solid #3f3f4e;
+            background-color: var(--btn-bg);
+            border: 1px solid var(--btn-border);
             font-weight: 700;
             font-size: 11px;
             line-height: 1;
@@ -343,7 +429,7 @@
             min-width: 58px;
             padding: 0 10px;
             text-transform: uppercase;
-            color: #d1d1d6;
+            color: var(--btn-fg);
             white-space: nowrap;
             box-sizing: border-box;
             cursor: pointer;
@@ -920,9 +1006,9 @@
             font-size: 11px;
             font-weight: 700;
             border-radius: 4px;
-            background-color: #1e1e24;
-            border: 1px solid #2d2d3d;
-            color: #71717a;
+            background-color: var(--step-bg);
+            border: 1px solid var(--step-border);
+            color: var(--step-fg);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -944,7 +1030,7 @@
             top: 0;
             bottom: 0;
             width: 3px;
-            background: #a9a9c4;
+            background: var(--beat-mark);
         }
         .step-btn.step-bar::before {
             content: '';
@@ -953,20 +1039,20 @@
             top: 0;
             bottom: 0;
             width: 4px;
-            background: #d6d6ec;
+            background: var(--bar-mark);
         }
         .step-btn.step-alt::after {
             content: '';
             position: absolute;
             inset: 0;
-            background: rgba(255, 255, 255, 0.07);
+            background: var(--step-alt);
         }
-        .step-btn.master-btn.active { background-color: #ff9100; border-color: #ffffff; color: #000; box-shadow: 0 0 6px #ff9100; }
-        .step-btn.meterA-btn.active { background-color: #ff3366; border-color: #ffffff; color: #fff; box-shadow: 0 0 6px #ff3366; }
-        .step-btn.meterB-btn.active { background-color: #00e5ff; border-color: #ffffff; color: #000; box-shadow: 0 0 6px #00e5ff; }
+        .step-btn.master-btn.active { background-color: var(--accent-a); border-color: #ffffff; color: var(--accent-a-fg); box-shadow: 0 0 6px var(--accent-a); }
+        .step-btn.meterA-btn.active { background-color: var(--accent-b); border-color: #ffffff; color: var(--accent-b-fg); box-shadow: 0 0 6px var(--accent-b); }
+        .step-btn.meterB-btn.active { background-color: var(--accent-c); border-color: #ffffff; color: var(--accent-c-fg); box-shadow: 0 0 6px var(--accent-c); }
         .step-btn.current {
-            border-color: #ffea00 !important;
-            box-shadow: 0 0 8px #ffea00;
+            border-color: var(--current) !important;
+            box-shadow: 0 0 8px var(--current);
         }
         /* Pulse-grouping lane: dim fill for non-onset pulses and a faint tint
            for inactive groups. The colored block of pulses per group is the
@@ -1224,9 +1310,9 @@
             margin-bottom: 6px;
         }
         #canvasContainer {
-            background: #08080c;
+            background: var(--panel-bg);
             border-radius: 8px;
-            border: 1px solid #232332;
+            border: 1px solid var(--panel-border);
             box-shadow: 0 12px 30px rgba(0,0,0,0.8);
             overflow-y: auto;
             overflow-x: hidden;
@@ -1241,8 +1327,8 @@
             box-sizing: border-box;
         }
         .visual-guide summary {
-            background: #141419;
-            border: 1px solid #27273a;
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
             border-radius: 8px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.7);
             color: #d6d6df;
@@ -2528,8 +2614,8 @@
             position: relative;
             height: 10px;
             min-width: 80px;
-            background: #1c1c26;
-            border: 1px solid #2d2d3d;
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
             border-radius: 999px;
             overflow: hidden;
         }
@@ -2539,8 +2625,8 @@
             bottom: 0;
             left: 0;
             width: 3px;
-            background: #ffea00;
-            box-shadow: 0 0 8px rgba(255, 234, 0, 0.8);
+            background: var(--playhead);
+            box-shadow: 0 0 8px color-mix(in srgb, var(--playhead) 80%, transparent);
             border-radius: 999px;
             will-change: transform;
         }
@@ -2556,17 +2642,17 @@
             opacity: 0;
             pointer-events: none;
             z-index: 2;
-            background: linear-gradient(to bottom, rgba(255, 234, 0, 0.16), rgba(255, 234, 0, 0.05));
-            border-left: 1px solid rgba(255, 234, 0, 0.55);
-            border-right: 1px solid rgba(255, 234, 0, 0.55);
-            box-shadow: 0 0 10px rgba(255, 234, 0, 0.25);
+            background: linear-gradient(to bottom, color-mix(in srgb, var(--playhead) 16%, transparent), color-mix(in srgb, var(--playhead) 5%, transparent));
+            border-left: 1px solid color-mix(in srgb, var(--playhead) 55%, transparent);
+            border-right: 1px solid color-mix(in srgb, var(--playhead) 55%, transparent);
+            box-shadow: 0 0 10px color-mix(in srgb, var(--playhead) 25%, transparent);
             transition: opacity 120ms ease;
             will-change: transform;
         }
 
         /* Softened per-button current marker (the column carries the read now). */
         .step-btn.current {
-            box-shadow: inset 0 0 0 2px rgba(255, 234, 0, 0.7);
+            box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--current) 70%, transparent);
         }
 
         .step-btn {
@@ -2692,11 +2778,20 @@
         @media (max-width: 720px) {
             .sticky-bar {
                 flex-wrap: wrap;
+                /* Reserve the right column for the pinned collapse toggle. */
+                padding-right: 56px;
             }
-            /* Step buttons wrap on narrow screens, so the column overlay can't
-               align; fall back to the per-button current marker. */
-            .lane-playhead {
-                display: none;
+            /* Pin the collapse/expand toggle to the top-right so it never jumps
+               around when the settings/secondary rows hide or show. */
+            .sticky-bar-toggle {
+                position: absolute;
+                top: 12px;
+                right: 12px;
+                width: 40px;
+                height: 40px;
+                margin: 0;
+                flex: 0 0 auto;
+                z-index: 2;
             }
         }
 
@@ -2714,9 +2809,9 @@
         .voice-nudge-reset-btn,
         .solo-btn,
         .mute-btn {
-            background: linear-gradient(180deg, #3a3a46 0%, #2c2c38 100%);
-            border: 1px solid #4a4a57;
-            color: #ececf5;
+            background: var(--chip-bg);
+            border: 1px solid var(--chip-border);
+            color: var(--chip-fg);
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.6px;
@@ -2786,241 +2881,374 @@
             }
         }
 
-        /* Cyberpunk Neon theme override. */
-        body {
-            background: radial-gradient(1200px 520px at 50% -120px, #2b0f3a 0%, #11071b 54%, #07040f 100%);
-            color: #e5dbff;
-        }
-        .rack-unit,
-        .utility-panel,
-        .visual-guide summary,
-        #canvasContainer {
-            background: #140d24;
-            border-color: #503070;
-            color: #e7ddff;
-        }
-        .transport-btn,
-        .action-row > button,
-        .secondary-actions button,
-        .edit-btn,
-        .clear-btn,
-        .add-voice-btn,
-        .lane-info-btn,
-        .voice-nudge-btn,
-        .voice-nudge-reset-btn,
-        .solo-btn,
-        .mute-btn {
-            background: linear-gradient(180deg, #2b1f46 0%, #1f1635 100%);
-            border-color: #6f4aa7;
-            color: #f1e8ff;
-        }
-        .transport-btn.active {
-            background: #ff2ea6;
-            border-color: #ff83cf;
-            color: #180614;
-        }
-        #audioBtn.transport-btn {
-            color: #f1e8ff;
-        }
-        #audioBtn.transport-btn.active {
-            color: #ffffff;
-            text-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
-        }
-        .tempo-value,
-        .tempo-readout,
-        .bar-settings .transport-readout {
-            color: #00e5ff;
-        }
-        select,
-        input,
-        textarea {
-            background: #1a1230;
-            border-color: #5f4091;
-            color: #e9e0ff;
-        }
-        .step-btn {
-            background-color: #1b142e;
-            border-color: #4f3478;
-            color: #a998d2;
-        }
-        .step-btn.step-beat::before {
-            background: #00e5ff;
-        }
-        .step-btn.step-bar::before {
-            background: #7df9ff;
-        }
-        .step-btn.step-alt::after {
-            background: rgba(255, 46, 166, 0.1);
-        }
-        .step-btn.master-btn.active {
-            background-color: #ff7a00;
-            border-color: #ffb86f;
-            color: #1a0b00;
-            box-shadow: 0 0 8px rgba(255, 122, 0, 0.75);
-        }
-        .step-btn.meterA-btn.active {
-            background-color: #ff2ea6;
-            border-color: #ff9fd9;
-            color: #1c0816;
-            box-shadow: 0 0 9px rgba(255, 46, 166, 0.8);
-        }
-        .step-btn.meterB-btn.active {
-            background-color: #00e5ff;
-            border-color: #a4f8ff;
-            color: #03171a;
-            box-shadow: 0 0 9px rgba(0, 229, 255, 0.8);
-        }
-        .step-btn.grouping-btn {
-            background: linear-gradient(180deg, #23173a 0%, #1a1230 100%);
-            border-color: #5b3a8d;
-            color: #d9c8ff;
-            box-shadow: inset 3px 0 0 0 rgba(255, 255, 255, 0.08), 0 1px 2px rgba(0, 0, 0, 0.28);
-        }
-        .step-btn.grouping-btn.active {
-            background: linear-gradient(180deg,
-                color-mix(in srgb, var(--lane-accent, #ff2ea6) 84%, #2c1d43) 0%,
-                color-mix(in srgb, var(--lane-accent, #ff2ea6) 62%, #1a1230) 100%);
-            border-color: color-mix(in srgb, var(--lane-accent, #ff2ea6) 80%, #ffffff);
-            color: #090610;
-            box-shadow: inset 3px 0 0 0 color-mix(in srgb, var(--lane-accent, #ff2ea6) 84%, #ffffff),
-                        0 0 0 1px rgba(255, 255, 255, 0.08),
-                        0 0 13px color-mix(in srgb, var(--lane-accent, #ff2ea6) 58%, transparent);
-        }
-        .step-btn.current {
-            border-color: #00e5ff !important;
-            box-shadow: 0 0 10px rgba(0, 229, 255, 0.95);
-        }
-        .mini-playhead {
-            background: #1a1230;
-            border-color: #5b3a8d;
-        }
-        .mini-playhead-dot {
-            background: #00e5ff;
-            box-shadow: 0 0 10px rgba(0, 229, 255, 0.9);
-        }
-        .lane-playhead {
-            background: linear-gradient(to bottom, rgba(0, 229, 255, 0.24), rgba(0, 229, 255, 0.08));
-            border-left: 1px solid rgba(0, 229, 255, 0.75);
-            border-right: 1px solid rgba(0, 229, 255, 0.75);
-            box-shadow: 0 0 12px rgba(0, 229, 255, 0.45);
+        /* Cyberpunk Neon theme. */
+        body[data-theme="cyberpunk"] {
+            --bg: radial-gradient(1200px 520px at 50% -120px, #2b0f3a 0%, #11071b 54%, #07040f 100%);
+            --fg: #e5dbff;
+            --panel-bg: #140d24;
+            --panel-border: #503070;
+            --panel-fg: #e7ddff;
+            --btn-bg: linear-gradient(180deg, #2b1f46 0%, #1f1635 100%);
+            --btn-border: #6f4aa7;
+            --btn-fg: #f1e8ff;
+            --btn-active-bg: #ff2ea6;
+            --btn-active-border: #ff83cf;
+            --btn-active-fg: #180614;
+            --chip-bg: linear-gradient(180deg, #2b1f46 0%, #1f1635 100%);
+            --chip-border: #6f4aa7;
+            --chip-fg: #f1e8ff;
+            --input-bg: #1a1230;
+            --input-border: #5f4091;
+            --input-fg: #e9e0ff;
+            --step-bg: #1b142e;
+            --step-border: #4f3478;
+            --step-fg: #a998d2;
+            --beat-mark: #00e5ff;
+            --bar-mark: #7df9ff;
+            --step-alt: rgba(255, 46, 166, 0.1);
+            --accent-a: #ff7a00;
+            --accent-b: #ff2ea6;
+            --accent-c: #00e5ff;
+            --accent-a-fg: #1a0b00;
+            --accent-b-fg: #1c0816;
+            --accent-c-fg: #03171a;
+            --readout: #00e5ff;
+            --playhead: #00e5ff;
+            --current: #00e5ff;
+            --title-gradient: linear-gradient(to right, #ff7a00, #ff2ea6, #00e5ff);
         }
 
+        /* Tokyo theme. */
         body[data-theme="tokyo"] {
-            background: radial-gradient(1200px 520px at 50% -120px, #2a2f4b 0%, #1a1b26 56%, #16161e 100%);
-            color: #c0caf5;
+            --bg: radial-gradient(1200px 520px at 50% -120px, #2a2f4b 0%, #1a1b26 56%, #16161e 100%);
+            --fg: #c0caf5;
+            --panel-bg: #1f2335;
+            --panel-border: #3b4261;
+            --panel-fg: #c0caf5;
+            --btn-bg: linear-gradient(180deg, #2a3048 0%, #23283c 100%);
+            --btn-border: #475073;
+            --btn-fg: #dbe4ff;
+            --btn-active-bg: #e0af68;
+            --btn-active-border: #e0af68;
+            --btn-active-fg: #11131a;
+            --chip-bg: linear-gradient(180deg, #2a3048 0%, #23283c 100%);
+            --chip-border: #475073;
+            --chip-fg: #dbe4ff;
+            --input-bg: #24283b;
+            --input-border: #475073;
+            --input-fg: #c0caf5;
+            --step-bg: #24283b;
+            --step-border: #414868;
+            --step-fg: #9aa5ce;
+            --beat-mark: #7aa2f7;
+            --bar-mark: #9ab8ff;
+            --step-alt: rgba(122, 162, 247, 0.08);
+            --accent-a: #e0af68;
+            --accent-b: #f7768e;
+            --accent-c: #7dcfff;
+            --accent-a-fg: #16161e;
+            --accent-b-fg: #16161e;
+            --accent-c-fg: #16161e;
+            --readout: #e0af68;
+            --playhead: #e0af68;
+            --current: #e0af68;
+            --title-gradient: linear-gradient(to right, #e0af68, #f7768e, #7dcfff);
         }
-        body[data-theme="tokyo"] .rack-unit,
-        body[data-theme="tokyo"] .utility-panel,
-        body[data-theme="tokyo"] .visual-guide summary,
-        body[data-theme="tokyo"] #canvasContainer {
-            background: #1f2335;
-            border-color: #3b4261;
-            color: #c0caf5;
+
+        /* ---- African-diaspora flag themes ---- */
+
+        /* Ghana — red, gold, green. */
+        body[data-theme="ghana"] {
+            --bg: radial-gradient(1200px 520px at 50% -120px, color-mix(in srgb, #ce1126 45%, #050508) 0%, color-mix(in srgb, #ce1126 22%, #050508) 56%, #050508 100%);
+            --fg: #f2e4e5;
+            --panel-bg: color-mix(in srgb, #ce1126 24%, #0a0a0e);
+            --panel-border: color-mix(in srgb, #ce1126 48%, #1a1a22);
+            --panel-fg: #f2e4e5;
+            --btn-bg: linear-gradient(180deg, color-mix(in srgb, #ce1126 32%, #0a0a0e), color-mix(in srgb, #ce1126 22%, #0a0a0e));
+            --btn-border: color-mix(in srgb, #ce1126 52%, #1a1a22);
+            --btn-fg: #f2e4e5;
+            --btn-active-bg: #ce1126;
+            --btn-active-border: #fcd116;
+            --btn-active-fg: #ffffff;
+            --chip-bg: linear-gradient(180deg, color-mix(in srgb, #ce1126 32%, #0a0a0e), color-mix(in srgb, #ce1126 22%, #0a0a0e));
+            --chip-border: color-mix(in srgb, #ce1126 52%, #1a1a22);
+            --chip-fg: #f2e4e5;
+            --input-bg: color-mix(in srgb, #ce1126 22%, #0a0a0e);
+            --input-border: color-mix(in srgb, #ce1126 48%, #1a1a22);
+            --input-fg: #f2e4e5;
+            --step-bg: color-mix(in srgb, #ce1126 22%, #0a0a0e);
+            --step-border: color-mix(in srgb, #ce1126 48%, #1a1a22);
+            --step-fg: color-mix(in srgb, #ce1126 8%, #8a8a94);
+            --beat-mark: color-mix(in srgb, #fcd116 70%, #8a8a94);
+            --bar-mark: color-mix(in srgb, #fcd116 90%, #ffffff);
+            --step-alt: color-mix(in srgb, #fcd116 12%, transparent);
+            --accent-a: #ce1126; --accent-a-fg: #ffffff;
+            --accent-b: #fcd116; --accent-b-fg: #000000;
+            --accent-c: #006b3f; --accent-c-fg: #ffffff;
+            --readout: #fcd116;
+            --playhead: #fcd116;
+            --current: #fcd116;
+            --glane-1: #ce1126;
+            --glane-2: #fcd116;
+            --glane-3: #006b3f;
+            --glane-4: color-mix(in srgb, #ce1126 50%, #ffffff);
+            --glane-5: color-mix(in srgb, #fcd116 50%, #ffffff);
+            --glane-6: color-mix(in srgb, #006b3f 50%, #ffffff);
+            --glane-7: color-mix(in srgb, #ce1126 65%, #000000);
+            --glane-8: color-mix(in srgb, #fcd116 65%, #000000);
+            --title-gradient: linear-gradient(to right, #ce1126, #fcd116, #006b3f);
         }
-        body[data-theme="tokyo"] .transport-btn,
-        body[data-theme="tokyo"] .action-row > button,
-        body[data-theme="tokyo"] .secondary-actions button,
-        body[data-theme="tokyo"] .edit-btn,
-        body[data-theme="tokyo"] .clear-btn,
-        body[data-theme="tokyo"] .add-voice-btn,
-        body[data-theme="tokyo"] .lane-info-btn,
-        body[data-theme="tokyo"] .voice-nudge-btn,
-        body[data-theme="tokyo"] .voice-nudge-reset-btn,
-        body[data-theme="tokyo"] .solo-btn,
-        body[data-theme="tokyo"] .mute-btn {
-            background: linear-gradient(180deg, #2a3048 0%, #23283c 100%);
-            border-color: #475073;
-            color: #dbe4ff;
+
+        /* Cuba — blue, white, red. */
+        body[data-theme="cuba"] {
+            --bg: radial-gradient(1200px 520px at 50% -120px, color-mix(in srgb, #002a8f 45%, #050508) 0%, color-mix(in srgb, #002a8f 22%, #050508) 56%, #050508 100%);
+            --fg: #e8ecf8;
+            --panel-bg: color-mix(in srgb, #002a8f 26%, #0a0a0e);
+            --panel-border: color-mix(in srgb, #002a8f 52%, #1a1a22);
+            --panel-fg: #e8ecf8;
+            --btn-bg: linear-gradient(180deg, color-mix(in srgb, #002a8f 34%, #0a0a0e), color-mix(in srgb, #002a8f 24%, #0a0a0e));
+            --btn-border: color-mix(in srgb, #002a8f 55%, #1a1a22);
+            --btn-fg: #e8ecf8;
+            --btn-active-bg: #cf142b;
+            --btn-active-border: #ffffff;
+            --btn-active-fg: #ffffff;
+            --chip-bg: linear-gradient(180deg, color-mix(in srgb, #002a8f 34%, #0a0a0e), color-mix(in srgb, #002a8f 24%, #0a0a0e));
+            --chip-border: color-mix(in srgb, #002a8f 55%, #1a1a22);
+            --chip-fg: #e8ecf8;
+            --input-bg: color-mix(in srgb, #002a8f 24%, #0a0a0e);
+            --input-border: color-mix(in srgb, #002a8f 52%, #1a1a22);
+            --input-fg: #e8ecf8;
+            --step-bg: color-mix(in srgb, #002a8f 24%, #0a0a0e);
+            --step-border: color-mix(in srgb, #002a8f 52%, #1a1a22);
+            --step-fg: color-mix(in srgb, #002a8f 8%, #8a8a94);
+            --beat-mark: color-mix(in srgb, #cf142b 70%, #8a8a94);
+            --bar-mark: color-mix(in srgb, #cf142b 90%, #ffffff);
+            --step-alt: color-mix(in srgb, #cf142b 12%, transparent);
+            --accent-a: #002a8f; --accent-a-fg: #ffffff;
+            --accent-b: #cf142b; --accent-b-fg: #ffffff;
+            --accent-c: #ffffff; --accent-c-fg: #000000;
+            --readout: #cf142b;
+            --playhead: #cf142b;
+            --current: #cf142b;
+            --glane-1: #002a8f;
+            --glane-2: #cf142b;
+            --glane-3: #ffffff;
+            --glane-4: color-mix(in srgb, #002a8f 50%, #ffffff);
+            --glane-5: color-mix(in srgb, #cf142b 50%, #ffffff);
+            --glane-6: #ffffff;
+            --glane-7: color-mix(in srgb, #002a8f 65%, #000000);
+            --glane-8: color-mix(in srgb, #cf142b 65%, #000000);
+            --title-gradient: linear-gradient(to right, #002a8f, #ffffff, #002a8f, #ffffff, #cf142b);
         }
-        body[data-theme="tokyo"] .transport-btn.active {
-            background: #e0af68;
-            border-color: #e0af68;
-            color: #11131a;
+
+        /* Dominican Republic — blue, red, white. */
+        body[data-theme="dominican-republic"] {
+            --bg: radial-gradient(1200px 520px at 50% -120px, color-mix(in srgb, #002d62 45%, #050508) 0%, color-mix(in srgb, #002d62 22%, #050508) 56%, #050508 100%);
+            --fg: #e8ecf8;
+            --panel-bg: color-mix(in srgb, #002d62 26%, #0a0a0e);
+            --panel-border: color-mix(in srgb, #002d62 52%, #1a1a22);
+            --panel-fg: #e8ecf8;
+            --btn-bg: linear-gradient(180deg, color-mix(in srgb, #002d62 34%, #0a0a0e), color-mix(in srgb, #002d62 24%, #0a0a0e));
+            --btn-border: color-mix(in srgb, #002d62 55%, #1a1a22);
+            --btn-fg: #e8ecf8;
+            --btn-active-bg: #ce1126;
+            --btn-active-border: #ffffff;
+            --btn-active-fg: #ffffff;
+            --chip-bg: linear-gradient(180deg, color-mix(in srgb, #002d62 34%, #0a0a0e), color-mix(in srgb, #002d62 24%, #0a0a0e));
+            --chip-border: color-mix(in srgb, #002d62 55%, #1a1a22);
+            --chip-fg: #e8ecf8;
+            --input-bg: color-mix(in srgb, #002d62 24%, #0a0a0e);
+            --input-border: color-mix(in srgb, #002d62 52%, #1a1a22);
+            --input-fg: #e8ecf8;
+            --step-bg: color-mix(in srgb, #002d62 24%, #0a0a0e);
+            --step-border: color-mix(in srgb, #002d62 52%, #1a1a22);
+            --step-fg: color-mix(in srgb, #002d62 8%, #8a8a94);
+            --beat-mark: color-mix(in srgb, #ce1126 70%, #8a8a94);
+            --bar-mark: color-mix(in srgb, #ce1126 90%, #ffffff);
+            --step-alt: color-mix(in srgb, #ce1126 12%, transparent);
+            --accent-a: #002d62; --accent-a-fg: #ffffff;
+            --accent-b: #ce1126; --accent-b-fg: #ffffff;
+            --accent-c: #ffffff; --accent-c-fg: #000000;
+            --readout: #ce1126;
+            --playhead: #ce1126;
+            --current: #ce1126;
+            --glane-1: #002d62;
+            --glane-2: #ce1126;
+            --glane-3: #ffffff;
+            --glane-4: color-mix(in srgb, #002d62 50%, #ffffff);
+            --glane-5: color-mix(in srgb, #ce1126 50%, #ffffff);
+            --glane-6: #ffffff;
+            --glane-7: color-mix(in srgb, #002d62 65%, #000000);
+            --glane-8: color-mix(in srgb, #ce1126 65%, #000000);
+            --title-gradient: linear-gradient(to right, #002d62, #ffffff, #ce1126, #ffffff, #002d62);
         }
-        body[data-theme="tokyo"] #audioBtn.transport-btn {
-            color: #dbe4ff;
+
+        /* Haiti — blue, red. */
+        body[data-theme="haiti"] {
+            --bg: radial-gradient(1200px 520px at 50% -120px, color-mix(in srgb, #00209f 45%, #050508) 0%, color-mix(in srgb, #00209f 22%, #050508) 56%, #050508 100%);
+            --fg: #e8ecf8;
+            --panel-bg: color-mix(in srgb, #00209f 26%, #0a0a0e);
+            --panel-border: color-mix(in srgb, #00209f 52%, #1a1a22);
+            --panel-fg: #e8ecf8;
+            --btn-bg: linear-gradient(180deg, color-mix(in srgb, #00209f 34%, #0a0a0e), color-mix(in srgb, #00209f 24%, #0a0a0e));
+            --btn-border: color-mix(in srgb, #00209f 55%, #1a1a22);
+            --btn-fg: #e8ecf8;
+            --btn-active-bg: #d21034;
+            --btn-active-border: #ffffff;
+            --btn-active-fg: #ffffff;
+            --chip-bg: linear-gradient(180deg, color-mix(in srgb, #00209f 34%, #0a0a0e), color-mix(in srgb, #00209f 24%, #0a0a0e));
+            --chip-border: color-mix(in srgb, #00209f 55%, #1a1a22);
+            --chip-fg: #e8ecf8;
+            --input-bg: color-mix(in srgb, #00209f 24%, #0a0a0e);
+            --input-border: color-mix(in srgb, #00209f 52%, #1a1a22);
+            --input-fg: #e8ecf8;
+            --step-bg: color-mix(in srgb, #00209f 24%, #0a0a0e);
+            --step-border: color-mix(in srgb, #00209f 52%, #1a1a22);
+            --step-fg: color-mix(in srgb, #00209f 8%, #8a8a94);
+            --beat-mark: color-mix(in srgb, #d21034 70%, #8a8a94);
+            --bar-mark: color-mix(in srgb, #d21034 90%, #ffffff);
+            --step-alt: color-mix(in srgb, #d21034 12%, transparent);
+            --accent-a: #00209f; --accent-a-fg: #ffffff;
+            --accent-b: #d21034; --accent-b-fg: #ffffff;
+            --accent-c: #ffffff; --accent-c-fg: #000000;
+            --readout: #d21034;
+            --playhead: #d21034;
+            --current: #d21034;
+            --glane-1: #00209f;
+            --glane-2: #d21034;
+            --glane-3: #ffffff;
+            --glane-4: color-mix(in srgb, #00209f 50%, #ffffff);
+            --glane-5: color-mix(in srgb, #d21034 50%, #ffffff);
+            --glane-6: #ffffff;
+            --glane-7: color-mix(in srgb, #00209f 65%, #000000);
+            --glane-8: color-mix(in srgb, #d21034 65%, #000000);
+            --title-gradient: linear-gradient(to right, #00209f, #ffffff, #d21034);
         }
-        body[data-theme="tokyo"] #audioBtn.transport-btn.active {
-            color: #ffffff;
-            text-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
+
+        /* Puerto Rico — red, white, blue. */
+        body[data-theme="puerto-rico"] {
+            --bg: radial-gradient(1200px 520px at 50% -120px, color-mix(in srgb, #ef3340 45%, #050508) 0%, color-mix(in srgb, #0050ef 22%, #050508) 56%, #050508 100%);
+            --fg: #f2e6e8;
+            --panel-bg: color-mix(in srgb, #0050ef 24%, #0a0a0e);
+            --panel-border: color-mix(in srgb, #0050ef 50%, #1a1a22);
+            --panel-fg: #f2e6e8;
+            --btn-bg: linear-gradient(180deg, color-mix(in srgb, #0050ef 32%, #0a0a0e), color-mix(in srgb, #0050ef 22%, #0a0a0e));
+            --btn-border: color-mix(in srgb, #0050ef 54%, #1a1a22);
+            --btn-fg: #f2e6e8;
+            --btn-active-bg: #ef3340;
+            --btn-active-border: #ffffff;
+            --btn-active-fg: #ffffff;
+            --chip-bg: linear-gradient(180deg, color-mix(in srgb, #0050ef 32%, #0a0a0e), color-mix(in srgb, #0050ef 22%, #0a0a0e));
+            --chip-border: color-mix(in srgb, #0050ef 54%, #1a1a22);
+            --chip-fg: #f2e6e8;
+            --input-bg: color-mix(in srgb, #0050ef 22%, #0a0a0e);
+            --input-border: color-mix(in srgb, #0050ef 50%, #1a1a22);
+            --input-fg: #f2e6e8;
+            --step-bg: color-mix(in srgb, #0050ef 22%, #0a0a0e);
+            --step-border: color-mix(in srgb, #0050ef 50%, #1a1a22);
+            --step-fg: color-mix(in srgb, #0050ef 8%, #8a8a94);
+            --beat-mark: color-mix(in srgb, #ef3340 70%, #8a8a94);
+            --bar-mark: color-mix(in srgb, #ef3340 90%, #ffffff);
+            --step-alt: color-mix(in srgb, #ef3340 12%, transparent);
+            --accent-a: #ef3340; --accent-a-fg: #ffffff;
+            --accent-b: #0050ef; --accent-b-fg: #ffffff;
+            --accent-c: #ffffff; --accent-c-fg: #000000;
+            --readout: #ef3340;
+            --playhead: #ef3340;
+            --current: #ef3340;
+            --glane-1: #ef3340;
+            --glane-2: #0050ef;
+            --glane-3: #ffffff;
+            --glane-4: color-mix(in srgb, #ef3340 50%, #ffffff);
+            --glane-5: color-mix(in srgb, #0050ef 50%, #ffffff);
+            --glane-6: #ffffff;
+            --glane-7: color-mix(in srgb, #ef3340 65%, #000000);
+            --glane-8: color-mix(in srgb, #0050ef 65%, #000000);
+            --title-gradient: linear-gradient(to right, #ef3340, #ffffff, #0050ef);
         }
-        body[data-theme="tokyo"] .tempo-value,
-        body[data-theme="tokyo"] .tempo-readout,
-        body[data-theme="tokyo"] .bar-settings .transport-readout {
-            color: #e0af68;
+
+        /* Jamaica — green, gold, black. */
+        body[data-theme="jamaica"] {
+            --bg: radial-gradient(1200px 520px at 50% -120px, color-mix(in srgb, #009b3a 40%, #050508) 0%, color-mix(in srgb, #009b3a 18%, #050508) 56%, #020202 100%);
+            --fg: #eef5ec;
+            --panel-bg: color-mix(in srgb, #009b3a 22%, #050506);
+            --panel-border: color-mix(in srgb, #009b3a 48%, #1a1a22);
+            --panel-fg: #eef5ec;
+            --btn-bg: linear-gradient(180deg, color-mix(in srgb, #009b3a 30%, #050506), color-mix(in srgb, #009b3a 20%, #050506));
+            --btn-border: color-mix(in srgb, #009b3a 52%, #1a1a22);
+            --btn-fg: #eef5ec;
+            --btn-active-bg: #009b3a;
+            --btn-active-border: #fed100;
+            --btn-active-fg: #ffffff;
+            --chip-bg: linear-gradient(180deg, color-mix(in srgb, #009b3a 30%, #050506), color-mix(in srgb, #009b3a 20%, #050506));
+            --chip-border: color-mix(in srgb, #009b3a 52%, #1a1a22);
+            --chip-fg: #eef5ec;
+            --input-bg: color-mix(in srgb, #009b3a 20%, #050506);
+            --input-border: color-mix(in srgb, #009b3a 48%, #1a1a22);
+            --input-fg: #eef5ec;
+            --step-bg: color-mix(in srgb, #009b3a 20%, #050506);
+            --step-border: color-mix(in srgb, #009b3a 48%, #1a1a22);
+            --step-fg: color-mix(in srgb, #009b3a 8%, #8a8a94);
+            --beat-mark: color-mix(in srgb, #fed100 70%, #8a8a94);
+            --bar-mark: color-mix(in srgb, #fed100 90%, #ffffff);
+            --step-alt: color-mix(in srgb, #fed100 12%, transparent);
+            --accent-a: #009b3a; --accent-a-fg: #ffffff;
+            --accent-b: #fed100; --accent-b-fg: #000000;
+            --accent-c: #fed100; --accent-c-fg: #000000;
+            --readout: #fed100;
+            --playhead: #fed100;
+            --current: #fed100;
+            --glane-1: #009b3a;
+            --glane-2: #fed100;
+            --glane-3: #fed100;
+            --glane-4: color-mix(in srgb, #009b3a 50%, #ffffff);
+            --glane-5: color-mix(in srgb, #fed100 50%, #ffffff);
+            --glane-6: color-mix(in srgb, #009b3a 50%, #000000);
+            --glane-7: color-mix(in srgb, #009b3a 65%, #000000);
+            --glane-8: color-mix(in srgb, #fed100 65%, #000000);
+            --title-gradient: linear-gradient(to right, #009b3a, #fed100, #000000);
         }
-        body[data-theme="tokyo"] select,
-        body[data-theme="tokyo"] input,
-        body[data-theme="tokyo"] textarea {
-            background: #24283b;
-            border-color: #475073;
-            color: #c0caf5;
-        }
-        body[data-theme="tokyo"] .step-btn {
-            background-color: #24283b;
-            border-color: #414868;
-            color: #9aa5ce;
-        }
-        body[data-theme="tokyo"] .step-btn.step-beat::before {
-            background: #7aa2f7;
-        }
-        body[data-theme="tokyo"] .step-btn.step-bar::before {
-            background: #9ab8ff;
-        }
-        body[data-theme="tokyo"] .step-btn.step-alt::after {
-            background: rgba(122, 162, 247, 0.08);
-        }
-        body[data-theme="tokyo"] .step-btn.master-btn.active {
-            background-color: #e0af68;
-            border-color: #f2d3a1;
-            color: #16161e;
-            box-shadow: 0 0 7px rgba(224, 175, 104, 0.7);
-        }
-        body[data-theme="tokyo"] .step-btn.meterA-btn.active {
-            background-color: #f7768e;
-            border-color: #ffbac7;
-            color: #16161e;
-            box-shadow: 0 0 7px rgba(247, 118, 142, 0.68);
-        }
-        body[data-theme="tokyo"] .step-btn.meterB-btn.active {
-            background-color: #7dcfff;
-            border-color: #c5ebff;
-            color: #16161e;
-            box-shadow: 0 0 7px rgba(125, 207, 255, 0.68);
-        }
-        body[data-theme="tokyo"] .step-btn.grouping-btn {
-            background: linear-gradient(180deg, #22283b 0%, #1a2030 100%);
-            border-color: #414868;
-            color: #c7d2f4;
-            box-shadow: inset 3px 0 0 0 rgba(255, 255, 255, 0.08), 0 1px 2px rgba(0, 0, 0, 0.28);
-        }
-        body[data-theme="tokyo"] .step-btn.grouping-btn.active {
-            background: linear-gradient(180deg,
-                color-mix(in srgb, var(--lane-accent, #e0af68) 82%, #2a2f43) 0%,
-                color-mix(in srgb, var(--lane-accent, #e0af68) 62%, #1b1f2e) 100%);
-            border-color: color-mix(in srgb, var(--lane-accent, #e0af68) 78%, #f2f4ff);
-            color: #10131a;
-            box-shadow: inset 3px 0 0 0 color-mix(in srgb, var(--lane-accent, #e0af68) 82%, #ffffff),
-                        0 0 0 1px rgba(255, 255, 255, 0.08),
-                        0 0 12px color-mix(in srgb, var(--lane-accent, #e0af68) 52%, transparent);
-        }
-        body[data-theme="tokyo"] .step-btn.current {
-            border-color: #e0af68 !important;
-            box-shadow: 0 0 9px rgba(224, 175, 104, 0.95);
-        }
-        body[data-theme="tokyo"] .mini-playhead {
-            background: #22283b;
-            border-color: #414868;
-        }
-        body[data-theme="tokyo"] .mini-playhead-dot {
-            background: #e0af68;
-            box-shadow: 0 0 8px rgba(224, 175, 104, 0.85);
-        }
-        body[data-theme="tokyo"] .lane-playhead {
-            background: linear-gradient(to bottom, rgba(224, 175, 104, 0.2), rgba(224, 175, 104, 0.06));
-            border-left: 1px solid rgba(224, 175, 104, 0.65);
-            border-right: 1px solid rgba(224, 175, 104, 0.65);
-            box-shadow: 0 0 10px rgba(224, 175, 104, 0.3);
+
+        /* Nigeria — green, white. */
+        body[data-theme="nigeria"] {
+            --bg: radial-gradient(1200px 520px at 50% -120px, color-mix(in srgb, #008751 42%, #050508) 0%, color-mix(in srgb, #008751 20%, #050508) 56%, #050508 100%);
+            --fg: #edf6ee;
+            --panel-bg: color-mix(in srgb, #008751 23%, #0a0a0e);
+            --panel-border: color-mix(in srgb, #008751 48%, #1a1a22);
+            --panel-fg: #edf6ee;
+            --btn-bg: linear-gradient(180deg, color-mix(in srgb, #008751 31%, #0a0a0e), color-mix(in srgb, #008751 21%, #0a0a0e));
+            --btn-border: color-mix(in srgb, #008751 52%, #1a1a22);
+            --btn-fg: #edf6ee;
+            --btn-active-bg: #008751;
+            --btn-active-border: #ffffff;
+            --btn-active-fg: #ffffff;
+            --chip-bg: linear-gradient(180deg, color-mix(in srgb, #008751 31%, #0a0a0e), color-mix(in srgb, #008751 21%, #0a0a0e));
+            --chip-border: color-mix(in srgb, #008751 52%, #1a1a22);
+            --chip-fg: #edf6ee;
+            --input-bg: color-mix(in srgb, #008751 21%, #0a0a0e);
+            --input-border: color-mix(in srgb, #008751 48%, #1a1a22);
+            --input-fg: #edf6ee;
+            --step-bg: color-mix(in srgb, #008751 21%, #0a0a0e);
+            --step-border: color-mix(in srgb, #008751 48%, #1a1a22);
+            --step-fg: color-mix(in srgb, #008751 8%, #8a8a94);
+            --beat-mark: color-mix(in srgb, #ffffff 70%, #8a8a94);
+            --bar-mark: #ffffff;
+            --step-alt: color-mix(in srgb, #ffffff 10%, transparent);
+            --accent-a: #008751; --accent-a-fg: #ffffff;
+            --accent-b: #ffffff; --accent-b-fg: #000000;
+            --accent-c: #008751; --accent-c-fg: #ffffff;
+            --readout: #ffffff;
+            --playhead: #ffffff;
+            --current: #ffffff;
+            --glane-1: #008751;
+            --glane-2: #ffffff;
+            --glane-3: #008751;
+            --glane-4: color-mix(in srgb, #008751 50%, #ffffff);
+            --glane-5: color-mix(in srgb, #008751 50%, #000000);
+            --glane-6: color-mix(in srgb, #ffffff 50%, #008751);
+            --glane-7: color-mix(in srgb, #008751 65%, #000000);
+            --glane-8: color-mix(in srgb, #ffffff 70%, #008751);
+            --title-gradient: linear-gradient(to right, #008751, #ffffff, #008751);
         }
 
         /* Overlay-mode grouping lanes: keep the pulse row visible underneath,

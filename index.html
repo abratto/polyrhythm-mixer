@@ -59,7 +59,10 @@
                 <button id="stopBtn" class="transport-btn">Stop</button>
                 <button id="resetBtn" class="transport-btn">Reset Mixer</button>
                 <button id="followScrollBtn" class="transport-btn follow-toggle" aria-pressed="true">Follow: On</button>
-                <button id="themeToggleBtn" class="transport-btn" aria-pressed="false">Theme: Cyberpunk</button>
+                <label class="theme-picker">
+                    <span class="theme-select-label">Theme</span>
+                    <select id="themeSelect" class="theme-select" aria-label="Color theme"></select>
+                </label>
             </div>
             <div class="secondary-actions">
                 <button id="saveRhythmBtn">Save</button>
@@ -128,7 +131,7 @@
         </div>
     </details>
 
-    <div class="rack-unit sequencer-panel" style="background: #101015; border-color: #2a2a3c; padding-top: 5px; padding-bottom: 5px; margin-top: 12px;">
+    <div class="rack-unit sequencer-panel" style="padding-top: 5px; padding-bottom: 5px; margin-top: 12px;">
 
         <div class="rail-all-toggle">
             <span class="rail-all-label">Left-rail controls</span>
