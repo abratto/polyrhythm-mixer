@@ -633,11 +633,12 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
             if (i === 0) cell.classList.add('is-bar');
             else if (isOnQuarter(i, state.mainTeeth)) cell.classList.add('is-beat');
             // The grouping's start pulse (offset) gets a marker on the pulse box,
-            // labelled with its 1-based start position (1..groupSize) so the
-            // nudge count reads right off the subdivision it starts from.
+            // always labelled "1": it marks where the grouping's own "1" falls.
+            // Nudging the offset slides the marker to another subdivision without
+            // changing the number, so the count stays meaningful as "the one".
             if (markStart && i % groupSize === phase) {
                 cell.classList.add('is-start');
-                cell.textContent = String(phase + 1);
+                cell.textContent = '1';
             }
             underlay.appendChild(cell);
         }
