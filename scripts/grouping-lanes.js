@@ -19,7 +19,7 @@ import { getActivePhraseStep, isOnQuarter, quarterBeatPeriod, lcm } from './math
 import { createVoiceChannel } from './channels.js';
 import { buildLane } from './lanes.js';
 
-const COLORS = ['#ff3366', '#00e5ff', '#ff9100', '#8be28b', '#c07ae6', '#ffd166', '#f4845f', '#7bdff2'];
+const COLORS = ['#ff2ea6', '#00e5ff', '#b4ff39', '#ff7a00', '#8a7dff', '#ff4d6d', '#39ffd4', '#7df9ff'];
 const MAX_CYCLES = 8;
 const DEFAULT_SOUND = 'shaker';
 
@@ -62,6 +62,7 @@ function makeLane(state, { groupCount, cycles = 1, linked = null, color = null }
         cycleKey: `grouping_${id}`,
         channelPrefix: `grouping_${id}`,
         className: 'grouping-btn',
+        groupingOverlay: true,
         stepId: `grouping-${id}-step`,
         kind: 'phrase',
         isMultiVoice: true,
@@ -98,7 +99,10 @@ function makeLane(state, { groupCount, cycles = 1, linked = null, color = null }
             : ` The grouping spans the whole master cycle (one onset per cycle).`;
         return `${groups} • ${cycles}.${offset}`;
     };
-    lane.textForStep = i => (i % lane.groupCount) + 1;
+    // Group boxes are left unnumbered: the offset/start subdivision now carries
+    // the count (see the .is-start label in lane-ui.js), so a per-box number
+    // would be redundant and noisier.
+    lane.textForStep = () => '';
     // Pulse segments drawn inside each group cell, with the offset marking the
     // grouping's start pulse.
     lane.stepSlices = () => groupSizeFor(state, lane.groupCount);

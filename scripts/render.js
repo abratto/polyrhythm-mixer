@@ -71,6 +71,7 @@ function _fillCanonicalPulseMasks(state) {
  * Audio triggers are handled independently by the audio scheduler loop.
  */
 function processTriggers(state, lanes, active, channels) {
+    state.lastActive.masterStep = active.masterStep;
     if (active.master !== state.lastActive.master) {
         lanes.master.voices.forEach((voice) => {
             if (voice.selected[active.master] && !voice.channel?.silenced) state.flash.custom = 12;
@@ -1948,6 +1949,7 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             const grouping = lanes.grouping || [];
             const fillActive = (s, out) => {
                 out.master = ((s % state.masterPhraseSteps) + state.masterPhraseSteps) % state.masterPhraseSteps;
+                out.masterStep = s;
                 for (let i = 0; i < grouping.length; i++) {
                     const lane = grouping[i];
                     out[lane.cycleKey] = getActivePhraseStep(s, lane.phase || 0, state.mainTeeth / lane.groupCount, lane.count());
