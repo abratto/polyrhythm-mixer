@@ -1,4 +1,9 @@
 # Changelog
+## v1.24.1 — 2026-10-03
+
+### Changed
+- **Grouping offset marker always reads "1".** The start subdivision previously counted up (1..subdivisions-per-group) as you nudged the offset; it now stays "1" to mark where the grouping's own "1" falls, while nudging still slides the marker and the toolbar keeps its `1/4`-style readout.
+
 ## v1.24.0 — 2026-10-03
 
 ### Added
