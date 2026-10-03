@@ -1,4 +1,9 @@
 # Changelog
+## v1.25.1 — 2026-10-03
+
+### Fixed
+- **Duplicate beat/bar accents on grouping rectangles.** The overlay grouping rectangles still carried `step-beat`/`step-bar`/`step-alt` classes from the pre-overlay design, painting extra left-edge bars and alternating tints on top of the underlay's own grid marks. The rectangles now render clean, leaving the beat/bar grid to the underlay cells.
+
 ## v1.25.0 — 2026-10-03
 
 ### Added
