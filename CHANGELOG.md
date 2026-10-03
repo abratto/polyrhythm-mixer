@@ -1,4 +1,19 @@
 # Changelog
+## v1.24.0 — 2026-10-03
+
+### Added
+- **Grouping lanes now overlay translucent rectangles on a shared pulse grid.** Each grouping lane draws an underlying master-pulse row (the same cell language as the Rhythm Tracks voices) with translucent grouping rectangles laid on top, aligned so every grouping edge lands exactly on a pulse boundary.
+- **A sweeping sub-playhead in grouping lanes.** A vertical playhead now steps through the pulses inside each grouping box — matching the Rhythm Tracks playhead — replacing the old horizontal white/gold offset strip.
+- **The offset/start subdivision is now numbered.** The grouping's start pulse is labelled with its 1-based count (1..subdivisions-per-group), advancing with each ←/→ nudge, so the count reads right off the subdivision the grouping starts from.
+- **Cyberpunk / Tokyo theme toggle.** A transport-bar toggle switches the whole app between the Cyberpunk and Tokyo color schemes (persisted to localStorage).
+
+### Changed
+- **Selected grouping boxes read more clearly.** The active fill is more saturated, with a stronger border and left accent, while the underlying pulse grid still shows through.
+- **Responsive controls re-arranged.** The transport bar and per-lane toolbars (Grouping / Phrase Length / Offset / Cycle) compact onto fewer rows on small screens; the Groupings heading stacks cleanly.
+- **Step rows wrap instead of truncating.** When a lane's beats exceed its width the boxes flow onto a second row (with uniform sizing) rather than clipping; the column playhead steps aside for the per-button highlight in wrapped layouts.
+- **Master Beat reference no longer clips.** The strip shrinks to fit the full cycle on one line, so dense meters (e.g. 6 against 7) no longer truncate on the right.
+- Group boxes are left unnumbered now that the offset count lives on the start subdivision.
+
 ## v1.23.0 — 2026-10-02
 
 ### Added
