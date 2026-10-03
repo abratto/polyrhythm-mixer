@@ -380,17 +380,32 @@ function buildVoiceInstrumentSelect(lane, voice, voiceIndex) {
 
 /** Creates a single step button for a voice with click-to-toggle behavior. */
 /**
- * Grouping cells draw a horizontal row of pulse segments (one per pulse in the
- * group) along the bottom edge; the segment at the lane's offset marks where
- * the grouping starts. Lanes without a `stepSlices` hook (master, etc.) are
- * unaffected.
+ * Grouping cells draw one mini cell per pulse in the group so they visually
+ * match the regular step-box language. The mini cell at the lane's offset marks
+ * where the grouping starts. Lanes without a `stepSlices` hook are unaffected.
+ *
+ * Overlay-mode lanes (the current grouping lanes) skip the strip entirely: the
+ * pulse position is read from the lane playhead sweeping the underlying pulse
+ * boxes, and the offset is marked on the start pulse cell, so no inline strip is
+ * drawn.
  */
 function applyStepSlices(btn, lane) {
+    if (lane.groupingOverlay) return;
     if (typeof lane.stepSlices !== 'function') return;
     const count = lane.stepSlices();
     // Skip huge subdivisions (small group counts) where segments would collapse.
     if (!Number.isInteger(count) || count < 2 || count > 24) return;
     btn.classList.add('has-slices');
+    btn._stepSlices = [];
+    btn.style.setProperty('--slice-count', String(count));
+
+    // Keep the step index legible above the mini subdivision cells.
+    const label = document.createElement('span');
+    label.className = 'step-main-label';
+    label.textContent = btn.textContent;
+    btn.textContent = '';
+    btn.appendChild(label);
+
     const phase = typeof lane.stepPhase === 'function' ? lane.stepPhase() : 0;
     const slices = document.createElement('span');
     slices.className = 'step-slices';
@@ -398,6 +413,7 @@ function applyStepSlices(btn, lane) {
         const slice = document.createElement('span');
         slice.className = 'step-slice' + (s === phase ? ' start' : '');
         slices.appendChild(slice);
+        btn._stepSlices.push(slice);
     }
     btn.appendChild(slices);
 }
@@ -408,6 +424,12 @@ function createStepButton(lane, voice, i, actualIndex) {
     btn.className = `step-btn ${lane.className}`;
     btn.id = `${lane.stepId}-${i}`;
     btn.textContent = lane.textForStep(i);
+    if (!lane.groupingOverlay && typeof lane.stepSlices === 'function') {
+        const span = lane.stepSlices();
+        if (Number.isInteger(span) && span > 0) {
+            btn.style.setProperty('--step-span', String(span));
+        }
+    }
     applyStepSlices(btn, lane);
 
     applyGroupClasses(btn, lane, i);
@@ -588,6 +610,44 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     const stepsContainer = document.createElement('div');
     stepsContainer.className = 'voice-steps';
     stepsContainer.style.position = 'relative';
+    if (lane.groupingOverlay && Number.isInteger(state?.mainTeeth) && state.mainTeeth > 0) {
+        stepsContainer.classList.add('grouping-overlay-mode');
+        stepsContainer.style.setProperty('--master-columns', String(state.mainTeeth));
+    }
+    if (!lane.groupingOverlay && typeof lane.stepSlices === 'function' && Number.isInteger(state?.mainTeeth) && state.mainTeeth > 0) {
+        stepsContainer.classList.add('grouping-grid');
+        stepsContainer.style.setProperty('--master-columns', String(state.mainTeeth));
+    }
+
+    let stepsMount = stepsContainer;
+    if (lane.groupingOverlay && Number.isInteger(state?.mainTeeth) && state.mainTeeth > 0) {
+        const underlay = document.createElement('div');
+        underlay.className = 'grouping-underlay-grid';
+        const groupSize = typeof lane.stepSlices === 'function' ? lane.stepSlices() : 1;
+        const phase = typeof lane.stepPhase === 'function' ? lane.stepPhase() : 0;
+        const markStart = Number.isInteger(groupSize) && groupSize >= 2
+            && Number.isInteger(phase) && phase >= 0 && phase < groupSize;
+        for (let i = 0; i < state.mainTeeth; i++) {
+            const cell = document.createElement('span');
+            cell.className = 'grouping-underlay-cell';
+            if (i === 0) cell.classList.add('is-bar');
+            else if (isOnQuarter(i, state.mainTeeth)) cell.classList.add('is-beat');
+            // The grouping's start pulse (offset) gets a marker on the pulse box,
+            // labelled with its 1-based start position (1..groupSize) so the
+            // nudge count reads right off the subdivision it starts from.
+            if (markStart && i % groupSize === phase) {
+                cell.classList.add('is-start');
+                cell.textContent = String(phase + 1);
+            }
+            underlay.appendChild(cell);
+        }
+        stepsContainer.appendChild(underlay);
+
+        const overlay = document.createElement('div');
+        overlay.className = 'grouping-overlay-grid';
+        stepsContainer.appendChild(overlay);
+        stepsMount = overlay;
+    }
 
     const totalCycles = lane.totalCycles?.() ?? 1;
     const stepsPerCycle = lane.stepsPerCycle?.() ?? lane.count();
@@ -598,7 +658,13 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     for (let i = 0; i < stepsPerCycle; i++) {
         const actualIndex = totalCycles > 1 ? cycleStart + i : i;
         const btn = createStepButton(lane, voice, i, actualIndex);
-        stepsContainer.appendChild(btn);
+        if (lane.groupingOverlay && typeof lane.stepSlices === 'function') {
+            const span = lane.stepSlices();
+            if (Number.isInteger(span) && span > 0) {
+                btn.style.setProperty('--step-span', String(span));
+            }
+        }
+        stepsMount.appendChild(btn);
         voice.buttons.push(btn);
     }
 
@@ -609,7 +675,7 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         const playhead = document.createElement('div');
         playhead.className = 'lane-playhead';
         playhead.setAttribute('aria-hidden', 'true');
-        stepsContainer.appendChild(playhead);
+        stepsMount.appendChild(playhead);
         lane._playheads = lane._playheads || [];
         lane._playheads.push(playhead);
     }
@@ -1446,13 +1512,29 @@ export function wireLaneMixButtons(lanes, channels) {
  * The old code wrote `left`/`width` as percentages on every step boundary,
  * which forced layout across the whole sequence at dense meters.
  */
+/** Returns true when the container's step buttons wrap onto more than one row.
+    (A single horizontal track is required for the column playhead to align.) */
+function stepsWrap(container) {
+    if (!container) return false;
+    let first = null;
+    let last = null;
+    const kids = container.children;
+    for (let i = 0; i < kids.length; i++) {
+        const c = kids[i];
+        if (c.classList.contains('lane-playhead')) continue;
+        if (first === null) first = c;
+        last = c;
+    }
+    if (!first || !last || first === last) return false;
+    return first.offsetTop !== last.offsetTop;
+}
+
 function positionPlayhead(overlay, displayedIndex, stepsPerCycle) {
     if (!overlay) return;
     if (displayedIndex < 0 || displayedIndex >= stepsPerCycle) {
         if (overlay.style.opacity !== '0') overlay.style.opacity = '0';
         return;
     }
-    if (overlay.style.opacity !== '1') overlay.style.opacity = '1';
 
     // Width is fixed for a given step count — set it only when that changes.
     if (overlay._spr !== stepsPerCycle) {
@@ -1463,14 +1545,24 @@ function positionPlayhead(overlay, displayedIndex, stepsPerCycle) {
 
     // Container width is measured lazily and cached; refreshed when the step
     // count changes (above) or when a resize/scroll changes it between calls.
+    // While measuring we also detect whether the buttons wrap onto multiple
+    // rows — a single linear track is required for the column to align, so the
+    // column is hidden and the per-button `.current` highlight takes over.
     const container = overlay.parentElement;
     if (container) {
         const w = container.clientWidth;
         if (w > 0 && w !== overlay._trackWidth) {
             overlay._trackWidth = w;
             overlay._lastX = null;
+            overlay._wrapped = stepsWrap(container);
+        }
+        if (overlay._wrapped) {
+            if (overlay.style.opacity !== '0') overlay.style.opacity = '0';
+            return;
         }
     }
+
+    if (overlay.style.opacity !== '1') overlay.style.opacity = '1';
 
     const trackWidth = overlay._trackWidth || 0;
     if (trackWidth > 0) {
@@ -1573,6 +1665,15 @@ function markMultiVoiceCurrentButtons(lane, state, previous, next) {
     const currentIndexes = Array.isArray(next) ? next : lane.voices.map(() => next);
     const totalCycles = lane.totalCycles?.() ?? 1;
     const stepsPerCycle = lane.stepsPerCycle?.() ?? lane.count();
+    const masterStep = state?.lastActive?.masterStep;
+    // Overlay grouping lanes sweep the playhead across the underlying master
+    // pulse boxes (one column per pulse) instead of one column per group box.
+    const overlayPulses = lane.groupingOverlay && Number.isInteger(state?.mainTeeth) && state.mainTeeth > 0
+        ? state.mainTeeth
+        : 0;
+    const pulseIndex = overlayPulses > 0 && Number.isFinite(masterStep)
+        ? ((masterStep % overlayPulses) + overlayPulses) % overlayPulses
+        : null;
 
     if (lane._playheads) lane._playheads.forEach(p => { if (p) p.style.opacity = '0'; });
 
@@ -1593,8 +1694,11 @@ function markMultiVoiceCurrentButtons(lane, state, previous, next) {
                 if (isInView) {
                     addCurrentClass(voice.buttons[displayedCurr]);
                     voice._currentIndex = displayedCurr;
-                    positionPlayhead(lane._playheads?.[voiceIndex], displayedCurr, stepsPerCycle);
+                    if (pulseIndex != null) positionPlayhead(lane._playheads?.[voiceIndex], pulseIndex, overlayPulses);
+                    else positionPlayhead(lane._playheads?.[voiceIndex], displayedCurr, stepsPerCycle);
                     revealStepInView(voice.buttons[displayedCurr]);
+                } else {
+                    if (pulseIndex != null) positionPlayhead(lane._playheads?.[voiceIndex], pulseIndex, overlayPulses);
                 }
             } else {
                 // Pinned: the highlight loops the pinned cycle continuously,
@@ -1607,7 +1711,8 @@ function markMultiVoiceCurrentButtons(lane, state, previous, next) {
                 const local = ((currentIndexes[voiceIndex] % stepsPerCycle) + stepsPerCycle) % stepsPerCycle;
                 addCurrentClass(voice.buttons[local]);
                 voice._currentIndex = local;
-                positionPlayhead(lane._playheads?.[voiceIndex], local, stepsPerCycle);
+                if (pulseIndex != null) positionPlayhead(lane._playheads?.[voiceIndex], pulseIndex, overlayPulses);
+                else positionPlayhead(lane._playheads?.[voiceIndex], local, stepsPerCycle);
                 revealStepInView(voice.buttons[local]);
             }
         });
@@ -1632,7 +1737,8 @@ function markMultiVoiceCurrentButtons(lane, state, previous, next) {
         lane.voices.forEach((voice, voiceIndex) => {
             removeCurrentClass(voice.buttons[previousIndexes[voiceIndex]]);
             addCurrentClass(voice.buttons[currentIndexes[voiceIndex]]);
-            positionPlayhead(lane._playheads?.[voiceIndex], currentIndexes[voiceIndex], stepsPerCycle);
+            if (pulseIndex != null) positionPlayhead(lane._playheads?.[voiceIndex], pulseIndex, overlayPulses);
+            else positionPlayhead(lane._playheads?.[voiceIndex], currentIndexes[voiceIndex], stepsPerCycle);
             revealStepInView(voice.buttons[currentIndexes[voiceIndex]]);
         });
         if (lane._cue) lane._cue.hidden = true;

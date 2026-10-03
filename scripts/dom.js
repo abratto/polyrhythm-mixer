@@ -47,6 +47,7 @@ export function getDomRefs() {
         audioBtn: document.getElementById('audioBtn'),
         playBtn: document.getElementById('playBtn'),
         stopBtn: document.getElementById('stopBtn'),
+        themeToggleBtn: document.getElementById('themeToggleBtn'),
         transportReadout: document.getElementById('transportReadout'),
         miniPlayhead: document.getElementById('miniPlayhead'),
         helpBtn: document.getElementById('helpBtn'),

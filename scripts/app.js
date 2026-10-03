@@ -35,8 +35,50 @@ const STARTING_MIXER_STATE = {
     }
 };
 
+const THEME_STORAGE_KEY = 'alans-polyrhythm-mixer-theme';
+const THEME_CYBERPUNK = 'cyberpunk';
+const THEME_TOKYO = 'tokyo';
+
 // Phase 1: Collect all DOM element references
 const { canvas, ctx, ui } = getDomRefs();
+
+function getSavedTheme() {
+    try {
+        const saved = localStorage.getItem(THEME_STORAGE_KEY);
+        return saved === THEME_TOKYO ? THEME_TOKYO : THEME_CYBERPUNK;
+    } catch {
+        return THEME_CYBERPUNK;
+    }
+}
+
+function saveTheme(theme) {
+    try {
+        localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+        // Best-effort persistence; ignore storage failures.
+    }
+}
+
+function applyTheme(theme) {
+    document.body.setAttribute('data-theme', theme);
+    if (ui.themeToggleBtn) {
+        const tokyo = theme === THEME_TOKYO;
+        ui.themeToggleBtn.textContent = tokyo ? 'Theme: Tokyo' : 'Theme: Cyberpunk';
+        ui.themeToggleBtn.setAttribute('aria-pressed', String(tokyo));
+        ui.themeToggleBtn.classList.toggle('active', tokyo);
+    }
+}
+
+function wireThemeToggle() {
+    if (!ui.themeToggleBtn) return;
+    applyTheme(getSavedTheme());
+    ui.themeToggleBtn.addEventListener('click', () => {
+        const current = document.body.getAttribute('data-theme') || THEME_CYBERPUNK;
+        const next = current === THEME_CYBERPUNK ? THEME_TOKYO : THEME_CYBERPUNK;
+        applyTheme(next);
+        saveTheme(next);
+    });
+}
 
 // Phase 2: Create core data structures
 const state = createState(ui);
@@ -390,6 +432,8 @@ const shareDeps = {
     syncAudioStartTime,
     resetAudioScheduler
 };
+
+wireThemeToggle();
 
 // Phase 3: Initialize derived state and populate UI
 updateDerivedState(state);
