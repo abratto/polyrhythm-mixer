@@ -341,6 +341,11 @@ export function removeVoice(lane, index) {
  * group so the eye can count groups at a glance.
  */
 function applyGroupClasses(btn, lane, i) {
+    // Overlay grouping lanes draw their beat/bar grid in the pulse underlay
+    // (is-beat/is-bar cells), so the rectangles must stay clean — the global
+    // step-beat/step-bar/step-alt accents would paint duplicate bars/tints.
+    if (lane.groupingOverlay) return;
+
     const isBeat = lane.isBeat?.(i);
     const isBar = lane.isBar?.(i);
 
