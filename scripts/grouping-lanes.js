@@ -19,7 +19,11 @@ import { getActivePhraseStep, isOnQuarter, quarterBeatPeriod, lcm } from './math
 import { createVoiceChannel } from './channels.js';
 import { buildLane } from './lanes.js';
 
-const COLORS = ['#ff2ea6', '#00e5ff', '#b4ff39', '#ff7a00', '#8a7dff', '#ff4d6d', '#39ffd4', '#7df9ff'];
+// Grouping lane colors are theme-driven: each slot references a --glane-N
+// custom property so the lane accent (and its labels) resolve against the
+// active theme. The :root defaults match the original neon palette; flag
+// themes override them with flag-derived tints.
+const COLORS = ['var(--glane-1)', 'var(--glane-2)', 'var(--glane-3)', 'var(--glane-4)', 'var(--glane-5)', 'var(--glane-6)', 'var(--glane-7)', 'var(--glane-8)'];
 const MAX_CYCLES = 8;
 const DEFAULT_SOUND = 'shaker';
 

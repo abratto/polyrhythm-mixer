@@ -36,8 +36,19 @@ const STARTING_MIXER_STATE = {
 };
 
 const THEME_STORAGE_KEY = 'alans-polyrhythm-mixer-theme';
-const THEME_CYBERPUNK = 'cyberpunk';
-const THEME_TOKYO = 'tokyo';
+const THEMES = [
+    { id: 'original', label: 'Original' },
+    { id: 'cyberpunk', label: 'Cyberpunk' },
+    { id: 'tokyo', label: 'Tokyo' },
+    { id: 'ghana', label: 'Ghana' },
+    { id: 'cuba', label: 'Cuba' },
+    { id: 'dominican-republic', label: 'Dominican Republic' },
+    { id: 'haiti', label: 'Haiti' },
+    { id: 'puerto-rico', label: 'Puerto Rico' },
+    { id: 'jamaica', label: 'Jamaica' },
+    { id: 'nigeria', label: 'Nigeria' }
+];
+const THEME_DEFAULT = 'cyberpunk';
 
 // Phase 1: Collect all DOM element references
 const { canvas, ctx, ui } = getDomRefs();
@@ -45,9 +56,9 @@ const { canvas, ctx, ui } = getDomRefs();
 function getSavedTheme() {
     try {
         const saved = localStorage.getItem(THEME_STORAGE_KEY);
-        return saved === THEME_TOKYO ? THEME_TOKYO : THEME_CYBERPUNK;
+        return THEMES.some((t) => t.id === saved) ? saved : THEME_DEFAULT;
     } catch {
-        return THEME_CYBERPUNK;
+        return THEME_DEFAULT;
     }
 }
 
@@ -61,22 +72,21 @@ function saveTheme(theme) {
 
 function applyTheme(theme) {
     document.body.setAttribute('data-theme', theme);
-    if (ui.themeToggleBtn) {
-        const tokyo = theme === THEME_TOKYO;
-        ui.themeToggleBtn.textContent = tokyo ? 'Theme: Tokyo' : 'Theme: Cyberpunk';
-        ui.themeToggleBtn.setAttribute('aria-pressed', String(tokyo));
-        ui.themeToggleBtn.classList.toggle('active', tokyo);
-    }
+    if (ui.themeSelect) ui.themeSelect.value = theme;
 }
 
-function wireThemeToggle() {
-    if (!ui.themeToggleBtn) return;
+function wireThemeSelect() {
+    if (!ui.themeSelect) return;
+    THEMES.forEach((t) => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.label;
+        ui.themeSelect.appendChild(opt);
+    });
     applyTheme(getSavedTheme());
-    ui.themeToggleBtn.addEventListener('click', () => {
-        const current = document.body.getAttribute('data-theme') || THEME_CYBERPUNK;
-        const next = current === THEME_CYBERPUNK ? THEME_TOKYO : THEME_CYBERPUNK;
-        applyTheme(next);
-        saveTheme(next);
+    ui.themeSelect.addEventListener('change', () => {
+        applyTheme(ui.themeSelect.value);
+        saveTheme(ui.themeSelect.value);
     });
 }
 
@@ -433,7 +443,7 @@ const shareDeps = {
     resetAudioScheduler
 };
 
-wireThemeToggle();
+wireThemeSelect();
 
 // Phase 3: Initialize derived state and populate UI
 updateDerivedState(state);
