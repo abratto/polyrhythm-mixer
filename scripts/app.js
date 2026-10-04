@@ -23,6 +23,7 @@ import { copyShareLink, loadStateFromUrl, applyChannelState } from './share.js';
 import { closeSaveRhythmModal, closeSavedRhythmsModal, openSaveRhythmModal, openSavedRhythmsModal, saveCurrentRhythm } from './saved-rhythms.js';
 import { startAnimation } from './render.js';
 import { initGroupingLanes, syncGroupingLanesToFrame, resetGroupingLanes } from './grouping-lanes.js';
+import { wireGridScrollSync } from './scroll-sync.js';
 
 const STARTING_MIXER_STATE = {
     A: 6,
@@ -126,6 +127,9 @@ function bindChannelToVoice(prefix, voiceIndex, channel) {
 
     lane.voices[voiceIndex].channel = channel;
     channel.onInstrumentChange = () => updateVoiceInstrumentLabels(lane);
+    // If the row was already built with a header M/S mount, land the controls
+    // there (persistent header) instead of the expandable mix sub-row.
+    lane.voices[voiceIndex]._mountHeadMix?.(channel);
     return channel;
 }
 
@@ -542,6 +546,10 @@ if (ui.followScrollBtn) {
     onScrollFollowChange(syncFollowBtn);
     syncFollowBtn(isScrollFollow());
 }
+
+// Fixed row headers + one shared horizontal track: all step grids stay aligned
+// as they scroll. Presentation-only; no pattern/transport state involved.
+wireGridScrollSync();
 
 // Manually scrolling a sequence lane (horizontal wheel / shift+wheel / trackpad
 // swipe) disables follow, matching Ableton's follow-override behaviour.

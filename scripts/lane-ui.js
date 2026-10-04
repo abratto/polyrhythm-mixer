@@ -481,25 +481,10 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     instrumentSelect.title = `Voice ${voiceIndex + 1} instrument`;
     identityGroup.appendChild(instrumentSelect);
 
-    // Remove button (not for first voice)
-    if (voiceIndex > 0) {
-        const removeBtn = document.createElement('button');
-        removeBtn.className = 'remove-voice-btn';
-        removeBtn.textContent = '×';
-        removeBtn.title = `Remove Voice ${voiceIndex + 1}`;
-        removeBtn.addEventListener('click', () => {
-            removeVoice(lane, voiceIndex);
-            if (lane.onRemoveVoice) {
-                lane.onRemoveVoice(voiceIndex);
-            }
-            buildMultiVoiceLane(lane, state);
-        });
-        identityGroup.appendChild(removeBtn);
-    }
-
-    // Collapse/expand toggle for this voice's rail controls. The identity row
-    // (Voice N + instrument) always stays visible; mix + pattern groups hide.
-    // New voices (no stored state) default to collapsed on load/reset.
+    // Collapse/expand toggle for this voice's rail controls. Rendered first so
+    // it reads as a disclosure triangle at the head of the row. The identity row
+    // (Voice N + instrument + M/S) always stays visible; the mix + pattern
+    // sub-row hides. New voices (no stored state) default to collapsed on load.
     if (voice.railCollapsed === undefined) voice.railCollapsed = true;
     const railToggle = document.createElement('button');
     railToggle.type = 'button';
@@ -518,8 +503,30 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         _railCollapsed = !_railCollapsed;
         syncRail();
     });
-    identityGroup.appendChild(railToggle);
+    identityGroup.insertBefore(railToggle, identityGroup.firstChild);
     lane._voiceRailCtrls.push(setRailCollapsed);
+
+    // Persistent M/S head controls (Ableton-style): always visible in the header
+    // even when the rail is collapsed. These bind to `voice.channel`; when the
+    // channel isn't linked yet the same elements are created later by the strut
+    // below (mountSoloMute).
+    let headSoloMuteControls = null;
+
+    // Remove button (not for first voice)
+    if (voiceIndex > 0) {
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-voice-btn';
+        removeBtn.textContent = '×';
+        removeBtn.title = `Remove Voice ${voiceIndex + 1}`;
+        removeBtn.addEventListener('click', () => {
+            removeVoice(lane, voiceIndex);
+            if (lane.onRemoveVoice) {
+                lane.onRemoveVoice(voiceIndex);
+            }
+            buildMultiVoiceLane(lane, state);
+        });
+        identityGroup.appendChild(removeBtn);
+    }
 
     // Nudge control — built here, lands in the pattern group.
     let nudgeControl = null;
@@ -549,22 +556,21 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     }
 
     // Per-voice edit controls (Rnd/Rev/Copy)
-    const editControls = createVoiceEditControls(lane, voiceIndex);
+    const editControls = createVoiceEditControls(lane, voiceIndex, state);
 
-    // Per-voice Solo/Mute — own row in the mixer sub-panel (also hosts Clear so
-    // Solo / Mute / Clear share one rail row).
-    let soloMuteControls = null;
-    let soloMuteRow = null;
-    if (voice.channel) {
-        soloMuteControls = createSoloMuteControls(voice.channel, `solo_${lane.channelPrefix}_${voiceIndex}`, `mute_${lane.channelPrefix}_${voiceIndex}`);
-        soloMuteRow = document.createElement('div');
-        soloMuteRow.className = 'mix-row';
-        soloMuteRow.appendChild(soloMuteControls);
-        mixGroup.appendChild(soloMuteRow);
-    }
+    // Per-voice Solo/Mute — persistent head controls mounted in the always-visible
+    // identity group. The mix sub-row below carries only the volume fader (and
+    // Clear), so collapsing the rail never hides Mute/Solo.
+    const mountSoloMute = (channel) => {
+        const controls = createSoloMuteControls(channel, `solo_${lane.channelPrefix}_${voiceIndex}`, `mute_${lane.channelPrefix}_${voiceIndex}`, { compact: true });
+        controls.classList.add('head-mix-controls');
+        identityGroup.appendChild(controls);
+        headSoloMuteControls = controls;
+        return controls;
+    };
+    if (voice.channel) mountSoloMute(voice.channel);
 
-    // Per-voice volume fader — own row in the mixer sub-panel (inserted first so
-    // Volume sits above Solo/Mute).
+    // Per-voice volume fader — own row in the mixer sub-panel.
     let volWrap = null;
     if (voice.channel) {
         volWrap = document.createElement('div');
@@ -586,8 +592,8 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         mixGroup.insertBefore(volWrap, mixGroup.firstChild);
     }
 
-    // Clr button for this voice — shares the Solo/Mute row so Solo / Mute / Clear
-    // sit together on one rail row.
+    // Clr button for this voice — sits in the mix sub-row, which now hosts the
+    // volume fader on its own line.
     let clrBtn = null;
     if (voice.channel) {
         clrBtn = document.createElement('button');
@@ -595,18 +601,40 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         clrBtn.className = 'edit-btn edit-btn-sm';
         clrBtn.textContent = 'Clear';
         clrBtn.title = `Clear voice ${voiceIndex + 1}`;
-        clrBtn.addEventListener('click', () => clearVoice(lane, lane.voices[voiceIndex]));
-        if (soloMuteRow) soloMuteRow.appendChild(clrBtn);
-        else patternGroup.appendChild(clrBtn);
+        clrBtn.addEventListener('click', () => clearVoice(lane, lane.voices[voiceIndex], state));
+        mixGroup.appendChild(clrBtn);
     }
 
-    // Assemble pattern group (edit ops + nudge; Clear moved up to the Solo/Mute row).
+    // Assemble pattern group (edit ops + nudge).
     if (editControls) patternGroup.appendChild(editControls);
     if (nudgeControl) patternGroup.appendChild(nudgeControl);
+
+    // Track-level controls for a multi-voice lane (currently the grouping lanes'
+    // Grouping / Phrase Length / Offset / remove) mount into the first voice's
+    // collapsible rail sub-row so they stay contextually attached to the lane.
+    if (voiceIndex === 0 && typeof lane._mountGroupControls === 'function') {
+        lane._mountGroupControls(patternGroup);
+    }
+
+    // Cycle nav + help live in the first voice's row header (next to the voice
+    // picker / S / M) when the lane provides a header mount, so grouping lanes
+    // need no separate toolbar row.
+    if (voiceIndex === 0 && lane._headerViewControls) {
+        lane._headerViewControls.classList.add('lane-header-view-actions');
+        identityGroup.appendChild(lane._headerViewControls);
+    }
 
     labelArea.append(identityGroup, mixGroup, patternGroup);
     if (voice.railCollapsed) labelArea.classList.add('rail-collapsed');
     row.appendChild(labelArea);
+
+    // Expose the header M/S mount so channels that link AFTER this row was built
+    // (share-load / add-voice ordering) can still land their controls in the
+    // header rather than the sub-row.
+    voice._mountHeadMix = (channel) => {
+        if (headSoloMuteControls) return headSoloMuteControls;
+        return mountSoloMute(channel);
+    };
 
     const stepsColumn = document.createElement('div');
     stepsColumn.className = 'voice-steps-column';
@@ -622,6 +650,13 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     if (!lane.groupingOverlay && typeof lane.stepSlices === 'function' && Number.isInteger(state?.mainTeeth) && state.mainTeeth > 0) {
         stepsContainer.classList.add('grouping-grid');
         stepsContainer.style.setProperty('--master-columns', String(state.mainTeeth));
+    }
+    // Fixed column count drives the horizontally scrollable grid: width =
+    // columns × step-size, so dense meters extend past the rail and scroll
+    // instead of wrapping. `--columns` is the displayed (per-cycle) step count.
+    const displayedSteps = lane.stepsPerCycle?.() ?? lane.count();
+    if (Number.isInteger(displayedSteps) && displayedSteps > 0) {
+        stepsContainer.style.setProperty('--columns', String(displayedSteps));
     }
 
     let stepsMount = stepsContainer;
@@ -795,10 +830,13 @@ function addCycleNavigation(lane, state) {
     const following = state.followPlayhead[key] !== false;
 
     const viewActions = lane.container?.closest('.matrix-row')?.querySelector('.lane-view-actions');
-    if (!viewActions) return;
+    const usesHeaderMount = typeof lane._mountHeaderViewControls === 'function';
+    if (!viewActions && !usesHeaderMount) return;
 
-    const existing = viewActions.querySelector('.cycle-nav');
-    if (existing) existing.remove();
+    if (viewActions) {
+        const existing = viewActions.querySelector('.cycle-nav');
+        if (existing) existing.remove();
+    }
 
     const nav = document.createElement('div');
     nav.className = 'cycle-nav';
@@ -835,6 +873,18 @@ function addCycleNavigation(lane, state) {
     nextBtn.addEventListener('click', () => navigateCycle(lane, state, 1));
 
     nav.append(title, prevBtn, label, nextBtn);
+    // Prefer the row header (identity group) when the lane provides a mount hook
+    // — grouping lanes put cycle nav + help next to the voice picker / S / M so
+    // the lane needs no separate toolbar row. Otherwise fall back to the toolbar.
+    if (usesHeaderMount) {
+        // The header container persists across rebuilds, so drop any previously
+        // mounted cycle nav first — otherwise each rebuild appends a duplicate.
+        const staleNav = lane._headerViewControls?.querySelector('.cycle-nav');
+        if (staleNav) staleNav.remove();
+        lane._mountHeaderViewControls(nav);
+        return;
+    }
+    if (!viewActions) return;
     const infoBtn = viewActions.querySelector('.lane-info-btn');
     if (infoBtn) {
         viewActions.insertBefore(nav, infoBtn);
@@ -1328,7 +1378,7 @@ export function wireLaneClearButtons(lanes, state) {
 }
 
 /** Replaces a lane's pattern with a random one (~40% density). */
-function randomizeLane(lane) {
+function randomizeLane(lane, state) {
     if (lane.isMultiVoice) {
         lane.voices.forEach(v => {
             for (let i = 0; i < v.selected.length; i++) v.selected[i] = Math.random() < 0.4;
@@ -1336,32 +1386,32 @@ function randomizeLane(lane) {
     } else {
         for (let i = 0; i < lane.selected.length; i++) lane.selected[i] = Math.random() < 0.4;
     }
-    buildLane(lane);
+    buildLane(lane, state);
 }
 
 /** Reverses every voice's pattern in place. */
-function reverseLane(lane) {
+function reverseLane(lane, state) {
     if (lane.isMultiVoice) lane.voices.forEach(v => v.selected.reverse());
     else lane.selected.reverse();
-    buildLane(lane);
+    buildLane(lane, state);
 }
 
 /** Replaces a single voice's pattern with a random one (~40% density). */
-function randomizeVoice(lane, voice) {
+function randomizeVoice(lane, voice, state) {
     for (let i = 0; i < voice.selected.length; i++) voice.selected[i] = Math.random() < 0.4;
-    buildLane(lane);
+    buildLane(lane, state);
 }
 
 /** Reverses a single voice's pattern in place. */
-function reverseVoice(lane, voice) {
+function reverseVoice(lane, voice, state) {
     voice.selected.reverse();
-    buildLane(lane);
+    buildLane(lane, state);
 }
 
 /** Clears a single voice's pattern (all steps off). */
-function clearVoice(lane, voice) {
+function clearVoice(lane, voice, state) {
     voice.selected.fill(false);
-    buildLane(lane);
+    buildLane(lane, state);
 }
 
 /** Single-voice clipboard for per-voice copy/paste. */
@@ -1371,12 +1421,12 @@ function copyVoice(voice) {
     _voiceClipboard = [...voice.selected];
 }
 
-function pasteVoice(lane, voice) {
+function pasteVoice(lane, voice, state) {
     if (!_voiceClipboard) return;
     const dst = voice.selected;
     const len = Math.min(_voiceClipboard.length, dst.length);
     for (let i = 0; i < len; i++) dst[i] = _voiceClipboard[i];
-    buildLane(lane);
+    buildLane(lane, state);
 }
 
 /**
@@ -1384,7 +1434,7 @@ function pasteVoice(lane, voice) {
  * so a single voice can be copied and pasted into another voice (same lane or
  * a different lane).
  */
-function createVoiceEditControls(lane, voiceIndex) {
+function createVoiceEditControls(lane, voiceIndex, state) {
     const group = document.createElement('div');
     group.className = 'voice-edit-controls';
     const mk = (label, title, fn) => {
@@ -1397,10 +1447,10 @@ function createVoiceEditControls(lane, voiceIndex) {
         return b;
     };
     group.append(
-        mk('Random', `Randomize voice ${voiceIndex + 1}`, () => randomizeVoice(lane, lane.voices[voiceIndex])),
-        mk('Reverse', `Reverse voice ${voiceIndex + 1}`, () => reverseVoice(lane, lane.voices[voiceIndex])),
+        mk('Random', `Randomize voice ${voiceIndex + 1}`, () => randomizeVoice(lane, lane.voices[voiceIndex], state)),
+        mk('Reverse', `Reverse voice ${voiceIndex + 1}`, () => reverseVoice(lane, lane.voices[voiceIndex], state)),
         mk('Copy', `Copy voice ${voiceIndex + 1}`, () => copyVoice(lane.voices[voiceIndex])),
-        mk('Paste', `Paste into voice ${voiceIndex + 1}`, () => pasteVoice(lane, lane.voices[voiceIndex]))
+        mk('Paste', `Paste into voice ${voiceIndex + 1}`, () => pasteVoice(lane, lane.voices[voiceIndex], state))
     );
     return group;
 }
@@ -1409,7 +1459,7 @@ function createVoiceEditControls(lane, voiceIndex) {
  * Adds per-lane editing buttons (Randomize / Reverse / Copy / Paste) to the
  * lane toolbar. Called once per lane during initialization.
  */
-export function addLaneEditControls(lane) {
+export function addLaneEditControls(lane, state) {
     if (!lane.clearBtn) return;
     if (lane.allowLaneEdit === false) return;
     const parent = lane.clearBtn.parentElement;
@@ -1430,8 +1480,8 @@ export function addLaneEditControls(lane) {
     group.setAttribute('aria-label', `Edit ${lane.label()} pattern`);
     const name = lane.label();
     group.append(
-        mkBtn('Random', `Randomize ${name}`, () => randomizeLane(lane)),
-        mkBtn('Reverse', `Reverse ${name}`, () => reverseLane(lane))
+        mkBtn('Random', `Randomize ${name}`, () => randomizeLane(lane, state)),
+        mkBtn('Reverse', `Reverse ${name}`, () => reverseLane(lane, state))
     );
     parent.appendChild(group);
 }
@@ -1444,9 +1494,13 @@ export function addLaneEditControls(lane) {
  * state restore keep working. Pass `{ solo: false }` to render Mute only (used
  * for the Master lane, whose per-voice Solo already covers it).
  */
-function createSoloMuteControls(channel, idSolo, idMute, { solo = true } = {}) {
+function createSoloMuteControls(channel, idSolo, idMute, { solo = true, compact = false } = {}) {
     const wrap = document.createElement('div');
     wrap.className = 'voice-mix-controls';
+    // Compact head buttons render as one-letter M/S while keeping the full
+    // word in the accessible name / title.
+    const soloText = (on) => compact ? 'S' : (on ? 'Soloed' : 'Solo');
+    const muteText = (on) => compact ? 'M' : (on ? 'Muted' : 'Mute');
 
     let soloBtn = null;
     if (solo) {
@@ -1454,20 +1508,25 @@ function createSoloMuteControls(channel, idSolo, idMute, { solo = true } = {}) {
         soloBtn.type = 'button';
         soloBtn.className = 'solo-btn';
         soloBtn.id = idSolo;
-        soloBtn.textContent = channel.soloed ? 'Soloed' : 'Solo';
+        soloBtn.textContent = soloText(channel.soloed);
+        soloBtn.setAttribute('aria-label', 'Solo');
+        soloBtn.title = 'Solo';
     }
 
     const mute = document.createElement('button');
     mute.type = 'button';
     mute.className = 'mute-btn';
     mute.id = idMute;
-    mute.textContent = channel.muted ? 'Muted' : 'Mute';
+    mute.textContent = muteText(channel.muted);
+    mute.setAttribute('aria-label', 'Mute');
+    mute.title = 'Mute';
 
+    if (compact) wrap.classList.add('compact-mix-controls');
     if (soloBtn) wrap.append(soloBtn);
     wrap.append(mute);
     if (soloBtn) channel.soloEl = soloBtn;
     channel.muteEl = mute;
-    bindSoloMute(channel, _mixChannels);
+    bindSoloMute(channel, _mixChannels, { soloText, muteText });
     return wrap;
 }
 

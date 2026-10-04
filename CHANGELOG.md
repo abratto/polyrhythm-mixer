@@ -1,4 +1,26 @@
 # Changelog
+## v1.26.0 — 2026-10-04
+
+### Added
+- **Global toolbar.** The transport, tempo/master controls, theme picker, status readout, and Save/Load/Share/Help now live in a single top menu bar, decoupled from the sequence lanes (brand + file menus, transport, and global settings as three bands).
+- **Shared horizontal step scroll.** All step grids scroll together as one aligned track while the fixed row headers stay put; dense meters/phrase lengths scroll instead of wrapping.
+
+### Changed
+- **Compact row headers with disclosure sub-rows.** Each voice header now shows a disclosure triangle, voice name, instrument, and persistent `S`/`M` chips; volume, Clear, edit ops, and nudge move into the expandable sub-row, leaving the header readable while collapsed.
+- **Grouping lane controls moved into the rail.** Each grouping lane's Grouping, Phrase Length, Offset, and remove controls now live in that lane's expandable left rail instead of an always-visible toolbar above the grid, so the lane reads as one compact header + grid.
+- **All left rails start collapsed**, including on load and after Reset, for a uniform compact layout.
+- **Grouping lane cycle nav + help moved into the row header** (next to the voice picker / S / M), removing the now-empty toolbar row so grouping rows sit as tightly spaced as the Rhythm Track rows.
+- **Rails stay open while editing.** Interacting with a rail control (grouping, phrase length, offset, etc.) no longer re-collapses the rail — only the `▸/▾` disclosure toggles it. Expand/collapse state is preserved across lane rebuilds.
+- **Fixed-width, aligned step columns.** Step boxes are a constant width so columns line up across lanes and the grid scrolls horizontally when the pattern is longer than the lane.
+- **Mobile toolbar restacked.** On narrow screens the toolbar orders transport first, then file menus, then settings, with the collapse toggle pinned top-right.
+
+### Fixed
+- Loading a saved rhythm / shared link no longer overwrites the compact `S`/`M` header labels with full words.
+- **Collapsed left rails no longer reserve a tall empty box** on narrow screens. Below 1024px the rail stays beside the grid (rather than stacking into a full-width block), and on phones the collapsed rail shrinks to a single compact header line instead of a 236px-tall column — so rows sit tightly instead of being pushed apart.
+- **Clear / Random / Reverse / Paste on a grouping lane** no longer drop the lane's offset marker and outlined pulse sub-grid. These voice-edit actions rebuilt the lane without the current frame state, so the grouping underlay/overlay (offset marker + sub-box outline) was skipped; the frame state is now threaded through.
+- **No duplicate cycle nav on grouping lanes.** Rebuilding a lane (e.g. Clear) appended an extra `< AUTO >` control to the row header each time; the stale nav is now removed before the new one mounts.
+- **Clearer grouping playheads.** The grouping lanes' column playhead borders (3px) and the active group box's inset ring (3px) are now thicker than the base 1px/2px styles, matching the Rhythm Tracks playhead's prominence so the moving playhead is unmistakable in the Groupings section.
+
 ## v1.25.1 — 2026-10-03
 
 ### Fixed

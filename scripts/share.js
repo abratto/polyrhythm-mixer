@@ -458,7 +458,9 @@ export function applyChannelState(channel, stateObj, soundKey = 's') {
         channel.muted = !!muted;
         if (channel.muteEl) {
             channel.muteEl.classList.toggle('muted', channel.muted);
-            channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
+            // Preserve compact head-button labels (M/S) if the control uses them.
+            const compact = channel.muteEl.closest('.compact-mix-controls');
+            channel.muteEl.textContent = compact ? 'M' : (channel.muted ? 'Muted' : 'Mute');
         }
     }
 
@@ -467,7 +469,8 @@ export function applyChannelState(channel, stateObj, soundKey = 's') {
         channel.soloed = !!soloed;
         if (channel.soloEl) {
             channel.soloEl.classList.toggle('soloed', channel.soloed);
-            channel.soloEl.textContent = channel.soloed ? 'Soloed' : 'Solo';
+            const compact = channel.soloEl.closest('.compact-mix-controls');
+            channel.soloEl.textContent = compact ? 'S' : (channel.soloed ? 'Soloed' : 'Solo');
         }
     }
 }

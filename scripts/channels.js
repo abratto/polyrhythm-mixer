@@ -156,25 +156,27 @@ export function populateInstrumentSelect(el, selectedValue) {
  * be called again once the elements exist. Using assignment (not addEventListener)
  * keeps it idempotent across re-binds.
  */
-export function bindSoloMute(channel, channels) {
+export function bindSoloMute(channel, channels, labels = {}) {
     if (!channel) return;
+    const soloText = labels.soloText || ((on) => (on ? 'Soloed' : 'Solo'));
+    const muteText = labels.muteText || ((on) => (on ? 'Muted' : 'Mute'));
     if (channel.muteEl) {
         channel.muteEl.classList.toggle('muted', channel.muted);
-        channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
+        channel.muteEl.textContent = muteText(channel.muted);
         channel.muteEl.onclick = () => {
             channel.muted = !channel.muted;
             channel.muteEl.classList.toggle('muted', channel.muted);
-            channel.muteEl.textContent = channel.muted ? 'Muted' : 'Mute';
+            channel.muteEl.textContent = muteText(channel.muted);
             refreshSilenced(channels);
         };
     }
     if (channel.soloEl) {
         channel.soloEl.classList.toggle('soloed', channel.soloed);
-        channel.soloEl.textContent = channel.soloed ? 'Soloed' : 'Solo';
+        channel.soloEl.textContent = soloText(channel.soloed);
         channel.soloEl.onclick = () => {
             channel.soloed = !channel.soloed;
             channel.soloEl.classList.toggle('soloed', channel.soloed);
-            channel.soloEl.textContent = channel.soloed ? 'Soloed' : 'Solo';
+            channel.soloEl.textContent = soloText(channel.soloed);
             refreshSilenced(channels);
         };
     }

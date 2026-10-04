@@ -158,6 +158,8 @@ export function addGroupingVoice(lane) {
     const channel = createVoiceChannel(lane.container, voiceIndex, lane.channelPrefix,
         { [lane.channelPrefix]: DEFAULT_SOUND }, 0.5);
     voice.channel = channel;
+    // If the row already exists (rebuild ordering), place its M/S in the header.
+    voice._mountHeadMix?.(channel);
     lane.voiceChannels.push(channel);
     _deps.channels.groupingVoices.push(channel);
     return voice;
@@ -202,11 +204,6 @@ function buildLaneRow(lane, state) {
     row.className = 'matrix-row grouping-lane-row';
     row.style.setProperty('--lane-accent', lane.color);
     row.dataset.groupingId = String(lane.id);
-
-    const toolbar = document.createElement('div');
-    toolbar.className = 'lane-toolbar';
-    const actions = document.createElement('div');
-    actions.className = 'lane-actions';
 
     // Grouping selector
     const gGroup = document.createElement('div');
@@ -297,13 +294,18 @@ function buildLaneRow(lane, state) {
         if (idx >= 0) removeGroupingLane(idx);
     });
 
-    // Toolbar holds this lane's own grouping + phrase-length + offset controls
-    // and the remove button. Clear / Random / Reverse / Nudge and the per-voice
-    // mix controls live in the voice's collapsible rail (the ▸ dropdown),
-    // and + Voice sits at the bottom of the step boxes like the Master lane.
-    actions.append(gGroup, cGroup);
-    if (oGroup) actions.appendChild(oGroup);
-    actions.append(removeBtn);
+    // Track-level controls (grouping, phrase length, offset, remove) live in the
+    // lane's collapsible rail sub-row alongside the per-voice mix/pattern
+    // controls, rather than as an always-visible toolbar above the grid. The
+    // rail is built later by buildLane → buildVoiceButtons, so stash a mount
+    // hook that buildVoiceButtons calls for the lane's first voice.
+    const groupControls = document.createElement('div');
+    groupControls.className = 'grouping-controls';
+    groupControls.append(gGroup, cGroup);
+    if (oGroup) groupControls.appendChild(oGroup);
+    groupControls.append(removeBtn);
+    lane._groupControls = groupControls;
+    lane._mountGroupControls = (mount) => { mount.appendChild(groupControls); };
 
     const viewActions = document.createElement('div');
     viewActions.className = 'lane-view-actions';
@@ -314,8 +316,11 @@ function buildLaneRow(lane, state) {
     infoBtn.setAttribute('aria-label', 'Show grouping lane explanation');
     viewActions.appendChild(infoBtn);
 
-    toolbar.append(actions, viewActions);
-    row.appendChild(toolbar);
+    // Cycle nav + help live in the row header (next to the voice picker / S / M)
+    // so the grouping lane needs no separate toolbar row and rows sit as tight
+    // as the Rhythm Track rows. buildVoiceButtons mounts this container.
+    lane._headerViewControls = viewActions;
+    lane._mountHeaderViewControls = (nav) => { viewActions.insertBefore(nav, infoBtn); };
 
     const descriptionEl = document.createElement('div');
     descriptionEl.className = 'lane-description';
@@ -374,6 +379,17 @@ function renderLaneRow(lane, index) {
     lane.voices.forEach(v => { v._currentIndex = undefined; });
     // Capture the previous row before buildLaneRow overwrites lane.rootEl.
     const oldRow = lane.rootEl;
+    // Preserve each voice's expand/collapse state across rebuilds: changing a
+    // grouping/threshold control rebuilds the lane, and the rail must stay open
+    // unless the user explicitly toggled it. New voices default to collapsed.
+    const collapsedBefore = oldRow
+        ? Array.from(oldRow.querySelectorAll('.voice-row .lane-label-area'))
+            .map(el => el.classList.contains('rail-collapsed'))
+        : [];
+    lane.voices.forEach((v, vi) => {
+        if (v.railCollapsed === undefined) v.railCollapsed = true;
+        if (collapsedBefore[vi] !== undefined) v.railCollapsed = collapsedBefore[vi];
+    });
     const row = buildLaneRow(lane, state);
     if (oldRow && oldRow.parentElement === container) {
         oldRow.replaceWith(row);

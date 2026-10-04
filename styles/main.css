@@ -1935,17 +1935,18 @@
         /* Narrow: fall back to stacked (rail above grid) so the step grid
            keeps its full width instead of being squeezed by the rail. */
         @media (max-width: 1024px) {
+            /* Keep the rail beside the grid (not stacked) at laptop/landscape
+               widths so a collapsed rail is a compact column rather than a
+               full-width block that pushes the row apart. */
             .voice-row {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 6px;
+                flex-direction: row;
+                align-items: flex-start;
+                gap: 8px;
             }
             .lane-label-area {
-                flex: 1 1 auto;
-                width: 100%;
-                flex-direction: row;
+                flex: 0 0 200px;
+                width: 200px;
                 flex-wrap: wrap;
-                align-items: center;
             }
             .voice-control-group.mix-group {
                 align-self: auto;
@@ -2101,19 +2102,27 @@
         }
         .voice-steps {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(24px, 1fr));
+            /* Columns never shrink below --step-size: a dense phrase lane (many
+               columns) overflows and scrolls, while a sparse lane's columns grow
+               to fill the available width. */
+            --step-size: 30px;
+            grid-template-columns: repeat(var(--columns), minmax(var(--step-size), 1fr));
+            justify-content: start;
             gap: 4px;
             min-width: 0;
             width: 100%;
         }
-        /* Cells grow to fill the lane when they fit (so a short sequence still
-           spans the full width), but never shrink below 24px. Once there are
-           more than fit they wrap onto the next row rather than being cut off.
-           auto-fit keeps every wrapped row at the same column width, so the
-           last row never balloons into oversized boxes. */
+        /* A step grid wider than its column scrolls as a single horizontal track
+           (fixed row headers stay put; scroll-sync.js aligns all lanes). */
+        .voice-steps {
+            overflow-x: auto;
+            overflow-y: hidden;
+            flex-wrap: nowrap;
+            padding-bottom: 2px;
+        }
         .voice-steps .step-btn {
-            flex: 1 1 24px;
-            min-width: 24px;
+            flex: 1 1 var(--step-size, 24px);
+            min-width: var(--step-size, 24px);
         }
         /* Grouping overlay mode: a full master-pulse row using the same cell
            language as the Rhythm Track voice rows, with translucent grouping
@@ -2123,16 +2132,24 @@
         .grouping-lane-row .voice-steps.grouping-overlay-mode {
             position: relative;
             display: block;
-            overflow: hidden;
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
             min-height: 32px;
+        }
+        /* Base grid-width rule doesn't apply to the block-mode overlay wrapper. */
+        .grouping-lane-row .voice-steps.grouping-overlay-mode {
+            width: 100% !important;
         }
         .grouping-lane-row .grouping-underlay-grid,
         .grouping-lane-row .grouping-overlay-grid,
         .grouping-lane-row .voice-steps.grouping-grid {
             display: grid;
-            /* auto-fit lets pulse columns wrap onto new rows when they don't fit
-               the lane width, instead of being clipped by overflow:hidden. */
-            grid-template-columns: repeat(auto-fit, minmax(24px, 1fr));
+            /* Fixed pulse columns matching the voice rows so overlay/underlay
+               stay aligned while scrolling horizontally. */
+            --step-size: 30px;
+            grid-template-columns: repeat(var(--master-columns), minmax(var(--step-size), 1fr));
+            justify-content: start;
             grid-auto-rows: 32px;
             gap: 4px;
         }
@@ -2188,7 +2205,10 @@
         }
         .grouping-lane-row .grouping-overlay-grid {
             position: absolute;
-            inset: 0;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
             z-index: 2;
             pointer-events: none;
         }
@@ -3332,4 +3352,411 @@
                         inset 0 0 10px rgba(255, 255, 255, 0.28),
                         0 0 7px rgba(255, 255, 255, 0.45);
             color: #ffffff;
+        }
+
+        /* =====================================================================
+           Modern sequencer redesign
+           ---------------------------------------------------------------------
+           Additive restyle that reorganises the UI into a top global toolbar,
+           compact row headers with disclosure sub-rows, and a fixed-width rail
+           with an independently scrolling step grid.
+           Nothing here changes musical logic; selectors/IDs are preserved.
+           ===================================================================== */
+
+        /* ----- Global toolbar (was the sticky transport bar) ----- */
+        .global-toolbar.sticky-bar {
+            flex-direction: row;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px 16px;
+            padding: 8px 14px;
+            background: linear-gradient(180deg,
+                color-mix(in srgb, var(--panel-bg) 88%, #ffffff 4%) 0%,
+                var(--panel-bg) 100%);
+            border: 1px solid var(--panel-border);
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+        }
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+        .toolbar-brand-group {
+            gap: 14px;
+            padding-right: 14px;
+            border-right: 1px solid color-mix(in srgb, var(--panel-border) 70%, transparent);
+        }
+        .toolbar-brand {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 900;
+            letter-spacing: 0.4px;
+            line-height: 1;
+            white-space: nowrap;
+            background: var(--title-gradient, linear-gradient(to right, var(--accent-a), var(--accent-b), var(--accent-c)));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+        }
+        .toolbar-menus.secondary-actions {
+            display: inline-flex;
+            grid-template-columns: none;
+            gap: 4px;
+            margin-left: 0;
+        }
+        .toolbar-menus.secondary-actions button {
+            width: auto;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            background: transparent;
+            border-color: transparent;
+            color: color-mix(in srgb, var(--btn-fg) 78%, transparent);
+        }
+        .toolbar-menus.secondary-actions button:hover {
+            background: var(--chip-bg);
+            border-color: var(--chip-border);
+            color: var(--btn-fg);
+        }
+        .toolbar-transport {
+            gap: 6px;
+        }
+        .toolbar-transport .transport-btn {
+            padding: 7px 12px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+        /* Second toolbar band: full-width row of global settings. */
+        .toolbar-settings {
+            flex: 1 1 100%;
+            margin-left: 0;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding-top: 8px;
+            border-top: 1px solid color-mix(in srgb, var(--panel-border) 70%, transparent);
+        }
+        .global-toolbar .sticky-bar-toggle {
+            margin-left: auto;
+        }
+        .toolbar-settings .control-group {
+            width: auto;
+            min-width: 0;
+        }
+        .toolbar-settings .tempo-display input[type="range"],
+        .toolbar-settings .volume-display input[type="range"] {
+            width: 96px;
+        }
+        .toolbar-settings .transport-readout {
+            padding: 4px 8px;
+            border: 1px solid var(--chip-border);
+            border-radius: 6px;
+            background: var(--input-bg);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+        }
+
+        /* ----- Compact row headers + disclosure sub-rows ----- */
+        /* The rail keeps a fixed width but now reads as a compact track header:
+           disclosure triangle, voice name, instrument, M/S. */
+        .lane-label-area {
+            flex: 0 0 236px;
+            width: 236px;
+            gap: 6px;
+            padding: 6px 8px;
+        }
+        .identity-group {
+            gap: 6px;
+            flex-wrap: nowrap;
+            align-items: center;
+        }
+        .voice-label {
+            flex: 0 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 800;
+        }
+        .voice-instrument-select {
+            flex: 1 1 84px;
+            min-width: 60px;
+        }
+        /* Disclosure triangle at the head of the row. */
+        .rail-toggle-btn {
+            flex: 0 0 auto;
+            width: 20px;
+            height: 20px;
+            min-width: 0;
+            padding: 0;
+            font-size: 10px;
+            line-height: 1;
+        }
+        /* Persistent header M/S controls. */
+        .head-mix-controls {
+            flex: 0 0 auto;
+            margin-left: auto;
+            gap: 4px;
+        }
+        .head-mix-controls .solo-btn,
+        .head-mix-controls .mute-btn {
+            width: 22px;
+            height: 22px;
+            padding: 0;
+            font-size: 11px;
+            font-weight: 900;
+            border-radius: 5px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Expanded sub-row: the mix + pattern clusters sit as an indented strip
+           under the header, keeping advanced controls attached to the voice. */
+        .lane-label-area:not(.rail-collapsed) .mix-group,
+        .lane-label-area:not(.rail-collapsed) .pattern-group {
+            padding-left: 8px;
+            border-left: 2px solid color-mix(in srgb, var(--lane-accent, #ff9100) 45%, transparent);
+        }
+        .lane-label-area .mix-group {
+            gap: 5px;
+        }
+        .lane-label-area .mix-row {
+            gap: 6px;
+        }
+        /* In the sub-row the volume fader owns its line. */
+        .lane-label-area .lane-volume.mix-row .volume-fader {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        /* ----- Sequencer workspace ----- */
+        .sequencer-workspace {
+            display: block;
+            min-width: 0;
+        }
+        .sequencer-workspace > .phrases-section {
+            min-width: 0;
+        }
+
+        /* Mobile: keep the workspace and its grids within the viewport. The
+           fixed-column step grids scroll internally rather than expanding the
+           section (flex items default to min-width:auto and would otherwise
+           refuse to shrink below their content's min-content width). */
+        @media (max-width: 1024px) {
+            .sequencer-workspace > .phrases-section,
+            .sequencer-workspace .matrix-row,
+            .sequencer-workspace .sequencer-container,
+            .sequencer-workspace .voice-row,
+            .sequencer-workspace .voice-steps-column {
+                min-width: 0;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+            .sequencer-workspace .voice-steps {
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+        }
+
+        /* Mobile global toolbar: stack the three bands cleanly — transport
+           first (primary), then file menus, then global settings. */
+        @media (max-width: 720px) {
+            .global-toolbar.sticky-bar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .toolbar-brand-group {
+                order: 2;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 6px;
+                padding-right: 0;
+                border-right: none;
+                border-top: 1px solid color-mix(in srgb, var(--panel-border) 70%, transparent);
+                padding-top: 8px;
+            }
+            .toolbar-brand {
+                font-size: 13px;
+                text-align: center;
+            }
+            .toolbar-menus.secondary-actions {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 6px;
+                width: 100%;
+            }
+            .toolbar-menus.secondary-actions button {
+                width: 100%;
+                border-color: var(--chip-border);
+                background: var(--chip-bg);
+            }
+            .toolbar-transport {
+                order: 1;
+                width: 100%;
+            }
+            .toolbar-settings {
+                order: 3;
+                border-top: 1px solid color-mix(in srgb, var(--panel-border) 70%, transparent);
+            }
+            /* Pin the collapse toggle to the top-right of the toolbar. */
+            .global-toolbar .sticky-bar-toggle {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                margin: 0;
+                z-index: 2;
+            }
+            .global-toolbar.sticky-bar {
+                position: sticky;
+                padding-right: 56px;
+            }
+        }
+
+        /* ----- Grouping lane track controls (now in the rail sub-row) ----- */
+        /* The grouping / phrase-length / offset / remove controls moved out of
+           the always-visible lane toolbar and into the first voice's expandable
+           rail, kept contextually attached to the lane. */
+        .grouping-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+        }
+        .grouping-controls .control-group {
+            width: 100%;
+            min-width: 0;
+        }
+        .grouping-controls select {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .grouping-controls .grouping-offset-nudge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .grouping-controls .remove-voice-btn {
+            align-self: flex-start;
+        }
+        /* The lane toolbar for grouping rows now only carries cycle nav + help. */
+        .grouping-lane-row .lane-toolbar {
+            justify-content: flex-end;
+        }
+        .grouping-lane-row .lane-actions:empty {
+            display: none;
+        }
+
+        /* ----- Grouping rows: header-hosted cycle nav / help + tight spacing ----- */
+        /* Cycle nav + help moved out of a per-lane toolbar and into the row
+           header, next to the voice picker / S / M, so grouping rows have no
+           extra toolbar line and sit as tightly as the Rhythm Track rows. */
+        .lane-header-view-actions.lane-header-view-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: auto;
+            flex: 0 0 auto;
+        }
+        .lane-header-view-actions .lane-info-btn {
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            font-size: 11px;
+            flex: 0 0 auto;
+        }
+        .lane-header-view-actions .cycle-nav {
+            gap: 4px;
+        }
+        .lane-header-view-actions .cycle-nav-title {
+            display: none;
+        }
+        .lane-header-view-actions .cycle-nav-btn,
+        .lane-header-view-actions .cycle-nav-label {
+            height: 20px;
+            padding: 0 5px;
+            font-size: 10px;
+            line-height: 1;
+        }
+        /* Match the Rhythm Track row rhythm: same vertical padding and a hairline
+           divider, with a smaller gap between grouping lanes. */
+        .grouping-lanes {
+            gap: 0;
+        }
+        .grouping-lane-row {
+            padding: 10px 0;
+            gap: 6px;
+        }
+        .grouping-lane-row + .grouping-lane-row {
+            margin-top: 6px;
+            padding-top: 14px;
+        }
+        /* The grouping rail is a touch shorter than the master row since its
+           header carries the extra cycle/help controls inline. */
+        .grouping-lane-row .lane-label-area {
+            gap: 4px;
+        }
+
+        /* ----- Narrow screens: compact collapsed rails ----- */
+        /* On stacked layouts (phones) the rail is a full-width header above the
+           grid. In the collapsed state it must be only as tall as its single
+           identity line — not a tall empty box that pushes rows apart. */
+        @media (max-width: 720px) {
+            .lane-label-area.rail-collapsed {
+                flex: 0 0 auto;
+                height: auto;
+                align-self: stretch;
+            }
+            .lane-label-area.rail-collapsed .identity-group {
+                flex-wrap: nowrap;
+                width: 100%;
+            }
+            .lane-label-area.rail-collapsed .voice-instrument-select {
+                flex: 1 1 auto;
+                min-width: 0;
+            }
+            /* Collapse button to an icon so the header row never wraps. */
+            .lane-label-area.rail-collapsed .head-mix-controls {
+                margin-left: auto;
+            }
+        }
+
+        @media (max-width: 720px) {
+            /* Keep the voice name readable in the compact collapsed header. */
+            .lane-label-area.rail-collapsed .voice-label {
+                flex: 0 0 auto;
+                min-width: 52px;
+            }
+        }
+
+        /* ----- Grouping playheads: thicker borders for clarity ----- */
+        /* The grouping lane playhead and its in-box sub-playhead sit against the
+           overlay rectangles' 1px borders, so the default 1px playhead border
+           reads as part of the box. Thicken both so the moving playhead is
+           unmistakable (Rhythm Tracks' column playhead is the width reference). */
+        .grouping-lane-row .grouping-overlay-grid .lane-playhead,
+        .grouping-lane-row .voice-steps.grouping-grid .lane-playhead {
+            border-left-width: 3px;
+            border-right-width: 3px;
+            border-left-color: color-mix(in srgb, var(--playhead) 85%, transparent);
+            border-right-color: color-mix(in srgb, var(--playhead) 85%, transparent);
+        }
+        .grouping-lane-row .grouping-overlay-grid .step-btn.grouping-btn .step-slice.subplayhead,
+        .grouping-lane-row .voice-steps.grouping-grid .step-btn.grouping-btn .step-slice.subplayhead {
+            border-width: 2px;
+        }
+
+        /* The active grouping group box (the "sub playhead" as the lane playhead
+           sweeps its pulses) gets a thicker inset ring so the current group reads
+           clearly against the moving pulse playhead. */
+        .grouping-lane-row .grouping-overlay-grid .step-btn.grouping-btn.current,
+        .grouping-lane-row .voice-steps.grouping-grid .step-btn.grouping-btn.current {
+            box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--current) 88%, transparent),
+                        0 0 10px color-mix(in srgb, var(--current) 45%, transparent);
         }

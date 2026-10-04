@@ -446,7 +446,15 @@ async function run() {
         // --- Grouping lifecycle: any lane can be deleted; the meter re-asserts it ---
         // Delete both linked lanes (the grouping list can go empty), then pick a
         // new meter: the linked A/B lanes must reappear, pre-tapped with the pulse.
+        // Lane remove controls now live in the collapsible rail; expand before each
+        // remove because rebuilding a lane re-collapses its rail.
+        const expandGroupingRails = async () => {
+            await page.locator('#groupingLanesContainer .rail-toggle-btn[aria-expanded="false"]').evaluateAll(els => els.forEach(e => e.click()));
+            await page.waitForTimeout(80);
+        };
+        await expandGroupingRails();
         await page.locator('#groupingLanesContainer .grouping-lane-row:nth-child(2) .remove-voice-btn').click();
+        await expandGroupingRails();
         await page.locator('#groupingLanesContainer .grouping-lane-row:nth-child(1) .remove-voice-btn').click();
         const emptyState = await page.evaluate(() => ({
             lanes: document.querySelectorAll('#groupingLanesContainer .grouping-lane-row').length,
@@ -544,20 +552,24 @@ async function run() {
         await page.waitForTimeout(300);
 
         // --- Solo button toggling on fixed and voice channels ---
+        // Voice solo/mute controls now render as compact header chips (S/M)
+        // while the fixed driver control keeps its full words; accept both.
+        const isSoloOff = (t) => t === 'Solo' || t === 'S';
+        const isSoloOn = (t) => t === 'Soloed' || t === 'S';
         async function testSolo(id) {
             const btn = page.locator(`#${id}`);
             const textBefore = await btn.textContent();
-            assert(textBefore === 'Solo', `Solo button ${id} should start as 'Solo'`, textBefore);
+            assert(isSoloOff(textBefore), `Solo button ${id} should start off`, textBefore);
             await btn.click();
             await page.waitForTimeout(100);
             const textAfter = await btn.textContent();
-            assert(textAfter === 'Soloed', `Solo button ${id} should toggle to 'Soloed'`, textAfter);
+            assert(isSoloOn(textAfter), `Solo button ${id} should toggle to on`, textAfter);
             const hasClass = await btn.evaluate(el => el.classList.contains('soloed'));
             assert(hasClass, `${id} should have 'soloed' class when active`);
             await btn.click();
             await page.waitForTimeout(100);
             const textFinal = await btn.textContent();
-            assert(textFinal === 'Solo', `Solo button ${id} should toggle back to 'Solo'`, textFinal);
+            assert(isSoloOff(textFinal), `Solo button ${id} should toggle back off`, textFinal);
         }
 
         // Voices now default to collapsed (per the rail-controls UI change). Expand
@@ -610,6 +622,9 @@ async function run() {
         const applyGroupingEdits = async () => {
             await setSelect('#rhythmA', 5);
             await setSelect('#rhythmB', 7);
+            // Meter changes rebuild lanes and re-collapse their rails, so expand
+            // before touching rail-scoped grouping controls.
+            await expandAllRails();
             await setSelect(`${glRow(1)} .grouping-cycles-select`, 2);
             await setRange('#tempoSlider', 118);
             await setRange('#masterVolumeSlider', 72);
@@ -619,6 +634,7 @@ async function run() {
             // Add a third grouping voice lane via the single bottom "+ Voice"
             // button. Each lane keeps its own grouping.
             await page.locator('#groupingLanesContainer .add-voice-btn').click();
+            await expandAllRails();
             await setSelect(`${glRow(3)} .grouping-count-select`, 5);
             await setSelect('#sound_master_1', 'claves');
             await setSelect('#sound_grouping_0_0', 'woodblock');
@@ -759,6 +775,7 @@ async function run() {
         // of the phrase. It must wrap the global step index modulo the cycle
         // length so it loops the pinned cycle like the audio gate does.
         await page.locator('#audioBtn').click();
+        await expandAllRails();
         await setSelect(`${glRow(1)} .grouping-cycles-select`, 2);
         const groupingPinRow = page.locator(glRow(1));
         await groupingPinRow.locator('.cycle-nav-btn[title="Next cycle"]').click(); // pins + shows cycle 2
