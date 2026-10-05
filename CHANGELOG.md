@@ -1,4 +1,16 @@
 # Changelog
+## v1.27.0 — 2026-10-05
+
+### Changed
+- **Step grids wrap again.** Dense meters and phrase lengths flow onto extra rows instead of scrolling horizontally, and a sparse lane's cells still grow to fill the width. This reverts the v1.26.0 fixed-width horizontal-scroll grids.
+- **Grouping lanes wrap at group boundaries.** Each row holds a whole number of groups, so a group's pulse substeps never straddle a row break and the pulse underlay and group rectangles stay aligned at every width.
+- **Softer grouping playhead styling.** The grouping column playhead and the active group box's ring are toned down to match the Rhythm Tracks playhead while staying clearly visible over the boxes.
+
+### Fixed
+- **Grouping and step playheads stay aligned to the grid.** The column is positioned from the rendered cell it marks rather than a fraction of the container width, so it no longer drifts off the pulse boxes because of the column gap or a wrapped/overflowing row.
+- **The sub-playhead keeps sweeping wrapped grouping lanes.** It now follows its pulse cell onto the correct row instead of being hidden behind the per-group highlight.
+- **Every grouping box shows equal pulse substeps.** Fixed boxes that showed unequal or no substeps in dense polyrhythms (e.g. 6 against 7).
+
 ## v1.26.1 — 2026-10-04
 
 ### Fixed
