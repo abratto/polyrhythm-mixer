@@ -791,6 +791,31 @@ async function run() {
         assert(pinnedSamples.every(idx => idx >= 0), 'A pinned phrase lane should keep its playhead highlight lit at every sample, not only while the master playhead sweeps the pinned cycle.', pinnedSamples);
         assert(new Set(pinnedSamples).size > 1, 'A pinned phrase lane highlight should advance through the pinned cycle over time.', pinnedSamples);
 
+        // --- Grouping playhead aligns to the underlying pulse cell ---
+        // Regression: the playhead column was positioned as a fraction of the
+        // container width, so the grid's column gap and (at narrow widths) its
+        // horizontal overflow made it drift progressively left of the pulse
+        // boxes it marks. It must be measured against the rendered cell.
+        const playheadAlign = await page.evaluate((sel) => {
+            const grid = document.querySelector(sel);
+            const underlay = grid && grid.previousElementSibling;
+            const playhead = grid && grid.querySelector('.lane-playhead');
+            if (!underlay || !playhead || playhead.style.opacity === '0') return null;
+            const pr = playhead.getBoundingClientRect();
+            const cells = [...underlay.children].map(c => c.getBoundingClientRect());
+            let best = 0;
+            cells.forEach((r, i) => { if (Math.abs(r.left - pr.left) < Math.abs(cells[best].left - pr.left)) best = i; });
+            return {
+                leftErr: Number(Math.abs(cells[best].left - pr.left).toFixed(3)),
+                widthErr: Number(Math.abs(cells[best].width - pr.width).toFixed(3)),
+            };
+        }, `${glRow(1)} .grouping-overlay-grid`);
+        assert(
+            playheadAlign && playheadAlign.leftErr < 0.5 && playheadAlign.widthErr < 0.5,
+            'The grouping-lane playhead should sit exactly on the pulse cell it marks, not drift from column gap or grid overflow.',
+            playheadAlign
+        );
+
         // --- Main-thread stall recovery ---
         // A long stall (GC, layout) makes the audio-clock-derived angle jump.
         // The visual catch-up must bound itself and recover on the next frame
@@ -818,6 +843,96 @@ async function run() {
         assert(
             await page.locator('#vizModeGears').getAttribute('aria-pressed') === 'true',
             'Switching back to gears should restore the default view.'
+        );
+
+        // --- Dense meters wrap instead of scrolling horizontally ---
+        // 6 against 7 = 42 pulses, wider than the lane at the test viewport.
+        // The grids must flow onto extra rows (auto-fit) rather than overflow
+        // and scroll, and the grouping pulse underlay must wrap with them.
+        await setSelect('#rhythmA', 6);
+        await setSelect('#rhythmB', 7);
+        await page.waitForTimeout(200);
+        const denseWrap = await page.evaluate(() => {
+            const rowsOf = (sel) => {
+                const el = document.querySelector(sel);
+                if (!el) return null;
+                const cells = [...el.children].filter(c => !c.classList.contains('lane-playhead'));
+                if (!cells.length) return null;
+                return {
+                    rows: new Set(cells.map(c => c.offsetTop)).size,
+                    overflow: el.scrollWidth - el.clientWidth,
+                    count: cells.length,
+                };
+            };
+            // Each grouping box must contain exactly its group's worth of pulse
+            // substeps — rows break at group boundaries, so no box straddles a
+            // wrap and none is left without substeps.
+            const groupSubsteps = [...document.querySelectorAll('.grouping-overlay-mode')].map((wrap) => {
+                const groupSize = Number(wrap.dataset.groupSize);
+                const cells = [...wrap.querySelector('.grouping-underlay-grid').children].map(c => c.getBoundingClientRect());
+                const btns = [...wrap.querySelector('.grouping-overlay-grid').children].filter(c => !c.classList.contains('lane-playhead'));
+                const counts = btns.map(btn => {
+                    const r = btn.getBoundingClientRect();
+                    return cells.filter(c => {
+                        const cx = c.left + c.width / 2;
+                        const cy = c.top + c.height / 2;
+                        return cx >= r.left - 0.5 && cx <= r.right + 0.5 && cy >= r.top - 0.5 && cy <= r.bottom + 0.5;
+                    }).length;
+                });
+                return { groupSize, counts };
+            });
+            return {
+                master: rowsOf('#masterGrid .voice-steps'),
+                underlay: rowsOf('.grouping-underlay-grid'),
+                groupSubsteps,
+            };
+        });
+        assert(
+            denseWrap.master && denseWrap.master.rows > 1 && denseWrap.master.overflow <= 1,
+            'A dense meter (6 against 7) should wrap the Master step grid onto multiple rows instead of scrolling.',
+            denseWrap.master
+        );
+        assert(
+            denseWrap.underlay && denseWrap.underlay.rows > 1 && denseWrap.underlay.overflow <= 1,
+            'The grouping pulse underlay should wrap onto multiple rows with the Master grid.',
+            denseWrap.underlay
+        );
+        assert(
+            denseWrap.groupSubsteps.length > 0 && denseWrap.groupSubsteps.every(
+                (lane) => lane.groupSize > 0 && lane.counts.every((n) => n === lane.groupSize)
+            ),
+            'Every grouping box should hold exactly its group\'s pulse substeps when the lane wraps.',
+            denseWrap.groupSubsteps
+        );
+
+        // The sub-playhead must keep sweeping the pulse boxes even when the
+        // lane wraps — following its cell onto the next row rather than being
+        // hidden behind the per-group highlight.
+        const wrappedPlayhead = await page.evaluate(() => {
+            const wrap = document.querySelector('.grouping-overlay-mode');
+            const over = wrap.querySelector('.grouping-overlay-grid');
+            const under = wrap.querySelector('.grouping-underlay-grid');
+            const ph = over.querySelector('.lane-playhead');
+            if (!ph || ph.style.opacity === '0') return { visible: false };
+            const pr = ph.getBoundingClientRect();
+            const cells = [...under.children].map(c => c.getBoundingClientRect());
+            let best = -1;
+            let err = Infinity;
+            cells.forEach((r, i) => {
+                const e = Math.abs(r.left - pr.left) + Math.abs(r.top - pr.top);
+                if (e < err) { err = e; best = i; }
+            });
+            return {
+                visible: true,
+                err: Number(err.toFixed(2)),
+                wErr: Number(Math.abs(pr.width - cells[best].width).toFixed(2)),
+                hErr: Number(Math.abs(pr.height - cells[best].height).toFixed(2)),
+            };
+        });
+        assert(
+            wrappedPlayhead.visible && wrappedPlayhead.err < 1 && wrappedPlayhead.wErr < 1 && wrappedPlayhead.hErr < 1,
+            'A wrapped grouping lane should keep its sub-playhead visible on the pulse cell it marks.',
+            wrappedPlayhead
         );
 
         assert(pageErrors.length === 0, 'No page errors should be emitted.', pageErrors);

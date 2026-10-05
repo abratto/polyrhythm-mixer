@@ -645,18 +645,9 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     stepsContainer.style.position = 'relative';
     if (lane.groupingOverlay && Number.isInteger(state?.mainTeeth) && state.mainTeeth > 0) {
         stepsContainer.classList.add('grouping-overlay-mode');
-        stepsContainer.style.setProperty('--master-columns', String(state.mainTeeth));
     }
     if (!lane.groupingOverlay && typeof lane.stepSlices === 'function' && Number.isInteger(state?.mainTeeth) && state.mainTeeth > 0) {
         stepsContainer.classList.add('grouping-grid');
-        stepsContainer.style.setProperty('--master-columns', String(state.mainTeeth));
-    }
-    // Fixed column count drives the horizontally scrollable grid: width =
-    // columns × step-size, so dense meters extend past the rail and scroll
-    // instead of wrapping. `--columns` is the displayed (per-cycle) step count.
-    const displayedSteps = lane.stepsPerCycle?.() ?? lane.count();
-    if (Number.isInteger(displayedSteps) && displayedSteps > 0) {
-        stepsContainer.style.setProperty('--columns', String(displayedSteps));
     }
 
     let stepsMount = stepsContainer;
@@ -664,6 +655,7 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         const underlay = document.createElement('div');
         underlay.className = 'grouping-underlay-grid';
         const groupSize = typeof lane.stepSlices === 'function' ? lane.stepSlices() : 1;
+        stepsContainer.dataset.groupSize = String(groupSize);
         const phase = typeof lane.stepPhase === 'function' ? lane.stepPhase() : 0;
         const markStart = Number.isInteger(groupSize) && groupSize >= 2
             && Number.isInteger(phase) && phase >= 0 && phase < groupSize;
@@ -893,10 +885,68 @@ function addCycleNavigation(lane, state) {
     }
 }
 
+/**
+ * Grouping-overlay lanes wrap at group boundaries: each row holds a whole
+ * number of groups, so a group's pulse substeps never straddle a row break and
+ * the pulse underlay and group-button overlay share identical tracks. The
+ * per-row column count depends on the lane width, so it is measured and written
+ * to the wrapper's `--group-template`; a ResizeObserver keeps it in sync.
+ */
+let _groupingWrapObserver = null;
+
+function layoutGroupingWrap(wrap) {
+    const groupSize = Number(wrap.dataset.groupSize);
+    if (!Number.isInteger(groupSize) || groupSize < 1) return;
+    const underlay = wrap.querySelector('.grouping-underlay-grid');
+    const width = wrap.clientWidth;
+    if (!underlay || width <= 0) return;
+    const cs = getComputedStyle(underlay);
+    const stepSize = parseFloat(cs.getPropertyValue('--step-size')) || 30;
+    const gap = parseFloat(cs.columnGap) || 4;
+    // Width of one group (its pulses + internal gaps) plus the gap before the
+    // next group; fit as many whole groups per row as the lane allows, but
+    // never more than exist (so a sparse lane's cells still fill the width
+    // instead of leaving empty tracks at the right edge).
+    const totalGroups = Math.max(1, Math.ceil(underlay.children.length / groupSize));
+    const perGroup = groupSize * stepSize + (groupSize - 1) * gap;
+    const groupsPerRow = Math.min(totalGroups, Math.max(1, Math.floor((width + gap) / (perGroup + gap))));
+    const template = `repeat(${groupsPerRow * groupSize}, minmax(${stepSize}px, 1fr))`;
+    if (wrap._groupTemplate !== template) {
+        wrap._groupTemplate = template;
+        wrap.style.setProperty('--group-template', template);
+    }
+}
+
+function observeGroupingWrap(wrap) {
+    if (typeof ResizeObserver === 'undefined') return;
+    if (!_groupingWrapObserver) {
+        _groupingWrapObserver = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                const target = entry.target;
+                if (!target.isConnected) {
+                    _groupingWrapObserver.unobserve(target);
+                    continue;
+                }
+                layoutGroupingWrap(target);
+            }
+        });
+    }
+    _groupingWrapObserver.observe(wrap);
+}
+
+/** Stops observing a lane's grouping wrappers before its DOM is rebuilt. */
+function unobserveGroupingWraps(container) {
+    if (!_groupingWrapObserver || !container) return;
+    container.querySelectorAll('.grouping-overlay-mode').forEach((wrap) => {
+        _groupingWrapObserver.unobserve(wrap);
+    });
+}
+
 /** Builds all voice rows for a multi-voice lane. */
 function buildMultiVoiceLane(lane, state) {
     const activeSelect = document.activeElement;
     const activeSelectId = (activeSelect && activeSelect.tagName === 'SELECT' && lane.container.contains(activeSelect)) ? activeSelect.id : null;
+    unobserveGroupingWraps(lane.container);
     lane.container.innerHTML = '';
     lane.container.style.position = 'relative';
     lane._playheads = [];
@@ -931,6 +981,15 @@ function buildMultiVoiceLane(lane, state) {
         const row = buildVoiceButtons(lane, voice, idx, state);
         lane.container.appendChild(row);
     });
+
+    // Grouping lanes wrap at group boundaries; measure each row now that it is
+    // in the DOM and keep it in sync on resize.
+    if (lane.groupingOverlay) {
+        lane.container.querySelectorAll('.grouping-overlay-mode').forEach((wrap) => {
+            layoutGroupingWrap(wrap);
+            observeGroupingWrap(wrap);
+        });
+    }
 
     // "+ Voice" lives at the bottom of the lane so adding a voice never forces
     // the user to scroll back up to the top toolbar — each new row pushes it
@@ -1568,81 +1627,82 @@ export function wireLaneMixButtons(lanes, channels) {
         });
     }
 
+/** The rendered grid cells a playhead measures against: overlay grouping
+    lanes draw their pulse cells in a sibling underlay grid (the playhead lives
+    in the group-button layer above it), while every other lane's cells are its
+    own grid children. Returns a live HTMLCollection, or null when unhosted. */
+function playheadCells(overlay) {
+    const host = overlay.parentElement;
+    if (!host) return null;
+    const underlay = host.previousElementSibling;
+    if (underlay && underlay.classList && underlay.classList.contains('grouping-underlay-grid')) {
+        return underlay.children;
+    }
+    return host.children;
+}
+
 /**
  * Moves a lane's playhead column overlay to the given visible step index.
  *
- * Writes are limited to compositor-only properties: the column width is set
- * once per step count (it never changes while the lane is on screen) and the
- * position is a translateX in pixels, measured from the overlay's container.
- * The old code wrote `left`/`width` as percentages on every step boundary,
- * which forced layout across the whole sequence at dense meters.
+ * The column is aligned to the rendered grid cell it marks rather than to a
+ * fraction of the container width. Measuring the cell keeps the playhead exact
+ * across the grid's column gap and, for a dense lane that wraps onto extra
+ * rows, across rows as well — the column follows its cell onto the correct row
+ * instead of being hidden.
+ *
+ * Writes are limited to compositor-only properties: a translate plus a size,
+ * each written only when it changes.
  */
-/** Returns true when the container's step buttons wrap onto more than one row.
-    (A single horizontal track is required for the column playhead to align.) */
-function stepsWrap(container) {
-    if (!container) return false;
-    let first = null;
-    let last = null;
-    const kids = container.children;
-    for (let i = 0; i < kids.length; i++) {
-        const c = kids[i];
-        if (c.classList.contains('lane-playhead')) continue;
-        if (first === null) first = c;
-        last = c;
-    }
-    if (!first || !last || first === last) return false;
-    return first.offsetTop !== last.offsetTop;
-}
-
 function positionPlayhead(overlay, displayedIndex, stepsPerCycle) {
     if (!overlay) return;
-    if (displayedIndex < 0 || displayedIndex >= stepsPerCycle) {
+    const host = overlay.parentElement;
+    const cells = playheadCells(overlay);
+    const cell = cells ? cells[displayedIndex] : null;
+    if (displayedIndex < 0 || displayedIndex >= stepsPerCycle || !host || !cell || cell === overlay) {
         if (overlay.style.opacity !== '0') overlay.style.opacity = '0';
         return;
     }
 
-    // Width is fixed for a given step count — set it only when that changes.
-    if (overlay._spr !== stepsPerCycle) {
-        overlay._spr = stepsPerCycle;
-        overlay.style.width = (1 / stepsPerCycle) * 100 + '%';
-        overlay._trackWidth = 0;
-    }
-
-    // Container width is measured lazily and cached; refreshed when the step
-    // count changes (above) or when a resize/scroll changes it between calls.
-    // While measuring we also detect whether the buttons wrap onto multiple
-    // rows — a single linear track is required for the column to align, so the
-    // column is hidden and the per-button `.current` highlight takes over.
-    const container = overlay.parentElement;
-    if (container) {
-        const w = container.clientWidth;
-        if (w > 0 && w !== overlay._trackWidth) {
-            overlay._trackWidth = w;
-            overlay._lastX = null;
-            overlay._wrapped = stepsWrap(container);
-        }
-        if (overlay._wrapped) {
-            if (overlay.style.opacity !== '0') overlay.style.opacity = '0';
-            return;
-        }
-    }
+    // Measure the cell against the overlay's own grid box; the scroll offset
+    // of the shared scrolling ancestor cancels out of the difference once
+    // host.scrollLeft/scrollTop are added back (host is itself the scroller
+    // for the non-overlay lanes).
+    const hostRect = host.getBoundingClientRect();
+    const cellRect = cell.getBoundingClientRect();
+    const x = cellRect.left - hostRect.left + host.scrollLeft - host.clientLeft;
+    const y = cellRect.top - hostRect.top + host.scrollTop - host.clientTop;
+    const w = cellRect.width;
+    const h = cellRect.height;
 
     if (overlay.style.opacity !== '1') overlay.style.opacity = '1';
 
-    const trackWidth = overlay._trackWidth || 0;
-    if (trackWidth > 0) {
-        const x = (displayedIndex / stepsPerCycle) * trackWidth;
-        if (overlay._lastX !== x) {
-            overlay._lastX = x;
-            // Clear any percentage fallback so the base `left` stays at 0 and
-            // the transform is the sole horizontal offset.
-            if (overlay.style.left) overlay.style.left = '0';
-            overlay.style.transform = `translateX(${x.toFixed(1)}px)`;
-        }
-    } else {
-        // Width not measured yet: fall back to the percentage write so the
-        // column is never stuck at the left edge.
-        overlay.style.left = (displayedIndex / stepsPerCycle) * 100 + '%';
+    // The column carries a decorative border; border-box keeps its outer edge
+    // flush with the cell instead of overshooting by the border width. It is
+    // placed per cell, so it no longer stretches between the grid's edges.
+    if (!overlay._boxSized) {
+        overlay._boxSized = true;
+        overlay.style.boxSizing = 'border-box';
+        overlay.style.top = '0';
+        overlay.style.bottom = 'auto';
+    }
+
+    if (overlay._lastW !== w) {
+        overlay._lastW = w;
+        overlay.style.width = w + 'px';
+    }
+    if (overlay._lastH !== h) {
+        overlay._lastH = h;
+        overlay.style.height = h + 'px';
+    }
+    const xf = x.toFixed(1);
+    const yf = y.toFixed(1);
+    if (overlay._lastX !== xf || overlay._lastY !== yf) {
+        overlay._lastX = xf;
+        overlay._lastY = yf;
+        // Clear any percentage fallback so the base `left` stays at 0 and the
+        // transform is the sole offset.
+        if (overlay.style.left) overlay.style.left = '0';
+        overlay.style.transform = `translate(${xf}px, ${yf}px)`;
     }
 }
 

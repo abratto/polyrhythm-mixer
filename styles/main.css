@@ -2102,22 +2102,21 @@
         }
         .voice-steps {
             display: grid;
-            /* Columns never shrink below --step-size: a dense phrase lane (many
-               columns) overflows and scrolls, while a sparse lane's columns grow
-               to fill the available width. */
+            /* Cells grow to fill the lane when they fit (so a short sequence still
+               spans the full width), but never shrink below --step-size. Once
+               there are more than fit they wrap onto the next row instead of
+               being cut off; auto-fit keeps every wrapped row at the same column
+               width, so the last row never balloons into oversized boxes. */
             --step-size: 30px;
-            grid-template-columns: repeat(var(--columns), minmax(var(--step-size), 1fr));
-            justify-content: start;
+            grid-template-columns: repeat(auto-fit, minmax(var(--step-size), 1fr));
             gap: 4px;
             min-width: 0;
             width: 100%;
         }
-        /* A step grid wider than its column scrolls as a single horizontal track
-           (fixed row headers stay put; scroll-sync.js aligns all lanes). */
+        /* Wrapped grids never overflow, so the shared horizontal scroll-sync is
+           a no-op for them. */
         .voice-steps {
-            overflow-x: auto;
-            overflow-y: hidden;
-            flex-wrap: nowrap;
+            overflow: visible;
             padding-bottom: 2px;
         }
         .voice-steps .step-btn {
@@ -2133,8 +2132,7 @@
             position: relative;
             display: block;
             width: 100%;
-            overflow-x: auto;
-            overflow-y: hidden;
+            overflow: hidden;
             min-height: 32px;
         }
         /* Base grid-width rule doesn't apply to the block-mode overlay wrapper. */
@@ -2145,11 +2143,13 @@
         .grouping-lane-row .grouping-overlay-grid,
         .grouping-lane-row .voice-steps.grouping-grid {
             display: grid;
-            /* Fixed pulse columns matching the voice rows so overlay/underlay
-               stay aligned while scrolling horizontally. */
+            /* --group-template is written per lane (lane-ui.js layoutGroupingWrap)
+               with a whole number of groups per row, so the pulse underlay and
+               the group-button overlay share identical tracks and every group
+               wraps with all of its substeps intact. Falls back to auto-fit
+               before the first measurement. */
             --step-size: 30px;
-            grid-template-columns: repeat(var(--master-columns), minmax(var(--step-size), 1fr));
-            justify-content: start;
+            grid-template-columns: var(--group-template, repeat(auto-fit, minmax(var(--step-size), 1fr)));
             grid-auto-rows: 32px;
             gap: 4px;
         }
@@ -3743,8 +3743,9 @@
         .grouping-lane-row .voice-steps.grouping-grid .lane-playhead {
             border-left-width: 3px;
             border-right-width: 3px;
-            border-left-color: color-mix(in srgb, var(--playhead) 85%, transparent);
-            border-right-color: color-mix(in srgb, var(--playhead) 85%, transparent);
+            border-left-color: color-mix(in srgb, var(--playhead) 75%, transparent);
+            border-right-color: color-mix(in srgb, var(--playhead) 75%, transparent);
+            box-shadow: 0 0 10px color-mix(in srgb, var(--playhead) 38%, transparent);
         }
         .grouping-lane-row .grouping-overlay-grid .step-btn.grouping-btn .step-slice.subplayhead,
         .grouping-lane-row .voice-steps.grouping-grid .step-btn.grouping-btn .step-slice.subplayhead {
@@ -3756,8 +3757,8 @@
            clearly against the moving pulse playhead. */
         .grouping-lane-row .grouping-overlay-grid .step-btn.grouping-btn.current,
         .grouping-lane-row .voice-steps.grouping-grid .step-btn.grouping-btn.current {
-            box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--current) 88%, transparent),
-                        0 0 10px color-mix(in srgb, var(--current) 45%, transparent);
+            box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--current) 80%, transparent),
+                        0 0 11px color-mix(in srgb, var(--current) 42%, transparent);
         }
 
         /* ----- Narrow screens: expanded rails must fit, not clip ----- */
