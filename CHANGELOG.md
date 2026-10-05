@@ -1,4 +1,10 @@
 # Changelog
+## v1.26.1 — 2026-10-04
+
+### Fixed
+- **Expanded left rails no longer lose controls on small screens.** On stacked layouts the rail kept a fixed width while its full-width contents (selects, faders, edit chips, header cycle nav) overflowed and were silently clipped by `overflow-x: hidden`. The rail now grows to the row width and every cluster can shrink, so all controls stay visible; collapsed rails remain a single compact line.
+- **Offset markers no longer read as white borders.** The grouping boxes' start-pulse markers used a pure white border/ring/glow that popped harshly inside the bright grouping rectangles; they are now tinted with each lane's accent color (subtler ring, no outer glow) across all themes.
+
 ## v1.26.0 — 2026-10-04
 
 ### Added
