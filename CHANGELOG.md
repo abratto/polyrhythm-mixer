@@ -1,4 +1,13 @@
 # Changelog
+## v1.28.0 — 2026-10-07
+
+### Added
+- **Getting-started help.** The welcome modal leads with a quick-start guide and keeps detailed mixer explanations in an expandable section.
+- **Visualization discovery.** The quick start points users to the polyrhythm visualization and its alternate views.
+
+### Changed
+- **Visualization starts collapsed.** The mixer opens with its controls in view; Reset Mixer also collapses the visualization.
+
 ## v1.27.0 — 2026-10-05
 
 ### Changed
