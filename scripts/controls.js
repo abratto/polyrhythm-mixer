@@ -87,7 +87,10 @@ export function wireControls({ ui, state, lanes, rebuildSystem, resetMixerToStar
     });
 
     // Reset button — restores the mixer to the app's starting state
-    ui.resetBtn.addEventListener('click', resetMixerToStartingState);
+    ui.resetBtn.addEventListener('click', () => {
+        resetMixerToStartingState();
+        if (polyrhythmView) polyrhythmView.open = false;
+    });
 
     // Audio toggle — initializes AudioContext on user gesture
     ui.audioBtn.addEventListener('click', async () => {

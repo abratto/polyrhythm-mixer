@@ -9,17 +9,46 @@
 <body>
     <div id="helpModal" class="modal-backdrop hidden" aria-hidden="true">
         <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
-            <div id="helpModalTitle" class="modal-title">Welcome to Alan's Polyrhythm Mixer</div>
+            <div id="helpModalTitle" class="modal-title">Make two rhythms meet</div>
             <div class="modal-subtitle">
-                Layer two competing meters into a groove — tap in patterns, add voices, and shape the sound.
+                Meter A and Meter B place different numbers of evenly spaced pulses across the same repeating cycle. Where their pulses line up, they land together.
             </div>
-            <div class="modal-help-grid">
-                <div class="modal-help-item"><strong>Pick a polyrhythm.</strong> Choose <strong>Meter A</strong> and <strong>Meter B</strong> (try 3 against 4), set a tempo, and press <strong>Enable Audio</strong>. A default pulse is pre-tapped so you hear the groove right away.</div>
-                <div class="modal-help-item"><strong>Tap steps and add voices.</strong> Click boxes in any lane to toggle hits. <strong>+ Voice</strong> layers extra rhythms in the Master or any grouping lane. <strong>Nudge</strong> shifts one voice; <strong>Nudge Group</strong> shifts the whole lane.</div>
-                <div class="modal-help-item"><strong>Build groupings.</strong> In <strong>Rhythm Tracks</strong>, each voice lane is one equal division of the master cycle (6 against 4 → a 6-group and a 4-group lane). <strong>+ Voice</strong> adds a lane; each lane's <strong>Grouping</strong> menu is scoped to that lane. Each box is split into its pulses — the highlighted segment is the start, moved with <strong>Offset</strong>.</div>
-                <div class="modal-help-item"><strong>Extend with phrase lengths.</strong> Set a grouping lane's or the Master <strong>Phrase Length</strong> to 2–8 cycles for longer repeating patterns. When a lane has multiple cycles, use <strong>Cycle ◀</strong> / <strong>▶</strong> to browse — the label shows <strong>AUTO</strong> (follows the playhead) or <strong>PIN</strong> (manual view).</div>
-                <div class="modal-help-item"><strong>Mix and share.</strong> Each voice's <strong>▸</strong> rail holds its instrument, volume, solo, and mute; the Master Beat click has its own. <strong>Save</strong> stores rhythms locally; <strong>Share</strong> copies a link; <strong>Reset Mixer</strong> restores defaults.</div>
-            </div>
+            <ol class="help-quick-start">
+                <li>Choose Meter A and Meter B — try <strong>3 against 4</strong>.</li>
+                <li>The groove is already moving silently. Click <strong>Enable Audio</strong> to hear it.</li>
+                <li>Click steps in a lane to change its pattern. Click <strong>+ Voice</strong> below Rhythm Tracks to add another rhythm track, then shape its pattern. Use <strong>Pause</strong> / <strong>Play</strong> to control playback.</li>
+                <li>Open <strong>Polyrhythm Visualization</strong> to see the rhythms move through the shared cycle. Switch views to explore gears, rings, orbit, clocks, and more.</li>
+            </ol>
+            <p class="help-tagline">Layer rhythms, hear where they meet, and shape the groove.</p>
+            <details class="help-details">
+                <summary>More about the mixer</summary>
+                <div class="help-details-content">
+                    <section class="help-topic">
+                        <h3>One cycle, several rhythms</h3>
+                        <p>Meter A and Meter B divide the same repeating cycle into evenly spaced pulses. For example, 3 against 4 places three pulses and four pulses across that shared cycle. The <strong>Master Beat</strong> is a separate 4/4 reference click.</p>
+                    </section>
+                    <section class="help-topic">
+                        <h3>Make your own patterns</h3>
+                        <p>Click a step to toggle a hit. The two grouping lanes start with Meter A's and Meter B's pulse patterns already tapped in. Click <strong>+ Voice</strong> below Rhythm Tracks to add another grouping lane with its own pattern. In the Master lane, <strong>+ Voice</strong> adds another voice to that lane. <strong>Nudge</strong> shifts one voice; <strong>Nudge Group</strong> shifts all voices in a lane.</p>
+                    </section>
+                    <section class="help-topic">
+                        <h3>Explore groupings</h3>
+                        <p>A grouping lane divides the cycle into equal parts. Choose the number of parts with <strong>Grouping</strong>; <strong>Offset</strong> moves the highlighted start pulse within each group. A step shows the smaller pulses inside that part.</p>
+                    </section>
+                    <section class="help-topic">
+                        <h3>Create longer phrases</h3>
+                        <p>Set a grouping lane's or the Master's <strong>Phrase Length</strong> to repeat its pattern over multiple cycles. Use the cycle controls to browse the phrase: <strong>AUTO</strong> follows playback, while <strong>PIN</strong> keeps the view on the selected cycle.</p>
+                    </section>
+                    <section class="help-topic">
+                        <h3>Shape the mix</h3>
+                        <p>Expand a voice's <strong>▸</strong> rail to choose its instrument and adjust volume, solo, or mute. The Master Beat click has its own volume control. <strong>Tempo</strong> changes the speed; <strong>Master</strong> changes the overall level.</p>
+                    </section>
+                    <section class="help-topic">
+                        <h3>Save, share, and explore</h3>
+                        <p><strong>Save</strong> stores a rhythm in this browser. <strong>Share</strong> copies a link to it. <strong>Reset Mixer</strong> restores the starting setup. Use the visualization controls to explore how the meters line up through the cycle.</p>
+                    </section>
+                </div>
+            </details>
             <div class="modal-actions">
                 <button id="closeHelpModalBtn" class="modal-close-btn">Got It</button>
             </div>
@@ -95,7 +124,7 @@
         </div>
     </div>
 
-    <details id="polyrhythmView" class="visual-guide" open>
+    <details id="polyrhythmView" class="visual-guide">
         <summary>Polyrhythm Visualization</summary>
         <button id="vizInfoBtn" class="lane-info-btn" aria-label="Show visualization explanation" aria-expanded="false" aria-controls="vizDescription">?</button>
         <div class="viz-mode-toggle" role="group" aria-label="Visualization mode">

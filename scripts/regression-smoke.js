@@ -243,7 +243,14 @@ async function run() {
                 B1: selectText(gl(2, 1, '.voice-instrument-select')),
                 B2: selectText(gl(2, 2, '.voice-instrument-select'))
             },
-            helpLeads: Array.from(document.querySelectorAll('#helpModal .modal-help-item > strong:first-child')).map(node => node.textContent.trim())
+            help: {
+                title: document.querySelector('#helpModalTitle')?.textContent.trim(),
+                quickStart: document.querySelector('#helpModal .help-quick-start')?.innerText.trim(),
+                detailsOpen: document.querySelector('#helpModal .help-details')?.open,
+                detailsSummary: document.querySelector('#helpModal .help-details > summary')?.textContent.trim(),
+                details: document.querySelector('#helpModal .help-details-content')?.textContent.trim().replace(/\s+/g, ' ')
+            },
+            polyrhythmViewOpen: document.querySelector('#polyrhythmView')?.open
         };
     });
 
@@ -327,7 +334,16 @@ async function run() {
             initialBeatGeometry.subtitle
         );
         assert(initial.voiceLabels.master1 === 'Handclap' && initial.voiceLabels.A1 === 'Percussion Shaker' && initial.voiceLabels.B1 === 'Percussion Shaker', 'Voice rows should display their default mixer instruments.', initial.voiceLabels);
-        assert(initial.helpLeads.length === 5, 'Help modal should expose five bold lead sentences.', initial.helpLeads);
+        assert(initial.help.title === 'Make two rhythms meet', 'Help modal should lead with the mixer mental model.', initial.help);
+        assert(initial.help.quickStart.includes('Enable Audio') && initial.help.quickStart.includes('Pause') && initial.help.quickStart.includes('Play'),
+            'Quick start should distinguish enabling audio from controlling playback.', initial.help.quickStart);
+        assert(initial.help.quickStart.includes('Polyrhythm Visualization') && initial.help.quickStart.includes('gears, rings, orbit, clocks'),
+            'Quick start should explain how to open and explore the visualizations.', initial.help.quickStart);
+        assert(initial.help.detailsOpen === false && initial.help.detailsSummary === 'More about the mixer',
+            'Detailed mixer help should be available in a collapsed section.', initial.help);
+        assert(initial.help.details.includes('Grouping') && initial.help.details.includes('Phrase Length') && initial.help.details.includes('Save, share, and explore'),
+            'Expanded help should explain the advanced mixer features.', initial.help.details);
+        assert(initial.polyrhythmViewOpen === false, 'The polyrhythm visualization should start collapsed.', initial.polyrhythmViewOpen);
         assert(await page.locator('#resetBtn').textContent() === 'Reset Mixer', 'Reset button should clearly describe full mixer reset.');
         const bataOptions = await page.locator('#soundDriver option').evaluateAll(options => options
             .map(option => ({ value: option.value, label: option.textContent.trim() }))
@@ -670,6 +686,8 @@ async function run() {
 
         const expectedCurrent = await snapshot();
 
+        await page.locator('#polyrhythmView > summary').click();
+        assert(await page.locator('#polyrhythmView').evaluate(el => el.open), 'The visualization should open from its summary control.');
         await page.locator('#resetBtn').click();
         await page.waitForFunction(() => document.querySelectorAll('#masterGrid .voice-row').length === 1);
         assert(same(await snapshot(), initial), 'Reset Mixer should restore the startup state after meter, voice, pattern, nudge, and mixer edits.', { expected: initial, actual: await snapshot() });
@@ -830,6 +848,9 @@ async function run() {
 
         // --- Visualization mode switcher ---
         // --- Visualization mode switcher (nine views) ---
+        if (!(await page.locator('#polyrhythmView').evaluate(el => el.open))) {
+            await page.locator('#polyrhythmView > summary').click();
+        }
         const vizModes = ['gears', 'rings', 'orbit', 'clock', 'phase', 'phase3d', 'align', 'voice', 'shapes'];
         for (const mode of vizModes) {
             await page.locator(`#vizMode${mode[0].toUpperCase()}${mode.slice(1)}`).click();
