@@ -1423,19 +1423,53 @@
             line-height: 1.5;
             margin-bottom: 16px;
         }
-        .modal-help-grid {
+        .help-quick-start {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 10px 16px;
-            margin-bottom: 18px;
-        }
-        .modal-help-item {
+            gap: 8px;
+            margin: 0 0 14px;
+            padding-left: 24px;
             font-size: 13px;
             line-height: 1.45;
             color: #d9d9e2;
         }
-        .modal-help-item strong {
+        .help-quick-start strong,
+        .help-topic strong {
             color: #ffffff;
+        }
+        .help-tagline {
+            margin: 0 0 18px;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .help-details {
+            margin-bottom: 18px;
+            border-top: 1px solid #303044;
+            border-bottom: 1px solid #303044;
+        }
+        .help-details > summary {
+            padding: 12px 0;
+            color: #ffffff;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 800;
+        }
+        .help-details-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px 18px;
+            padding: 0 0 14px;
+        }
+        .help-topic h3 {
+            margin: 0 0 4px;
+            color: #ffffff;
+            font-size: 13px;
+        }
+        .help-topic p {
+            margin: 0;
+            color: #d9d9e2;
+            font-size: 12px;
+            line-height: 1.45;
         }
         .modal-actions {
             display: flex;
