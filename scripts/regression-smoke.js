@@ -1105,8 +1105,43 @@ async function run() {
                     .locator('.step-btn[aria-pressed="true"]').count() === otherPatternBeforeClear,
                 'Compact Clear should clear only its voice pattern.');
             await page.locator('#groupingLanesContainer .rail-toggle-btn').first().click();
+            if (viewport.width <= 480) {
+                assert(await compactRail.locator('.pattern-group').isVisible() &&
+                    !(await compactRail.locator('.track-group').isVisible()) &&
+                    await compactRail.locator('[data-panel="pattern"]').getAttribute('aria-pressed') === 'true',
+                    'Narrow phones should start with Pattern selected and Timing hidden.');
+                await compactRail.locator('[data-panel="timing"]').click();
+            }
             assert(await compactRail.locator('.track-group').isVisible(),
-                'Opening a compact track should reveal deeper timing controls.');
+                'Timing controls should be reachable after opening a compact track.');
+            if (viewport.width <= 480) {
+                assert(!(await compactRail.locator('.pattern-group').isVisible()) &&
+                    await compactRail.locator('[data-panel="timing"]').getAttribute('aria-pressed') === 'true',
+                    'Selecting Timing should hide Pattern and expose the selected state.');
+                await compactRail.locator('.grouping-count-select').selectOption('4');
+                await page.waitForTimeout(160);
+                assert(await compactRail.locator('[data-panel="timing"]').getAttribute('aria-pressed') === 'true' &&
+                    await compactRail.locator('.grouping-count-select').inputValue() === '4',
+                    'The selected editing section and timing setting should survive a lane rebuild.');
+                await compactRail.locator('.rail-toggle-btn').click();
+                await compactRail.locator('.rail-toggle-btn').click();
+                assert(await compactRail.locator('.track-group').isVisible(),
+                    'Reopening a lane should retain the selected editing section.');
+                await compactRail.locator('[data-panel="pattern"]').click();
+                await compactRail.locator('.voice-edit-controls button').first().click();
+                await compactRail.locator('[data-panel="timing"]').click();
+                assert(await compactRail.locator('.grouping-count-select').inputValue() === '4',
+                    'Editing a pattern and switching sections should retain the timing settings.');
+                await page.setViewportSize({ width: 768, height: 900 });
+                assert(await compactRail.locator('.pattern-group').isVisible() &&
+                    await compactRail.locator('.track-group').isVisible() &&
+                    !(await compactRail.locator('.voice-panel-switch').isVisible()),
+                    'Wider screens should show both editing sections without redundant section buttons.');
+                await page.setViewportSize(viewport);
+                assert(await compactRail.locator('.track-group').isVisible() &&
+                    !(await compactRail.locator('.pattern-group').isVisible()),
+                    'Returning to a narrow phone should retain the selected editing section.');
+            }
             assert(await compactRail.locator('.voice-instrument-select').inputValue() === 'snare',
                 'The instrument chosen from a compact rail should remain selected when expanded.');
             await page.locator('#expandAllRailsBtn').click();
@@ -1117,6 +1152,7 @@ async function run() {
                 return {
                     instrumentWidth: instrument.width,
                     railWidth: rail.width,
+                    railHeight: rail.height,
                     trackSettingsSeparate: !!el.querySelector(':scope > .track-group .grouping-count-select'),
                     clearInHeader: !!el.querySelector('.head-mix-controls button[title^="Clear voice"]'),
                     touchTargets: [...el.querySelectorAll('button')].filter(button => button.getBoundingClientRect().width > 0)
@@ -1125,12 +1161,28 @@ async function run() {
                         control.getBoundingClientRect().width > 0 && control.getBoundingClientRect().right > rail.right + 1)
                 };
             });
-            assert(voiceLayout.instrumentWidth >= voiceLayout.railWidth - 24 && !voiceLayout.overflow,
-                'Mobile voice instrument selectors should use the header width without clipping controls.', { viewport, voiceLayout });
+            assert(voiceLayout.instrumentWidth >= 70 && voiceLayout.instrumentWidth <= 141 && !voiceLayout.overflow,
+                'Expanded instrument selectors should stay compact without clipping controls.', { viewport, voiceLayout });
+            assert(voiceLayout.railHeight <= (viewport.width <= 480 ? 350 : 300),
+                'Expanded phone and landscape controls should conserve vertical space.', { viewport, voiceLayout });
             assert(voiceLayout.trackSettingsSeparate && voiceLayout.clearInHeader,
                 'Track timing should be separate from pattern editing, with Clear in the common controls.', voiceLayout);
             assert(voiceLayout.touchTargets.every(rect => rect.width >= 43 && rect.height >= 44),
                 'Expanded voice controls should retain comfortable touch targets.', { viewport, voiceLayout });
+            if (viewport.width <= 480) {
+                await compactRail.locator('[data-panel="pattern"]').click();
+                const patternLayout = await compactRail.evaluate(el => ({
+                    height: el.getBoundingClientRect().height,
+                    targets: [...el.querySelectorAll('.pattern-group button')].map(button => {
+                        const rect = button.getBoundingClientRect();
+                        return { width: rect.width, height: rect.height };
+                    })
+                }));
+                assert(patternLayout.height <= 350 &&
+                    patternLayout.targets.every(rect => rect.width >= 43 && rect.height >= 44),
+                    'The Pattern section should also fit within the height budget with usable targets.',
+                    { viewport, patternLayout });
+            }
             await page.locator('#collapseAllRailsBtn').click();
             await page.locator('#groupingLanesContainer .compact-delete-btn').first().click();
             assert(await page.locator('#groupingLanesContainer .grouping-lane-row').count() === 1 &&
@@ -1174,6 +1226,128 @@ async function run() {
             assert(inlineLanes.every((lane, index) => lane.aligned && lane.selectWidth >= 130 && lane.selectWidth <= 141 &&
                 lane.railRight <= lane.gridLeft && (index === 0 || lane.top - inlineLanes[index - 1].bottom <= 6)),
                 'Wider screens should retain inline common controls and tightly stacked step grids.', { width, inlineLanes });
+        }
+
+        for (const width of [320, 360, 390, 430, 480, 481, 539, 540, 599, 600, 666, 667, 720, 721, 768, 859, 860, 900, 949, 950, 1024, 1260, 1279, 1280, 1369, 1370, 1399, 1400, 1440, 1600, 1920]) {
+            await page.setViewportSize({ width, height: 900 });
+            if (width <= 720) {
+                await page.locator('#masterPatternControls > summary').click();
+                const masterPanel = await page.locator('#masterPatternControls .lane-toolbar').evaluate(el => {
+                    const rect = el.getBoundingClientRect();
+                    return {
+                        height: rect.height,
+                        controlsFit: [...el.querySelectorAll('button, select')].every(control => {
+                            const bounds = control.getBoundingClientRect();
+                            return bounds.width >= 43 && bounds.height >= 43 &&
+                                bounds.left >= rect.left - 1 && bounds.right <= rect.right + 1;
+                        })
+                    };
+                });
+                assert(masterPanel.controlsFit && masterPanel.height <= (width <= 480 ? 210 : width <= 666 ? 165 : 110),
+                    'Shared Master controls should use compact rows with touch-friendly, unclipped controls.',
+                    { width, masterPanel });
+                await page.locator('#masterPatternControls > summary').click();
+            }
+            await page.locator('#collapseAllRailsBtn').click();
+            await page.waitForTimeout(180);
+            const measureGrids = () => page.locator('.master-beat-voice-row, #masterGrid .voice-row, #groupingLanesContainer .voice-row')
+                .evaluateAll(rows => rows.map(row => {
+                    const grid = row.querySelector('.voice-steps').getBoundingClientRect();
+                    const cells = [...row.querySelectorAll('.voice-steps .step-btn')].map(cell => {
+                        const rect = cell.getBoundingClientRect();
+                        return { left: rect.left + scrollX, width: rect.width, height: rect.height };
+                    });
+                    return { left: grid.left + scrollX, width: grid.width, cells };
+                }));
+            const before = await measureGrids();
+            const toggles = page.locator('.master-beat-voice-row .rail-toggle-btn, #masterGrid .rail-toggle-btn, #groupingLanesContainer .rail-toggle-btn');
+            for (let index = 0; index < await toggles.count(); index++) {
+                await toggles.nth(index).click();
+                await page.waitForTimeout(180);
+                const after = await measureGrids();
+                const expandedLayout = await toggles.nth(index).evaluate(button => {
+                    const rail = button.closest('.lane-label-area');
+                    const rect = rail.getBoundingClientRect();
+                    return {
+                        height: rect.height,
+                        grouping: !!rail.dataset.controlPanel,
+                        beat: rail.classList.contains('master-beat-rail'),
+                        instrumentWidth: rail.querySelector('select').getBoundingClientRect().width,
+                        volumeWidth: rail.querySelector('.volume-fader').getBoundingClientRect().width,
+                        rowCenters: [...new Set([...rail.children].filter(group => group.getBoundingClientRect().width > 0)
+                            .map(group => {
+                                const bounds = group.getBoundingClientRect();
+                                return Math.round(bounds.top + bounds.height / 2);
+                            }))],
+                        touchTargets: [...rail.querySelectorAll('button')].filter(control => control.getBoundingClientRect().width > 0)
+                            .every(control => {
+                                const bounds = control.getBoundingClientRect();
+                                return bounds.width >= 43 && bounds.height >= 43;
+                            }),
+                        overflow: document.documentElement.scrollWidth > innerWidth,
+                        singleRow: [...rail.children].filter(group => group.getBoundingClientRect().width > 0)
+                            .every(group => {
+                                const bounds = group.getBoundingClientRect();
+                                return Math.abs(bounds.top + bounds.height / 2 - rect.top - rect.height / 2) < 1;
+                            }),
+                        clippedLabels: [...rail.querySelectorAll('.grouping-controls label')]
+                            .some(label => label.scrollWidth > label.clientWidth + 1),
+                        clippedControls: [...rail.querySelectorAll('select, button, input')]
+                            .filter(control => control.getBoundingClientRect().width > 0)
+                            .some(control => {
+                                const bounds = control.getBoundingClientRect();
+                                return bounds.left < rect.left - 1 || bounds.right > rect.right + 1;
+                            })
+                    };
+                });
+                assert(!expandedLayout.overflow && !expandedLayout.clippedControls && expandedLayout.volumeWidth >= 140 &&
+                    expandedLayout.height <= (width <= 480 ? 350 : width <= 720 ? 340 : width <= 1023 ? 160 : width < 1370 ? 140 : 50),
+                    'Expanded controls should fit their rail and responsive height budget.', { width, index, expandedLayout });
+                if (width <= 720) {
+                    assert(expandedLayout.touchTargets,
+                        'Every expanded Rhythm Tracks rail should retain touch-friendly controls.',
+                        { width, index, expandedLayout });
+                    const smallHeightBudget = expandedLayout.beat ? (width >= 540 ? 50 : 95) :
+                        expandedLayout.grouping ? (width <= 480 ? 300 : width < 600 ? 210 : 165) :
+                            (width <= 480 ? 240 : width < 600 ? 135 : 100);
+                    assert(expandedLayout.height <= smallHeightBudget,
+                        'Small-screen Beat, Master and grouping rails should avoid unnecessary control rows.',
+                        { width, index, smallHeightBudget, expandedLayout });
+                }
+                if (width >= 1370 || (!expandedLayout.grouping && width >= (expandedLayout.beat ? 721 : 950))) {
+                    assert(expandedLayout.singleRow && !expandedLayout.clippedLabels &&
+                        expandedLayout.height <= 50 && expandedLayout.instrumentWidth >= 100,
+                        'Each lane should retain a readable single control row for as long as its controls fit.',
+                        { width, index, expandedLayout });
+                }
+                if (!expandedLayout.grouping && !expandedLayout.beat && width >= 721 && width <= 949) {
+                    assert(expandedLayout.rowCenters.length === 2 && expandedLayout.height <= 75,
+                        'Master voice controls should occupy exactly two compact rows at tablet widths.',
+                        { width, index, expandedLayout });
+                }
+                if (expandedLayout.grouping && width >= 600 && width < 1370) {
+                    assert(expandedLayout.rowCenters.length === (width >= 950 ? 2 : 3) &&
+                        !expandedLayout.clippedLabels &&
+                        expandedLayout.height <= (width >= 950 ? 90 : width >= 721 ? 120 : 165),
+                        'Grouping controls should use two or three compact strips at intermediate widths.',
+                        { width, index, expandedLayout });
+                    if (width <= 720) {
+                        assert(expandedLayout.touchTargets,
+                            'Three-row phone controls should retain touch-friendly buttons.', { width, expandedLayout });
+                    }
+                }
+                assert(after.every((grid, row) => Math.abs(grid.left - before[row].left) < 1 &&
+                    Math.abs(grid.width - before[row].width) < 1 &&
+                    grid.cells.every((cell, position) => {
+                        const original = before[row].cells[position];
+                        return Math.abs(cell.left - original.left) < 1 &&
+                            Math.abs(cell.width - original.width) < 1 &&
+                            Math.abs(cell.height - original.height) < 1;
+                    })),
+                    'Opening a lane should preserve every grid and step column horizontally.', { width, index, before, after });
+                await toggles.nth(index).click();
+                await page.waitForTimeout(180);
+            }
         }
 
         await page.locator('#stickyBarToggle').click();

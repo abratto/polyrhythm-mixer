@@ -636,15 +636,38 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         group.prepend(heading);
     }
 
-    // Cycle nav + help live in the first voice's row header (next to the voice
-    // picker / S / M) when the lane provides a header mount, so grouping lanes
-    // need no separate toolbar row.
+    // Grouping navigation stays inside its first voice's expandable control area.
     if (voiceIndex === 0 && lane._headerViewControls) {
         lane._headerViewControls.classList.add('lane-header-view-actions');
     }
 
     labelArea.append(identityGroup, mixGroup, patternGroup);
     if (trackGroup.childElementCount) labelArea.appendChild(trackGroup);
+    if (trackGroup.childElementCount && patternGroup.childElementCount) {
+        const panelSwitch = document.createElement('div');
+        panelSwitch.className = 'voice-panel-switch';
+        panelSwitch.setAttribute('role', 'group');
+        panelSwitch.setAttribute('aria-label', 'Voice editing section');
+        const buttons = [];
+        const selectPanel = (panel) => {
+            voice.controlPanel = panel;
+            labelArea.dataset.controlPanel = panel;
+            buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.panel === panel)));
+        };
+        for (const [panel, title, target] of [['pattern', 'Pattern', patternGroup], ['timing', 'Timing', trackGroup]]) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = title;
+            button.dataset.panel = panel;
+            target.id = `${lane.channelPrefix}_${voiceIndex}_${panel}_controls`;
+            button.setAttribute('aria-controls', target.id);
+            button.addEventListener('click', () => selectPanel(panel));
+            buttons.push(button);
+            panelSwitch.appendChild(button);
+        }
+        selectPanel(voice.controlPanel === 'timing' ? 'timing' : 'pattern');
+        labelArea.insertBefore(panelSwitch, patternGroup);
+    }
     if (voiceIndex === 0 && lane._headerViewControls) {
         labelArea.insertBefore(lane._headerViewControls, mixGroup);
     }

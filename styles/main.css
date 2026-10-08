@@ -3947,6 +3947,12 @@
             display: none;
         }
         @media (min-width: 721px) {
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .volume-fader {
+                min-width: 140px;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) {
+                grid-template-columns: 190px repeat(2, minmax(0, 1fr));
+            }
             .sequencer-workspace .lane-label-area:not(.rail-collapsed) {
                 grid-template-columns: minmax(140px, 1fr) minmax(200px, 2fr) minmax(240px, 2fr);
                 gap: 10px;
@@ -4017,9 +4023,16 @@
             align-items: flex-start;
             border-top: none;
         }
-        .sequencer-workspace .voice-row:has(> .rail-collapsed) > .voice-steps-column {
+        .sequencer-workspace .voice-row > .voice-steps-column {
             padding: 0;
             border: none;
+        }
+        @media (min-width: 721px) {
+            .sequencer-workspace .voice-row:has(> .lane-label-area:not(.rail-collapsed)) > .voice-steps-column {
+                margin-left: calc(var(--compact-label-width) + 4px);
+                width: calc(100% - var(--compact-label-width) - 4px);
+                flex: 0 0 auto;
+            }
         }
         .sequencer-workspace .lane-label-area.rail-collapsed {
             flex: 0 0 var(--compact-label-width);
@@ -4201,6 +4214,819 @@
             }
             .sequencer-workspace .master-beat-rail.rail-collapsed .identity-group > select {
                 width: 0;
+            }
+        }
+
+        /* Expanded editing retains the compact header and the fixed step span. */
+        .sequencer-workspace .lane-label-area:not(.rail-collapsed) {
+            padding: 0;
+            gap: 6px;
+            border: none;
+            background: color-mix(in srgb, var(--panel-bg) 94%, white);
+            border-radius: 5px;
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--panel-border) 70%, transparent);
+        }
+        .sequencer-workspace .lane-label-area:not(.rail-collapsed) .identity-group {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 4px;
+            min-height: 34px;
+            align-items: center;
+        }
+        .sequencer-workspace .lane-label-area:not(.rail-collapsed) .voice-label {
+            min-width: 0;
+            flex: 0 0 auto;
+            font-size: 0;
+        }
+        .sequencer-workspace .lane-label-area:not(.rail-collapsed) .voice-label::after {
+            content: 'V' attr(data-compact-label) / "";
+            font-size: 10px;
+        }
+        .sequencer-workspace .lane-label-area:not(.rail-collapsed) .voice-instrument-select {
+            flex: 1 1 0;
+            min-width: 0;
+            max-width: 140px;
+            height: 34px;
+            padding: 0 4px;
+            font-size: 11px;
+        }
+        .sequencer-workspace .lane-label-area:not(.rail-collapsed) .head-mix-controls {
+            display: flex;
+            flex: 0 0 auto;
+            gap: 2px;
+            margin: 0;
+        }
+        .sequencer-workspace .lane-label-area:not(.rail-collapsed) .head-mix-controls button,
+        .sequencer-workspace .lane-label-area:not(.rail-collapsed) .rail-toggle-btn {
+            position: static;
+            width: 32px;
+            min-width: 32px;
+            height: 34px;
+            min-height: 34px;
+            padding: 0;
+        }
+        .sequencer-workspace .lane-label-area .mix-group,
+        .sequencer-workspace .lane-label-area .pattern-group,
+        .sequencer-workspace .lane-label-area .track-group {
+            align-content: flex-start;
+            align-items: flex-start;
+            padding: 4px 6px;
+            gap: 4px;
+        }
+        .sequencer-workspace .grouping-controls {
+            width: 100%;
+            gap: 4px;
+        }
+        .sequencer-workspace .voice-controls-heading {
+            margin-bottom: 0;
+        }
+        .voice-panel-switch {
+            display: none;
+        }
+        @media (min-width: 721px) {
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) {
+                grid-template-columns: minmax(130px, 1fr) minmax(200px, 2fr) minmax(210px, 2fr);
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .mix-group {
+                grid-column: 1;
+                grid-row: 2;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .lane-header-view-actions {
+                grid-column: 1;
+                grid-row: 3;
+                justify-content: flex-start;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .pattern-group {
+                grid-column: 2;
+                grid-row: 2 / span 2;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .track-group {
+                grid-column: 3;
+                grid-row: 2 / span 2;
+            }
+        }
+        @media (min-width: 950px) {
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                flex-wrap: nowrap;
+                gap: 6px;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .identity-group {
+                flex: 0 1 332px;
+                min-width: 280px;
+                width: auto;
+                order: 0;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .mix-group {
+                flex: 0 0 190px;
+                min-width: 0;
+                box-sizing: border-box;
+                order: 1;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .pattern-group {
+                flex: 0 0 auto;
+                flex-direction: row;
+                align-items: center;
+                flex-wrap: nowrap;
+                justify-content: flex-start;
+                order: 2;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .track-group {
+                flex: 1 0 258px;
+                box-sizing: border-box;
+                order: 3;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .lane-header-view-actions {
+                flex: 0 0 auto;
+                width: auto;
+                margin: 0;
+                order: 4;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .voice-controls-heading {
+                display: none;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .mix-group,
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .pattern-group,
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .track-group {
+                padding: 0 4px;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .voice-edit-controls,
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .voice-nudge-control {
+                flex-wrap: nowrap;
+                margin: 0;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .lane-volume {
+                width: 100%;
+                min-width: 0;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .volume-fader {
+                width: 0;
+                min-width: 140px;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .voice-edit-controls button {
+                font-size: 10px;
+                padding: 0 4px;
+                letter-spacing: 0;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .voice-nudge-control {
+                padding: 0;
+                gap: 3px;
+                margin-left: 0;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .voice-nudge-label {
+                font-size: 10px;
+                letter-spacing: 0;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .head-mix-controls button,
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .rail-toggle-btn {
+                width: 26px;
+                min-width: 26px;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .grouping-controls {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                flex-wrap: nowrap;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .grouping-controls .control-group {
+                flex: 1 1 0;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 2px;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .grouping-controls label {
+                white-space: nowrap;
+                letter-spacing: 0.5px;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .grouping-controls .grouping-cycles-group {
+                min-width: 96px;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .grouping-controls .grouping-count-group {
+                min-width: 66px;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .grouping-controls .grouping-offset-group {
+                flex: 0 0 88px;
+                width: auto;
+            }
+        }
+        @media (min-width: 950px) and (max-width: 1369px) {
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) {
+                display: grid;
+                grid-template-columns: minmax(280px, 1fr) 190px minmax(258px, 1fr);
+                align-items: center;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .voice-controls-heading {
+                display: none;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .identity-group {
+                width: 100%;
+                grid-column: 1;
+                grid-row: 1;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .mix-group {
+                grid-column: 2;
+                grid-row: 1;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .lane-header-view-actions {
+                grid-column: 3;
+                grid-row: 1;
+                justify-content: flex-end;
+                width: 100%;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .pattern-group {
+                grid-column: 1 / 3;
+                grid-row: 2;
+                flex-wrap: nowrap;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .track-group {
+                grid-column: 3;
+                grid-row: 2;
+            }
+        }
+        @media (min-width: 721px) and (max-width: 949px) {
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) {
+                grid-template-columns: minmax(0, 1fr) 190px;
+                align-items: center;
+                gap: 4px;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .identity-group {
+                grid-column: 1;
+                grid-row: 1;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .mix-group {
+                grid-column: 2;
+                grid-row: 1;
+                padding: 0;
+                border: none;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .lane-volume {
+                width: 100%;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .volume-fader {
+                width: 0;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .pattern-group {
+                grid-column: 1 / -1;
+                grid-row: 2;
+                padding: 0;
+                border: none;
+                flex-wrap: nowrap;
+                justify-content: flex-start;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .voice-controls-heading {
+                display: none;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .voice-nudge-control {
+                margin-left: 0;
+            }
+            .sequencer-workspace .lane-label-area.master-beat-rail:not(.rail-collapsed) {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                flex-wrap: nowrap;
+            }
+            .sequencer-workspace .lane-label-area.master-beat-rail:not(.rail-collapsed) .identity-group {
+                flex: 0 0 332px;
+                width: auto;
+            }
+            .sequencer-workspace .lane-label-area.master-beat-rail:not(.rail-collapsed) .mix-group {
+                flex: 1 1 auto;
+            }
+        }
+        @media (min-width: 481px) and (max-width: 720px) {
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .identity-group {
+                grid-column: 1 / -1;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .mix-group {
+                grid-column: 1;
+                grid-row: 2;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .lane-header-view-actions {
+                grid-column: 2;
+                grid-row: 2;
+                align-self: center;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .pattern-group {
+                grid-column: 1;
+                grid-row: 3;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .track-group {
+                grid-column: 2;
+                grid-row: 3;
+            }
+        }
+        @media (max-width: 720px) {
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .identity-group {
+                min-height: 44px;
+                gap: 2px;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .head-mix-controls button,
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .rail-toggle-btn,
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .voice-instrument-select {
+                min-width: 44px;
+                height: 44px;
+                min-height: 44px;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .voice-instrument-select {
+                width: 0;
+                min-width: 0;
+            }
+            .sequencer-workspace .lane-label-area .voice-edit-controls {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                width: 100%;
+                gap: 4px;
+            }
+            .sequencer-workspace .lane-label-area .voice-nudge-control {
+                flex-wrap: nowrap;
+                gap: 4px;
+            }
+        }
+        @media (min-width: 600px) and (max-width: 949px) {
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) 40px 190px;
+                align-items: center;
+                gap: 4px;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .identity-group {
+                grid-column: 1 / 3;
+                grid-row: 1;
+                width: 100%;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .mix-group {
+                grid-column: 3;
+                grid-row: 1;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .pattern-group {
+                grid-column: 1 / -1;
+                grid-row: 2;
+                flex-wrap: nowrap;
+                justify-content: flex-start;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .track-group {
+                grid-column: 1;
+                grid-row: 3;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .lane-header-view-actions {
+                grid-column: 2 / 4;
+                grid-row: 3;
+                width: auto;
+                flex-wrap: nowrap;
+                margin: 0;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .voice-controls-heading {
+                display: none;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .mix-group,
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .pattern-group,
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .track-group {
+                padding: 0;
+                border: none;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .lane-volume {
+                width: 100%;
+                min-width: 0;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .volume-fader {
+                width: 0;
+                min-width: 140px;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .voice-edit-controls {
+                display: flex;
+                width: auto;
+                flex-wrap: nowrap;
+                gap: 4px;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .voice-edit-controls button {
+                padding: 0 4px;
+                font-size: 10px;
+                letter-spacing: 0;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .voice-nudge-control {
+                padding: 0;
+                flex-wrap: nowrap;
+                margin-left: 0;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .grouping-controls {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .grouping-controls .control-group {
+                flex: 1 1 0;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 2px;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .grouping-controls label {
+                white-space: nowrap;
+                letter-spacing: 0;
+            }
+        }
+        @media (max-width: 480px) {
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .identity-group {
+                display: grid;
+                grid-template-columns: 44px auto minmax(0, 1fr);
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) {
+                gap: 4px;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .identity-group > select {
+                grid-column: 3;
+                grid-row: 1;
+                width: 100%;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .identity-group .head-mix-controls {
+                grid-column: 1 / -1;
+                grid-row: 2;
+            }
+            .sequencer-workspace .master-beat-rail:not(.rail-collapsed) .identity-group {
+                display: flex;
+            }
+            .sequencer-workspace .master-beat-rail:not(.rail-collapsed) .identity-group > select {
+                width: 0;
+            }
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .voice-panel-switch {
+                display: flex;
+                gap: 4px;
+            }
+            .voice-panel-switch button {
+                flex: 1;
+            }
+            .voice-panel-switch button[aria-pressed="true"] {
+                background: var(--input-bg);
+                border-color: var(--playhead);
+            }
+            .sequencer-workspace .lane-label-area[data-control-panel="pattern"] .track-group,
+            .sequencer-workspace .lane-label-area[data-control-panel="timing"] .pattern-group {
+                display: none;
+            }
+            .sequencer-workspace .lane-label-area .voice-controls-heading {
+                display: none;
+            }
+            .sequencer-workspace .lane-label-area .lane-volume {
+                margin: 0;
+                min-height: 44px;
+            }
+            .sequencer-workspace .lane-label-area .mix-group,
+            .sequencer-workspace .lane-label-area .pattern-group,
+            .sequencer-workspace .lane-label-area .track-group {
+                padding: 0;
+                border: none;
+            }
+            .sequencer-workspace .lane-label-area .voice-edit-controls {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+            .sequencer-workspace .lane-label-area .voice-edit-controls button {
+                padding: 0 2px;
+                font-size: 10px;
+            }
+            .sequencer-workspace .lane-label-area .voice-nudge-control {
+                padding: 0;
+                border: none;
+            }
+            .sequencer-workspace .grouping-offset-group {
+                flex-direction: row;
+                align-items: center;
+                gap: 4px;
+            }
+        }
+
+        @media (min-width: 481px) and (max-width: 720px) {
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) {
+                grid-template-columns: minmax(0, 1fr);
+                gap: 4px;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .mix-group {
+                grid-column: 1;
+                grid-row: 2;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .pattern-group {
+                grid-column: 1;
+                grid-row: 3;
+                flex-wrap: nowrap;
+                justify-content: flex-start;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .voice-controls-heading {
+                display: none;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .mix-group,
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .pattern-group {
+                padding: 0;
+                border: none;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .voice-edit-controls {
+                display: flex;
+                width: auto;
+                gap: 4px;
+                flex-wrap: nowrap;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .voice-edit-controls button {
+                padding: 0 4px;
+                font-size: 10px;
+                letter-spacing: 0;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .voice-nudge-control {
+                padding: 0;
+                margin-left: 0;
+            }
+        }
+        @media (min-width: 481px) and (max-width: 599px) {
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) {
+                grid-template-columns: minmax(0, 1fr) 200px;
+                align-items: center;
+                gap: 4px;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .mix-group {
+                grid-column: 1;
+                grid-row: 2;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .lane-header-view-actions {
+                grid-column: 2;
+                grid-row: 2;
+                flex-wrap: nowrap;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .pattern-group {
+                grid-column: 1 / -1;
+                grid-row: 3;
+                flex-wrap: nowrap;
+                justify-content: flex-start;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .track-group {
+                grid-column: 1 / -1;
+                grid-row: 4;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .voice-controls-heading {
+                display: none;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .mix-group,
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .pattern-group,
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .track-group {
+                padding: 0;
+                border: none;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .voice-edit-controls {
+                display: flex;
+                width: auto;
+                flex-wrap: nowrap;
+                gap: 4px;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .voice-edit-controls button {
+                padding: 0 4px;
+                font-size: 10px;
+                letter-spacing: 0;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .voice-nudge-control {
+                padding: 0;
+                margin-left: 0;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .lane-volume {
+                width: 100%;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .volume-fader {
+                min-width: 140px;
+                width: 0;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .grouping-controls {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .grouping-controls label {
+                white-space: nowrap;
+                letter-spacing: 0;
+            }
+        }
+        @media (min-width: 540px) and (max-width: 720px) {
+            .sequencer-workspace .lane-label-area.master-beat-rail:not(.rail-collapsed) {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                flex-wrap: nowrap;
+                gap: 4px;
+            }
+            .sequencer-workspace .lane-label-area.master-beat-rail:not(.rail-collapsed) .identity-group {
+                width: auto;
+                flex: 1 1 0;
+            }
+            .sequencer-workspace .lane-label-area.master-beat-rail:not(.rail-collapsed) .mix-group {
+                flex: 0 0 180px;
+                padding: 0;
+                border: none;
+            }
+            .sequencer-workspace .lane-label-area.master-beat-rail:not(.rail-collapsed) .lane-volume {
+                width: 100%;
+            }
+            .sequencer-workspace .lane-label-area.master-beat-rail:not(.rail-collapsed) .volume-fader {
+                width: 0;
+                min-width: 140px;
+            }
+        }
+        @media (max-width: 480px) {
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) {
+                grid-template-columns: minmax(0, 1fr) 96px;
+                align-items: center;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .identity-group,
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .lane-header-view-actions,
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .pattern-group,
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .track-group {
+                grid-column: 1 / -1;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .mix-group {
+                grid-column: 1;
+                grid-row: 3;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .voice-panel-switch {
+                grid-column: 2;
+                grid-row: 3;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .lane-volume {
+                width: 100%;
+                gap: 4px;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .lane-volume-label {
+                display: none;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .volume-fader {
+                min-width: 140px;
+                width: 0;
+            }
+            .sequencer-workspace .grouping-lane-row .lane-label-area:not(.rail-collapsed) .voice-panel-switch button {
+                padding: 0 2px;
+                font-size: 10px;
+                letter-spacing: 0;
+            }
+        }
+
+        @media (min-width: 600px) and (max-width: 720px) {
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) {
+                grid-template-columns: minmax(0, 1fr) 190px;
+                align-items: center;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .identity-group {
+                grid-column: 1;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .mix-group {
+                grid-column: 2;
+                grid-row: 1;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .lane-volume {
+                width: 100%;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .volume-fader {
+                width: 0;
+                min-width: 140px;
+            }
+            .sequencer-workspace #masterGrid .lane-label-area:not(.rail-collapsed) .pattern-group {
+                grid-column: 1 / -1;
+                grid-row: 2;
+            }
+        }
+        @media (max-width: 720px) {
+            .sequencer-workspace .lane-group-heading .beat-scheme-inline {
+                gap: 6px;
+            }
+            .sequencer-workspace .lane-group-heading .beat-scheme-inline .pulse-select-line {
+                flex: 0 0 auto;
+                gap: 4px;
+                font-size: 11px;
+            }
+            .sequencer-workspace .lane-group-heading .beat-scheme-inline select {
+                width: 44px;
+                min-height: 44px;
+            }
+            .sequencer-workspace .lane-group-heading .beat-scheme-inline .beat-scheme-summary {
+                flex: 0 0 auto;
+                font-size: 11px;
+            }
+            .master-pattern-controls > .lane-toolbar {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 4px;
+            }
+            .master-pattern-controls .lane-actions,
+            .master-pattern-controls .lane-view-actions,
+            .master-pattern-controls .lane-edit-controls {
+                display: contents;
+            }
+            .master-pattern-controls .meter-master-select {
+                grid-column: 1 / -1;
+                grid-row: 1;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                width: auto;
+                min-width: 0;
+            }
+            .master-pattern-controls .meter-master-select label {
+                font-size: 10px;
+                letter-spacing: 0;
+            }
+            .master-pattern-controls .meter-master-select select {
+                width: 100px;
+                min-height: 44px;
+            }
+            .master-pattern-controls .lane-edit-controls button,
+            .master-pattern-controls #clearMasterBtn {
+                grid-row: 2;
+                padding: 0 4px;
+                font-size: 10px;
+                letter-spacing: 0;
+            }
+            .master-pattern-controls .group-nudge-control {
+                grid-column: 1 / -1;
+                grid-row: 3;
+                justify-content: flex-start;
+                padding: 0;
+                margin: 0;
+            }
+            .master-pattern-controls .cycle-nav {
+                grid-column: 1 / 3;
+                grid-row: 4;
+                flex-wrap: nowrap;
+                gap: 4px;
+            }
+            .master-pattern-controls .cycle-nav-title {
+                display: none;
+            }
+            .master-pattern-controls #masterInfoBtn {
+                grid-column: 3;
+                grid-row: 4;
+                justify-self: end;
+            }
+            .master-pattern-controls button {
+                min-width: 44px;
+                min-height: 44px;
+                height: 44px;
+            }
+            .master-pattern-controls .cycle-nav-label {
+                font-size: 10px;
+                padding: 0 4px;
+            }
+        }
+        @media (min-width: 600px) and (max-width: 720px) {
+            .sequencer-workspace .lane-group-heading {
+                align-items: center;
+            }
+            .sequencer-workspace .lane-group-heading .beat-scheme-inline {
+                flex: 1 1 auto;
+                width: auto;
+                margin-top: 0;
+            }
+        }
+        @media (min-width: 481px) and (max-width: 666px) {
+            .master-pattern-controls > .lane-toolbar {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+            .master-pattern-controls .meter-master-select {
+                grid-column: 1 / 3;
+            }
+            .master-pattern-controls .lane-edit-controls button {
+                grid-row: 1;
+            }
+            .master-pattern-controls #clearMasterBtn {
+                grid-column: 4;
+                grid-row: 2;
+            }
+            .master-pattern-controls .group-nudge-control {
+                grid-column: 1 / 4;
+                grid-row: 2;
+            }
+            .master-pattern-controls .cycle-nav {
+                grid-column: 1 / 4;
+                grid-row: 3;
+            }
+            .master-pattern-controls #masterInfoBtn {
+                grid-column: 4;
+                grid-row: 3;
+            }
+        }
+        @media (min-width: 667px) and (max-width: 720px) {
+            .master-pattern-controls > .lane-toolbar {
+                grid-template-columns: repeat(6, minmax(0, 1fr));
+            }
+            .master-pattern-controls .meter-master-select {
+                grid-column: 1 / 4;
+            }
+            .master-pattern-controls .lane-edit-controls button,
+            .master-pattern-controls #clearMasterBtn {
+                grid-row: 1;
+            }
+            .master-pattern-controls .group-nudge-control {
+                grid-column: 1 / 4;
+                grid-row: 2;
+            }
+            .master-pattern-controls .cycle-nav {
+                grid-column: 4 / 6;
+                grid-row: 2;
+            }
+            .master-pattern-controls #masterInfoBtn {
+                grid-column: 6;
+                grid-row: 2;
             }
         }
 
