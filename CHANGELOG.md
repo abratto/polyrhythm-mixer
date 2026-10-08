@@ -1,4 +1,21 @@
 # Changelog
+## v1.29.0 — 2026-10-07
+
+### Added
+- **Compact voice actions.** Instrument, Solo, Mute, Clear, and red Delete controls stay available without expanding a voice. Every Master voice can be removed, including the last; + Voice adds one back.
+- **Master pattern controls panel.** A collapsed panel above the Beat reference groups Master phrase length, pattern edits, group nudge, cycle navigation, and help.
+
+### Changed
+- **Responsive pinned toolbar.** Controls, Audio, Play/Pause, Stop, and Reset Mixer appear in that order, with the beat/cycle counter and cycle progress always visible. Additional settings start collapsed at every screen size and preserve their disclosure state when resizing.
+- **Always-visible branding.** The app name sits above the pinned toolbar instead of inside the collapsible controls.
+- **Denser pattern lanes.** Collapsed desktop rails sit beside tightly stacked grids with shorter instrument selectors. Phones use full-width steps and compact control rows with 44px touch targets.
+- **Consistent Beat controls.** The Master Beat reference uses the same instrument and Solo/Mute header layout as voices, with volume behind its disclosure.
+- **Clearer expanded editing.** Voice controls are grouped into Sound, Pattern, and Track timing sections, with responsive layouts and updated help.
+
+### Fixed
+- **Empty Master lane lifecycle.** Removing the final Master voice clears its channel, preserves the Beat reference, and supports re-adding voices, meter changes, share/load, and reset.
+- **Frame profiling follows visualization defaults.** The performance probe opens the visualization before testing its modes.
+
 ## v1.28.0 — 2026-10-07
 
 ### Added
