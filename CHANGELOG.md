@@ -1,4 +1,18 @@
 # Changelog
+## v1.30.0 — 2026-10-08
+
+### Added
+- **Phone editing sections.** Narrow grouping-track controls offer Pattern and Timing buttons, retaining the selected section across lane edits, disclosure changes, and resizing.
+
+### Changed
+- **Compact responsive editing strips.** Expanded controls use one, two, or three rows as space permits. Grouping tracks switch to two rows below 1370px and three below 950px, with compact phone arrangements below 600px.
+- **Smaller Rhythm Tracks panels.** Master voices use two rows at tablet widths; phone Beat, Master voice, meter, and shared Master controls avoid unnecessary stacking while retaining touch-friendly controls.
+- **Clearly grouped control areas.** Expanded controls have a subtle theme-aware background and inset border, while volume sliders retain at least 140px of horizontal space.
+- **Expanded layout regression coverage.** Browser checks cover 31 screen widths, control row counts, panel heights, touch targets, clipping, and editing-section persistence.
+
+### Fixed
+- **Step grids stay aligned when controls open.** Expanding a Beat, Master voice, or grouping track preserves the grid's horizontal position and every step's width and height.
+
 ## v1.29.0 — 2026-10-07
 
 ### Added
