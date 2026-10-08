@@ -101,6 +101,7 @@ async function run() {
 
     await page.goto(`${BASE_URL}/?cache-bust=frame-probe-${Date.now()}`, { waitUntil: 'networkidle' });
     await page.waitForSelector('#masterGrid .voice-row:first-child .step-btn', { timeout: 10000 });
+    await page.locator('#polyrhythmView > summary').click();
 
     if (DENSE) {
         await page.selectOption('#rhythmA', '12');

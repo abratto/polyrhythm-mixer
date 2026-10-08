@@ -287,14 +287,16 @@ function buildLaneRow(lane, state) {
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'remove-voice-btn';
-    removeBtn.textContent = '×';
+    removeBtn.textContent = 'Remove track';
+    removeBtn.classList.add('remove-track-btn');
     removeBtn.title = 'Remove this grouping lane';
     removeBtn.addEventListener('click', () => {
         const idx = _deps.lanes.grouping.indexOf(lane);
         if (idx >= 0) removeGroupingLane(idx);
     });
+    lane._removeTrackButton = removeBtn;
 
-    // Track-level controls (grouping, phrase length, offset, remove) live in the
+    // Track-level controls (grouping, phrase length, offset) live in the
     // lane's collapsible rail sub-row alongside the per-voice mix/pattern
     // controls, rather than as an always-visible toolbar above the grid. The
     // rail is built later by buildLane → buildVoiceButtons, so stash a mount
@@ -303,7 +305,6 @@ function buildLaneRow(lane, state) {
     groupControls.className = 'grouping-controls';
     groupControls.append(gGroup, cGroup);
     if (oGroup) groupControls.appendChild(oGroup);
-    groupControls.append(removeBtn);
     lane._groupControls = groupControls;
     lane._mountGroupControls = (mount) => { mount.appendChild(groupControls); };
 
@@ -400,7 +401,24 @@ function renderLaneRow(lane, index) {
     // Label each lane's (single) voice by lane number so the list reads
     // "Voice 1, Voice 2, …" across lanes rather than "Voice 1" in every lane.
     const firstLabel = lane.container.querySelector('.voice-row .voice-label');
-    if (firstLabel) firstLabel.textContent = `Voice ${index + 1}`;
+    if (firstLabel) {
+        firstLabel.textContent = `Voice ${index + 1}`;
+        firstLabel.dataset.compactLabel = String(index + 1);
+        const rail = firstLabel.closest('.lane-label-area');
+        const instrument = rail.querySelector('.voice-instrument-select');
+        instrument.title = `${firstLabel.textContent} instrument`;
+        rail.title = `${firstLabel.textContent}: ${instrument.selectedOptions[0]?.textContent || 'instrument'}`;
+        const clear = rail.querySelector('.compact-clear-btn');
+        if (clear) {
+            clear.title = `Clear voice ${index + 1}`;
+            clear.setAttribute('aria-label', clear.title);
+        }
+        const remove = rail.querySelector('.compact-delete-btn');
+        if (remove) {
+            remove.title = `Remove grouping track ${index + 1}`;
+            remove.setAttribute('aria-label', remove.title);
+        }
+    }
 }
 
 /** Rebuilds only the given lane (keeps the other lanes' DOM untouched). */
@@ -613,4 +631,3 @@ export function restoreGroupingLanes(data, applyVoiceState) {
     buildGroupingLanes();
     return true;
 }
-

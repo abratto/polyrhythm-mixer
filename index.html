@@ -41,11 +41,11 @@
                     </section>
                     <section class="help-topic">
                         <h3>Shape the mix</h3>
-                        <p>Expand a voice's <strong>▸</strong> rail to choose its instrument and adjust volume, solo, or mute. The Master Beat click has its own volume control. <strong>Tempo</strong> changes the speed; <strong>Master</strong> changes the overall level.</p>
+                        <p>Each voice shows its instrument dropdown and <strong>S</strong> (solo), <strong>M</strong> (mute), and <strong>C</strong> (clear pattern) buttons beside its pattern, or just above it on phones. The red <strong>X</strong> removes a grouping track or any Master voice, including the last one. Use <strong>+ Voice</strong> to add one back. <strong>V1</strong> means Voice 1. Expand the <strong>▸</strong> rail for volume and deeper editing controls. The <strong>Beat</strong> row is the Master Beat click track, with instrument, solo, mute, and volume controls but no Clear or Delete. Open <strong>Master pattern controls</strong> above it for the Master phrase length, shared pattern edits, group nudge, and cycle navigation. Open <strong>Controls</strong> for global settings: <strong>Tempo</strong> changes the speed; <strong>Master</strong> changes the overall level.</p>
                     </section>
                     <section class="help-topic">
                         <h3>Save, share, and explore</h3>
-                        <p><strong>Save</strong> stores a rhythm in this browser. <strong>Share</strong> copies a link to it. <strong>Reset Mixer</strong> restores the starting setup. Use the visualization controls to explore how the meters line up through the cycle.</p>
+                        <p><strong>Save</strong> stores a rhythm in this browser. <strong>Share</strong> copies a link to it. <strong>Reset Mixer</strong> restores the starting setup. Reset, the beat/cycle counter, and the cycle progress indicator stay in the pinned top bar even when Controls is closed. Use the visualization controls to explore how the meters line up through the cycle.</p>
                     </section>
                 </div>
             </details>
@@ -78,24 +78,27 @@
         </div>
     </div>
 
-    <div id="stickyBar" class="sticky-bar global-toolbar">
-        <div class="toolbar-group toolbar-brand-group">
-            <h1 class="toolbar-brand">Alan's Polyrhythm Mixer</h1>
-            <div class="secondary-actions toolbar-menus">
-                <button id="saveRhythmBtn">Save</button>
-                <button id="loadRhythmBtn">Load</button>
-                <button id="shareBtn">Share</button>
-                <button id="helpBtn">Help</button>
+    <h1 class="toolbar-brand app-brand">Alan's Polyrhythm Mixer</h1>
+
+    <div id="stickyBar" class="sticky-bar global-toolbar collapsed">
+        <div class="toolbar-pinned">
+            <div class="toolbar-group toolbar-transport transport-controls">
+                <button id="stickyBarToggle" type="button" class="sticky-bar-toggle" aria-expanded="false" aria-controls="toolbarControls" title="Show additional controls">Controls ▾</button>
+                <button id="audioBtn" class="transport-btn">Enable Audio</button>
+                <button id="playBtn" class="transport-btn">Play</button>
+                <button id="stopBtn" class="transport-btn">Stop</button>
+                <button id="resetBtn" class="transport-btn">Reset Mixer</button>
+            </div>
+            <div class="toolbar-status">
+                <div class="transport-position">
+                    <span id="transportReadout" class="transport-readout">Stopped</span>
+                    <div class="mini-playhead" aria-hidden="true">
+                        <div id="miniPlayhead" class="mini-playhead-dot"></div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="toolbar-group toolbar-transport transport-controls">
-            <button id="audioBtn" class="transport-btn">Enable Audio</button>
-            <button id="playBtn" class="transport-btn">Play</button>
-            <button id="stopBtn" class="transport-btn">Stop</button>
-            <button id="resetBtn" class="transport-btn">Reset Mixer</button>
-            <button id="followScrollBtn" class="transport-btn follow-toggle" aria-pressed="true">Follow: On</button>
-        </div>
-        <button id="stickyBarToggle" class="sticky-bar-toggle" aria-expanded="true" aria-controls="stickyBar" title="Collapse controls">&#9650;</button>
+        <div id="toolbarControls" class="toolbar-controls">
         <div class="toolbar-group bar-settings toolbar-settings">
             <div class="control-group tempo-control-group">
                 <label>Tempo</label>
@@ -117,10 +120,18 @@
                 <span class="theme-select-label">Theme</span>
                 <select id="themeSelect" class="theme-select" aria-label="Color theme"></select>
             </label>
-            <span id="transportReadout" class="transport-readout">Stopped</span>
-            <div class="mini-playhead" aria-hidden="true">
-                <div id="miniPlayhead" class="mini-playhead-dot"></div>
+        </div>
+        <div class="toolbar-group toolbar-brand-group">
+            <div class="secondary-actions toolbar-menus">
+                <button id="saveRhythmBtn">Save</button>
+                <button id="loadRhythmBtn">Load</button>
+                <button id="shareBtn">Share</button>
+                <button id="helpBtn">Help</button>
             </div>
+        </div>
+        <div class="toolbar-group toolbar-utilities">
+            <button id="followScrollBtn" class="transport-btn follow-toggle" aria-pressed="true">Follow: On</button>
+        </div>
         </div>
     </div>
 
@@ -218,22 +229,9 @@
                 </span>
             </div>
 
-            <div class="voice-row master-beat-voice-row">
-                <div id="masterBeatControls" class="lane-label-area master-beat-rail">
-                    <div class="voice-control-group identity-group">
-                        <span class="master-beat-control-label">Master Beat</span>
-                        <span class="master-beat-sub">4/4 reference · the click track</span>
-                    </div>
-                    <div class="voice-control-group mix-group">
-                        <div class="mix-row lane-volume">
-                            <span class="lane-volume-label">Vol</span>
-                            <input type="range" id="volDriver" class="volume-fader" min="0" max="1" step="0.05" value="0.6">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <div class="matrix-row master-pattern-row" style="--lane-accent: #ff9100;">
+                <details id="masterPatternControls" class="master-pattern-controls">
+                    <summary>Master pattern controls</summary>
                 <div class="lane-toolbar">
                     <div class="lane-actions">
                         <div class="control-group lane-meter-select meter-master-select">
@@ -257,6 +255,21 @@
                     </div>
                 </div>
                 <div id="masterDescription" class="lane-description" hidden></div>
+                </details>
+                <div class="voice-row master-beat-voice-row">
+                    <div id="masterBeatControls" class="lane-label-area master-beat-rail">
+                        <div class="voice-control-group identity-group">
+                            <span class="master-beat-control-label" title="Master Beat - 4/4 click track">Beat</span>
+                            <span class="master-beat-sub">4/4 reference · the click track</span>
+                        </div>
+                        <div class="voice-control-group mix-group">
+                            <div class="mix-row lane-volume">
+                                <span class="lane-volume-label">Vol</span>
+                                <input type="range" id="volDriver" class="volume-fader" min="0" max="1" step="0.05" value="0.6">
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div id="masterGrid" class="sequencer-container"></div>
             </div>
 

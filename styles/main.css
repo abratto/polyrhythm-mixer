@@ -3874,3 +3874,527 @@
                 width: auto;
             }
         }
+
+        /* Voice headers span the pattern width; expanded controls use that space. */
+        .sequencer-workspace .voice-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .sequencer-workspace .lane-label-area {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            flex: 0 0 auto;
+            width: auto;
+            min-width: 0;
+            height: auto;
+        }
+        .sequencer-workspace .lane-label-area .identity-group {
+            display: flex;
+            flex-wrap: nowrap;
+            width: 100%;
+            min-width: 0;
+        }
+        .sequencer-workspace .lane-label-area .voice-instrument-select {
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: 320px;
+        }
+        .sequencer-workspace .lane-label-area .lane-header-view-actions {
+            display: flex;
+            justify-content: flex-end;
+            width: 100%;
+            gap: 6px;
+        }
+        .voice-controls-heading {
+            display: block;
+            width: 100%;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--btn-fg);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .sequencer-workspace .lane-label-area.rail-collapsed .track-group {
+            display: none;
+        }
+        .sequencer-workspace .lane-label-area .pattern-group,
+        .sequencer-workspace .lane-label-area .track-group {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            min-width: 0;
+        }
+        .sequencer-workspace .lane-label-area.rail-collapsed .pattern-group {
+            display: none;
+        }
+        .sequencer-workspace .grouping-controls {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .sequencer-workspace .grouping-controls .remove-track-btn {
+            width: auto;
+            height: auto;
+            min-height: 32px;
+            padding: 0 8px;
+            font-size: 11px;
+            justify-self: end;
+            align-self: end;
+        }
+        .sequencer-workspace .master-beat-sub {
+            display: none;
+        }
+        @media (min-width: 721px) {
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) {
+                grid-template-columns: minmax(140px, 1fr) minmax(200px, 2fr) minmax(240px, 2fr);
+                gap: 10px;
+            }
+            .sequencer-workspace .lane-label-area .identity-group,
+            .sequencer-workspace .lane-label-area .lane-header-view-actions {
+                grid-column: 1 / -1;
+            }
+        }
+        @media (max-width: 720px) {
+            .sequencer-workspace .lane-label-area .identity-group {
+                display: grid;
+                grid-template-columns: 44px minmax(0, 1fr) auto;
+                gap: 6px;
+            }
+            .sequencer-workspace .lane-label-area .identity-group > select {
+                grid-column: 1 / -1;
+                grid-row: 2;
+                width: 100%;
+                max-width: none;
+                min-height: 44px;
+            }
+            .sequencer-workspace .lane-label-area .identity-group > .rail-toggle-btn {
+                grid-column: 1;
+                grid-row: 1;
+            }
+            .sequencer-workspace .head-mix-controls {
+                grid-column: 3;
+                grid-row: 1;
+            }
+            .sequencer-workspace .lane-label-area button,
+            .sequencer-workspace .lane-label-area .head-mix-controls button {
+                min-width: 44px;
+                min-height: 44px;
+                height: auto;
+            }
+            .sequencer-workspace .lane-label-area .voice-edit-controls {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 6px;
+            }
+            .sequencer-workspace .grouping-controls select {
+                min-height: 44px;
+            }
+            .sequencer-workspace .grouping-controls .remove-track-btn {
+                min-height: 44px;
+            }
+            .sequencer-workspace .lane-label-area .mix-group,
+            .sequencer-workspace .lane-label-area .pattern-group,
+            .sequencer-workspace .lane-label-area .track-group {
+                padding: 8px 0;
+                border-left: none;
+                border-top: 1px solid var(--panel-border);
+            }
+        }
+
+        /* Collapsed tracks prioritize a vertically aligned pattern stack. */
+        .sequencer-workspace {
+            --compact-label-width: 332px;
+        }
+        .sequencer-workspace .voice-row {
+            margin-bottom: 0;
+            padding-top: 0;
+            gap: 4px;
+        }
+        .sequencer-workspace .voice-row:has(> .rail-collapsed) {
+            flex-direction: row;
+            align-items: flex-start;
+            border-top: none;
+        }
+        .sequencer-workspace .voice-row:has(> .rail-collapsed) > .voice-steps-column {
+            padding: 0;
+            border: none;
+        }
+        .sequencer-workspace .lane-label-area.rail-collapsed {
+            flex: 0 0 var(--compact-label-width);
+            width: var(--compact-label-width);
+            max-width: var(--compact-label-width);
+            padding: 0;
+            background: transparent;
+            border: none;
+            gap: 0;
+        }
+        .sequencer-workspace .lane-label-area.rail-collapsed .identity-group {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 4px;
+            min-height: 34px;
+        }
+        .sequencer-workspace .lane-label-area.rail-collapsed .lane-header-view-actions {
+            display: none;
+        }
+        .sequencer-workspace .lane-label-area.rail-collapsed .voice-label {
+            min-width: 0;
+            flex: 0 0 auto;
+            font-size: 0;
+        }
+        .sequencer-workspace .lane-label-area.rail-collapsed .voice-label::after {
+            content: 'V' attr(data-compact-label) / "";
+            font-size: 10px;
+        }
+        .sequencer-workspace .lane-label-area.rail-collapsed .voice-instrument-select {
+            flex: 1 1 0;
+            width: 0;
+            min-width: 0;
+            max-width: 140px;
+            height: 34px;
+            min-height: 34px;
+            padding: 0 4px;
+            font-size: 11px;
+        }
+        .sequencer-workspace .lane-label-area.rail-collapsed .head-mix-controls {
+            display: flex;
+            flex: 0 0 auto;
+            gap: 2px;
+            margin: 0;
+        }
+        .sequencer-workspace .lane-label-area.rail-collapsed .head-mix-controls button {
+            width: 32px;
+            min-width: 32px;
+            height: 34px;
+            min-height: 34px;
+            padding: 0;
+        }
+        .sequencer-workspace .lane-label-area.rail-collapsed .rail-toggle-btn {
+            flex: 0 0 28px;
+            width: 28px;
+            min-width: 28px;
+            height: 34px;
+            min-height: 34px;
+        }
+        .sequencer-workspace .master-beat-rail.rail-collapsed .identity-group {
+            flex-direction: row;
+        }
+        .sequencer-workspace .master-beat-control-label {
+            flex: 0 0 auto;
+            min-width: 0;
+            font-size: 10px;
+        }
+        .sequencer-workspace .voice-steps-column {
+            padding: 2px;
+            min-width: 0;
+            flex: 1 1 0;
+            border-radius: 3px;
+        }
+        .sequencer-workspace .grouping-lanes {
+            gap: 4px;
+        }
+        .sequencer-workspace .grouping-lane-row,
+        .sequencer-workspace .grouping-lane-row + .grouping-lane-row {
+            padding: 0;
+            margin: 0;
+            gap: 0;
+        }
+        .sequencer-workspace .sequencer-container {
+            gap: 4px;
+            margin-top: 0;
+        }
+        .sequencer-workspace .lane-cycle-cue:empty {
+            display: none;
+        }
+        @media (max-width: 720px) {
+            .sequencer-workspace .voice-row:has(> .rail-collapsed) {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 2px;
+            }
+            .sequencer-workspace .lane-label-area.rail-collapsed {
+                flex: 0 0 auto;
+                width: 100%;
+                max-width: none;
+            }
+            .sequencer-workspace .lane-label-area.rail-collapsed .identity-group {
+                min-height: 44px;
+                gap: 2px;
+            }
+            .sequencer-workspace .lane-label-area.rail-collapsed .rail-toggle-btn {
+                flex-basis: 44px;
+                width: 44px;
+                min-width: 44px;
+                height: 44px;
+                min-height: 44px;
+            }
+            .sequencer-workspace .lane-label-area.rail-collapsed .voice-instrument-select {
+                min-height: 44px;
+                height: 44px;
+            }
+            .sequencer-workspace .lane-label-area.rail-collapsed .head-mix-controls button {
+                width: 44px;
+                min-width: 44px;
+                height: 44px;
+                min-height: 44px;
+            }
+            .sequencer-workspace .master-beat-rail.rail-collapsed .master-beat-control-label {
+                font-size: 10px;
+            }
+        }
+        .master-pattern-controls {
+            width: 100%;
+            min-width: 0;
+            margin-bottom: 6px;
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+        }
+        .master-pattern-controls > summary {
+            cursor: pointer;
+            padding: 10px 8px;
+            min-height: 44px;
+            box-sizing: border-box;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--btn-fg);
+        }
+        .master-pattern-controls > .lane-toolbar {
+            padding: 8px;
+            margin: 0;
+        }
+        .master-pattern-controls > .lane-description {
+            margin: 0 8px 8px;
+        }
+        .sequencer-workspace .lane-label-area .head-mix-controls .compact-delete-btn {
+            color: #ff667a;
+            border-color: #b7374c;
+            background: var(--btn-bg);
+            position: static;
+        }
+        @media (max-width: 480px) {
+            .sequencer-workspace .lane-label-area .identity-group {
+                grid-template-columns: 44px minmax(0, 1fr);
+            }
+            .sequencer-workspace .lane-label-area .identity-group .head-mix-controls {
+                grid-column: 1 / -1;
+                grid-row: 3;
+                justify-content: flex-end;
+            }
+            .sequencer-workspace .lane-label-area.rail-collapsed .identity-group {
+                display: grid;
+                grid-template-columns: 44px auto minmax(0, 1fr);
+                gap: 2px;
+            }
+            .sequencer-workspace .lane-label-area.rail-collapsed .identity-group > select {
+                grid-column: 3;
+                grid-row: 1;
+                width: 100%;
+            }
+            .sequencer-workspace .lane-label-area.rail-collapsed .identity-group .head-mix-controls {
+                grid-column: 1 / -1;
+                grid-row: 2;
+            }
+            .sequencer-workspace .master-beat-rail.rail-collapsed .identity-group {
+                display: flex;
+            }
+            .sequencer-workspace .master-beat-rail.rail-collapsed .identity-group > select {
+                width: 0;
+            }
+        }
+
+        /* Transport, reset, and position stay pinned when settings close. */
+        .app-brand {
+            order: -1;
+            width: 100%;
+            max-width: 1440px;
+            margin: 0 auto 12px;
+            font-size: 20px;
+            line-height: 1.2;
+            text-align: left;
+            white-space: normal;
+        }
+        .global-toolbar.sticky-bar {
+            flex-direction: column;
+            align-items: stretch;
+            padding: 8px 12px;
+            gap: 0;
+        }
+        .global-toolbar .toolbar-transport {
+            order: 0;
+            width: 100%;
+            flex: 0 0 auto;
+            flex-wrap: nowrap;
+        }
+        .toolbar-pinned {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+        .global-toolbar .toolbar-pinned .toolbar-transport {
+            flex: 1 1 auto;
+            width: auto;
+            min-width: 0;
+        }
+        .toolbar-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 0 0 auto;
+            min-width: 0;
+        }
+        .toolbar-transport #resetBtn {
+            white-space: nowrap;
+            min-height: 36px;
+            font-size: 11px;
+            padding: 0 8px;
+        }
+        .transport-position {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+        }
+        .toolbar-status .transport-readout {
+            padding: 0;
+            font-size: 11px;
+        }
+        .toolbar-status .mini-playhead {
+            width: 100%;
+            min-width: 0;
+            height: 6px;
+            box-sizing: border-box;
+        }
+        .global-toolbar .sticky-bar-toggle {
+            position: static;
+            width: auto;
+            height: 36px;
+            padding: 0 12px;
+            margin-left: 0;
+            white-space: nowrap;
+        }
+        .toolbar-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-top: 10px;
+            min-width: 0;
+        }
+        .global-toolbar.collapsed .toolbar-controls {
+            display: none;
+        }
+        .global-toolbar .toolbar-settings,
+        .global-toolbar .toolbar-brand-group {
+            order: 0;
+        }
+        .global-toolbar .toolbar-brand-group {
+            border-right: none;
+            padding-right: 0;
+        }
+        .toolbar-utilities {
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 720px), (max-height: 500px) {
+            .global-toolbar.sticky-bar {
+                padding: 6px 8px;
+            }
+            .global-toolbar .toolbar-transport {
+                gap: 4px;
+            }
+            .toolbar-pinned {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 4px;
+            }
+            .global-toolbar .toolbar-pinned .toolbar-transport {
+                flex: 0 0 auto;
+                width: 100%;
+            }
+            .transport-position {
+                flex: 1 1 auto;
+            }
+            .toolbar-status .transport-readout {
+                font-size: 10px;
+            }
+            .global-toolbar .toolbar-transport .transport-btn,
+            .global-toolbar .sticky-bar-toggle {
+                flex: 1 1 0;
+                min-width: 0;
+                width: auto;
+                min-height: 44px;
+                height: 44px;
+                padding: 0 4px;
+                font-size: 11px;
+                box-sizing: border-box;
+            }
+            .global-toolbar #audioBtn {
+                flex-grow: 1.6;
+            }
+            .global-toolbar .sticky-bar-toggle {
+                flex-grow: 1.4;
+                margin-left: 0;
+            }
+            .global-toolbar #resetBtn {
+                flex-grow: 1.3;
+                white-space: normal;
+            }
+            .global-toolbar #playBtn,
+            .global-toolbar #stopBtn {
+                min-width: 44px;
+            }
+            @media (max-width: 390px) {
+                .global-toolbar .toolbar-transport .transport-btn,
+                .global-toolbar .sticky-bar-toggle {
+                    font-size: 10px;
+                    padding: 0 2px;
+                }
+                .global-toolbar #audioBtn {
+                    white-space: normal;
+                }
+            }
+            .toolbar-controls {
+                max-height: min(45vh, 360px);
+                max-height: min(45dvh, 360px);
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                scrollbar-gutter: stable;
+                padding-bottom: 4px;
+            }
+            .toolbar-controls > .toolbar-group {
+                flex: 0 0 auto;
+            }
+            .global-toolbar .toolbar-settings {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr);
+                gap: 10px;
+            }
+            .global-toolbar .toolbar-settings .control-group {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .global-toolbar .toolbar-settings .control-group > label {
+                min-width: 48px;
+                margin: 0;
+            }
+            .global-toolbar .toolbar-settings .tempo-display,
+            .global-toolbar .toolbar-settings .volume-display {
+                flex: 1;
+                min-width: 0;
+            }
+            .global-toolbar .toolbar-settings input[type="range"] {
+                flex: 1;
+                min-width: 40px;
+                width: auto;
+            }
+            .global-toolbar .toolbar-brand-group {
+                gap: 10px;
+            }
+            .global-toolbar .toolbar-menus button,
+            .global-toolbar .toolbar-utilities button {
+                min-height: 44px;
+            }
+        }

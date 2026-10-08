@@ -194,7 +194,8 @@ function createFixedLaneInstrumentSelects() {
         if (!mount || !channel) return;
         const select = document.createElement('select');
         select.id = id;
-        select.className = 'lane-instrument-select';
+        select.className = 'lane-instrument-select voice-instrument-select';
+        select.title = 'Master Beat instrument';
         select.style.color = color;
         populateInstrumentSelect(select, channel.sound);
         select.addEventListener('change', () => { channel.sound = select.value; });
@@ -263,11 +264,12 @@ function resetFixedChannel(channel, defaults) {
     if (channel.volEl) channel.volEl.value = String(defaults.volume);
     if (channel.muteEl) {
         channel.muteEl.classList.toggle('muted', defaults.muted);
-        channel.muteEl.textContent = defaults.muted ? 'Muted' : 'Mute';
+        channel.muteEl.textContent = channel.muteEl.closest('.compact-mix-controls')
+            ? 'M' : (defaults.muted ? 'Muted' : 'Mute');
     }
     if (channel.soloEl) {
         channel.soloEl.classList.remove('soloed');
-        channel.soloEl.textContent = 'Solo';
+        channel.soloEl.textContent = channel.soloEl.closest('.compact-mix-controls') ? 'S' : 'Solo';
     }
 }
 
@@ -305,6 +307,7 @@ function resetMixerToStartingState() {
     // Re-collapse the Master Beat click-track rail so reset matches the default
     // collapsed load state.
     collapsePulseRails();
+    document.getElementById('masterPatternControls').open = false;
 
     updateDerivedState(state);
     updatePhaseUI(state, ui);
@@ -341,7 +344,7 @@ function handleAddVoice(lane, prefix, container, color, label) {
 function handleRemoveVoiceChannel(prefix, voiceIndex) {
     const key = voiceChannelKeyForPrefix(prefix);
     const voiceArray = channels[key];
-    if (!voiceArray || voiceArray.length <= 1) return;
+    if (!voiceArray || voiceIndex < 0 || voiceIndex >= voiceArray.length) return;
 
     // Remove the specific strip DOM element
     const stripEl = document.getElementById(`strip_${prefix}_${voiceIndex}`);
@@ -349,6 +352,7 @@ function handleRemoveVoiceChannel(prefix, voiceIndex) {
 
     // Remove channel from array
     voiceArray.splice(voiceIndex, 1);
+    refreshSilenced(channels);
 
     // Re-index remaining strips' labels
     const lane = laneForPrefix(prefix);
@@ -561,16 +565,17 @@ document.addEventListener('wheel', (e) => {
     }
 }, { passive: true });
 
-// Collapse the sticky transport bar down to a single row of controls.
+// Start with the pinned transport only; the user owns the disclosure state.
 const stickyBarToggle = document.getElementById('stickyBarToggle');
 const stickyBar = document.getElementById('stickyBar');
 if (stickyBarToggle && stickyBar) {
     const syncStickyToggle = (collapsed) => {
         stickyBar.classList.toggle('collapsed', collapsed);
         stickyBarToggle.setAttribute('aria-expanded', String(!collapsed));
-        stickyBarToggle.textContent = collapsed ? '\u25be' : '\u25b4';
-        stickyBarToggle.title = collapsed ? 'Expand controls' : 'Collapse controls';
+        stickyBarToggle.textContent = collapsed ? 'Controls \u25be' : 'Controls \u25b4';
+        stickyBarToggle.title = collapsed ? 'Show additional controls' : 'Hide additional controls';
     };
+    syncStickyToggle(true);
     stickyBarToggle.addEventListener('click', () => {
         syncStickyToggle(!stickyBar.classList.contains('collapsed'));
     });
