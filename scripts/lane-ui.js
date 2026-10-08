@@ -328,9 +328,9 @@ export function addVoice(lane) {
     lane.voices.push(voice);
 }
 
-/** Removes a voice from a multi-voice lane (minimum 1 voice). */
+/** Removes a voice from a multi-voice lane. Grouping lanes retain one voice. */
 export function removeVoice(lane, index) {
-    if (!lane.isMultiVoice || lane.voices.length <= 1) return;
+    if (!lane.isMultiVoice || (lane.channelPrefix !== 'master' && lane.voices.length <= 1)) return;
     lane.voices.splice(index, 1);
 }
 
@@ -471,6 +471,7 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     const label = document.createElement('span');
     label.className = 'voice-label';
     label.textContent = `Voice ${voiceIndex + 1}`;
+    label.dataset.compactLabel = String(voiceIndex + 1);
     label.style.color = lane.color;
     identityGroup.appendChild(label);
 
@@ -479,12 +480,16 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     // rhythm while reclaiming the horizontal space the inline cell used.
     const instrumentSelect = buildVoiceInstrumentSelect(lane, voice, voiceIndex);
     instrumentSelect.title = `Voice ${voiceIndex + 1} instrument`;
+    const updateInstrumentTitle = () => {
+        labelArea.title = `${label.textContent}: ${instrumentSelect.selectedOptions[0]?.textContent || 'instrument'}`;
+    };
+    updateInstrumentTitle();
+    instrumentSelect.addEventListener('change', updateInstrumentTitle);
     identityGroup.appendChild(instrumentSelect);
 
     // Collapse/expand toggle for this voice's rail controls. Rendered first so
-    // it reads as a disclosure triangle at the head of the row. The identity row
-    // (Voice N + instrument + M/S) always stays visible; the mix + pattern
-    // sub-row hides. New voices (no stored state) default to collapsed on load.
+    // it reads as a disclosure triangle at the head of the row. Collapsed rails
+    // retain instrument and Solo/Mute controls. New voices default to collapsed.
     if (voice.railCollapsed === undefined) voice.railCollapsed = true;
     const railToggle = document.createElement('button');
     railToggle.type = 'button';
@@ -511,12 +516,13 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     // channel isn't linked yet the same elements are created later by the strut
     // below (mountSoloMute).
     let headSoloMuteControls = null;
+    let clrBtn = null;
+    let removeBtn = null;
 
-    // Remove button (not for first voice)
-    if (voiceIndex > 0) {
-        const removeBtn = document.createElement('button');
+    if (voiceIndex > 0 || lane.channelPrefix === 'master') {
+        removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
         removeBtn.className = 'remove-voice-btn';
-        removeBtn.textContent = '×';
         removeBtn.title = `Remove Voice ${voiceIndex + 1}`;
         removeBtn.addEventListener('click', () => {
             removeVoice(lane, voiceIndex);
@@ -525,7 +531,13 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
             }
             buildMultiVoiceLane(lane, state);
         });
-        identityGroup.appendChild(removeBtn);
+    } else if (lane._removeTrackButton) {
+        removeBtn = lane._removeTrackButton;
+    }
+    if (removeBtn) {
+        removeBtn.textContent = 'X';
+        removeBtn.classList.add('compact-delete-btn');
+        removeBtn.setAttribute('aria-label', removeBtn.title);
     }
 
     // Nudge control — built here, lands in the pattern group.
@@ -559,16 +571,17 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     const editControls = createVoiceEditControls(lane, voiceIndex, state);
 
     // Per-voice Solo/Mute — persistent head controls mounted in the always-visible
-    // identity group. The mix sub-row below carries only the volume fader (and
-    // Clear), so collapsing the rail never hides Mute/Solo.
+    // identity group alongside common pattern actions. The mix sub-row carries
+    // only the volume fader.
     const mountSoloMute = (channel) => {
         const controls = createSoloMuteControls(channel, `solo_${lane.channelPrefix}_${voiceIndex}`, `mute_${lane.channelPrefix}_${voiceIndex}`, { compact: true });
         controls.classList.add('head-mix-controls');
         identityGroup.appendChild(controls);
         headSoloMuteControls = controls;
+        if (clrBtn) controls.appendChild(clrBtn);
+        if (removeBtn) controls.appendChild(removeBtn);
         return controls;
     };
-    if (voice.channel) mountSoloMute(voice.channel);
 
     // Per-voice volume fader — own row in the mixer sub-panel.
     let volWrap = null;
@@ -587,33 +600,40 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         vol.step = '0.05';
         vol.value = String(voice.channel.volume ?? 0.5);
         volWrap.append(volLabel, vol);
+        vol.setAttribute('aria-label', `Voice ${voiceIndex + 1} volume`);
         voice.channel.volEl = vol;
         vol.addEventListener('input', () => { voice.channel.volume = parseFloat(vol.value); });
         mixGroup.insertBefore(volWrap, mixGroup.firstChild);
     }
 
-    // Clr button for this voice — sits in the mix sub-row, which now hosts the
-    // volume fader on its own line.
-    let clrBtn = null;
-    if (voice.channel) {
-        clrBtn = document.createElement('button');
-        clrBtn.type = 'button';
-        clrBtn.className = 'edit-btn edit-btn-sm';
-        clrBtn.textContent = 'Clear';
-        clrBtn.title = `Clear voice ${voiceIndex + 1}`;
-        clrBtn.addEventListener('click', () => clearVoice(lane, lane.voices[voiceIndex], state));
-        mixGroup.appendChild(clrBtn);
-    }
+    // Common pattern actions stay beside Solo/Mute even when collapsed.
+    clrBtn = document.createElement('button');
+    clrBtn.type = 'button';
+    clrBtn.className = 'edit-btn edit-btn-sm compact-clear-btn';
+    clrBtn.textContent = 'C';
+    clrBtn.title = `Clear voice ${voiceIndex + 1}`;
+    clrBtn.setAttribute('aria-label', clrBtn.title);
+    clrBtn.addEventListener('click', () => clearVoice(lane, lane.voices[voiceIndex], state));
+    if (voice.channel) mountSoloMute(voice.channel);
 
     // Assemble pattern group (edit ops + nudge).
     if (editControls) patternGroup.appendChild(editControls);
     if (nudgeControl) patternGroup.appendChild(nudgeControl);
 
     // Track-level controls for a multi-voice lane (currently the grouping lanes'
-    // Grouping / Phrase Length / Offset / remove) mount into the first voice's
+    // Grouping / Phrase Length / Offset) mount into the first voice's
     // collapsible rail sub-row so they stay contextually attached to the lane.
+    const trackGroup = document.createElement('div');
+    trackGroup.className = 'voice-control-group track-group';
     if (voiceIndex === 0 && typeof lane._mountGroupControls === 'function') {
-        lane._mountGroupControls(patternGroup);
+        lane._mountGroupControls(trackGroup);
+    }
+    for (const [group, title] of [[mixGroup, 'Sound'], [patternGroup, 'Pattern'], [trackGroup, 'Track timing']]) {
+        if (!group.childElementCount) continue;
+        const heading = document.createElement('span');
+        heading.className = 'voice-controls-heading';
+        heading.textContent = title;
+        group.prepend(heading);
     }
 
     // Cycle nav + help live in the first voice's row header (next to the voice
@@ -621,10 +641,13 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     // need no separate toolbar row.
     if (voiceIndex === 0 && lane._headerViewControls) {
         lane._headerViewControls.classList.add('lane-header-view-actions');
-        identityGroup.appendChild(lane._headerViewControls);
     }
 
     labelArea.append(identityGroup, mixGroup, patternGroup);
+    if (trackGroup.childElementCount) labelArea.appendChild(trackGroup);
+    if (voiceIndex === 0 && lane._headerViewControls) {
+        labelArea.insertBefore(lane._headerViewControls, mixGroup);
+    }
     if (voice.railCollapsed) labelArea.classList.add('rail-collapsed');
     row.appendChild(labelArea);
 
@@ -1241,7 +1264,7 @@ export function attachRailCollapseToggle(labelArea, { collapsed = false, label =
         isCollapsed = !isCollapsed;
         sync();
     });
-    identityGroup.appendChild(toggle);
+    identityGroup.insertBefore(toggle, identityGroup.firstChild);
     return toggle;
 }
 
@@ -1608,9 +1631,11 @@ export function wireLaneMixButtons(lanes, channels) {
     // volume, and solo/mute are colocated in the Master Beat rail.
     const beatControls = document.getElementById('masterBeatControls');
     if (beatControls && channels.driver) {
-        const mixGroup = beatControls.querySelector('.mix-group');
-        if (mixGroup && !beatControls.querySelector('#soloDriver')) {
-            mixGroup.appendChild(createSoloMuteControls(channels.driver, 'soloDriver', 'muteDriver'));
+        const identityGroup = beatControls.querySelector('.identity-group');
+        if (identityGroup && !beatControls.querySelector('#soloDriver')) {
+            const controls = createSoloMuteControls(channels.driver, 'soloDriver', 'muteDriver', { compact: true });
+            controls.classList.add('head-mix-controls');
+            identityGroup.appendChild(controls);
         }
     }
 

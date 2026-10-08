@@ -179,7 +179,10 @@ async function run() {
 
     const waitForApp = async () => {
         await page.waitForSelector('#masterGrid .voice-row:first-child .step-btn', { timeout: 10000 });
-        await page.waitForSelector('#sound_master_0', { timeout: 10000 });
+        await page.waitForSelector('#sound_master_0', { state: 'attached', timeout: 10000 });
+        if (await page.locator('#stickyBarToggle').getAttribute('aria-expanded') === 'false') {
+            await page.locator('#stickyBarToggle').click();
+        }
     };
 
     const snapshot = async () => page.evaluate(() => {
@@ -255,6 +258,9 @@ async function run() {
     });
 
     const setSelect = async (selector, value) => {
+        if (selector === '#masterPhraseCycles' && !(await page.locator('#masterPatternControls').evaluate(el => el.open))) {
+            await page.locator('#masterPatternControls > summary').click();
+        }
         await page.selectOption(selector, String(value));
         await page.locator(selector).dispatchEvent('change');
     };
@@ -542,6 +548,7 @@ async function run() {
         await page.locator('#addMasterVoiceBtn').click();
         await page.waitForTimeout(300);
         // Remove the middle voice (index 1 of 3) via its sequencer row remove button
+        await expandAllRails();
         await page.locator('#masterGrid .voice-row:nth-child(2) .remove-voice-btn').click();
         await page.waitForTimeout(300);
         // Re-add a voice
@@ -729,6 +736,7 @@ async function run() {
 
         // Editing a later phrase cycle must update that cycle's absolute step,
         // not the same displayed step in cycle one.
+        await expandAllRails();
         const groupingCycleRow = page.locator(glRow(1));
         const groupingNextCycle = groupingCycleRow.locator('.cycle-nav-btn[title="Next cycle"]');
         const groupingPreviousCycle = groupingCycleRow.locator('.cycle-nav-btn[title="Previous cycle"]');
@@ -955,6 +963,248 @@ async function run() {
             'A wrapped grouping lane should keep its sub-playhead visible on the pulse cell it marks.',
             wrappedPlayhead
         );
+
+        for (const viewport of [
+            { width: 320, height: 568 },
+            { width: 390, height: 844 },
+            { width: 667, height: 375 }
+        ]) {
+            await page.setViewportSize(viewport);
+            await page.reload();
+            await page.waitForFunction(() => document.querySelector('#playBtn')?.textContent === 'Pause');
+            const compact = await page.locator('#stickyBar').evaluate(el => ({
+                collapsed: el.classList.contains('collapsed'),
+                height: el.getBoundingClientRect().height,
+                expanded: document.querySelector('#stickyBarToggle').getAttribute('aria-expanded'),
+                controls: [...el.querySelectorAll('.toolbar-transport button')].map(button => {
+                    const rect = button.getBoundingClientRect();
+                    return { left: rect.left, right: rect.right, width: rect.width, height: rect.height };
+                })
+            }));
+            assert(compact.collapsed && compact.expanded === 'false' && compact.height <= 108,
+                'Small screens should start with a two-row pinned strip no taller than 108px.', { viewport, compact });
+            assert(compact.controls.every(rect => rect.left >= 0 && rect.right <= viewport.width && rect.width >= 44 && rect.height >= 44),
+                'Playback controls should fit the viewport and retain 44px touch targets.', { viewport, compact });
+            assert(same(await page.locator('.toolbar-transport button').evaluateAll(buttons => buttons.map(button => button.id)),
+                ['stickyBarToggle', 'audioBtn', 'playBtn', 'stopBtn', 'resetBtn']),
+                'Pinned buttons should place Controls first and Reset immediately after Stop.');
+            assert(!(await page.locator('#masterPatternControls').evaluate(el => el.open)),
+                'Shared Master pattern controls should start collapsed.');
+            for (const selector of ['#soundDriver', '#soloDriver', '#muteDriver']) {
+                assert(await page.locator(selector).isVisible(),
+                    'Master Beat should retain the same common controls as voice rows.', { viewport, selector });
+            }
+            const beatControlLayout = await page.locator('#masterBeatControls').evaluate(el => {
+                const controls = [...el.querySelectorAll('.identity-group select, .head-mix-controls button')]
+                    .map(control => control.getBoundingClientRect());
+                return controls.every(rect => rect.width >= 44) &&
+                    controls.every(rect => rect.height >= 44 && Math.abs(rect.top - controls[0].top) < 1 &&
+                        rect.right <= innerWidth);
+            });
+            assert(beatControlLayout, 'Master Beat common controls should fit one touch-friendly row.', viewport);
+            await page.locator('#soundDriver').selectOption('snare');
+            for (const [selector, activeClass] of [['#soloDriver', 'soloed'], ['#muteDriver', 'muted']]) {
+                await page.locator(selector).click();
+                assert(await page.locator(selector).evaluate((el, name) => el.classList.contains(name), activeClass),
+                    'Master Beat mix controls should work while collapsed.', { viewport, selector });
+                await page.locator(selector).click();
+            }
+            await page.locator('#masterBeatControls .rail-toggle-btn').click();
+            assert(await page.locator('#volDriver').isVisible(), 'Opening Master Beat should reveal its volume control.');
+            await page.locator('#masterBeatControls .rail-toggle-btn').click();
+            await page.locator('#masterPatternControls > summary').click();
+            for (const selector of ['#masterPhraseCycles', '#clearMasterBtn', '#masterInfoBtn',
+                '#masterPatternControls .cycle-nav', '#masterPatternControls .lane-edit-controls',
+                '#masterPatternControls .group-nudge-control']) {
+                assert(await page.locator(selector).isVisible(),
+                    'The Master panel should expose shared phrase, editing, and navigation controls.', { viewport, selector });
+            }
+            await page.locator('#masterPatternControls > summary').click();
+            for (const selector of ['#resetBtn', '#transportReadout', '.toolbar-status .mini-playhead']) {
+                assert(await page.locator(selector).isVisible() && await page.locator(selector).evaluate(el => {
+                    const rect = el.getBoundingClientRect();
+                    const pinned = document.querySelector('.toolbar-pinned').getBoundingClientRect();
+                    return rect.left >= pinned.left && rect.right <= pinned.right + 1 &&
+                        rect.top >= pinned.top && rect.bottom <= pinned.bottom + 1;
+                }), 'Reset and cycle position should remain visible inside the pinned strip.', { viewport, selector });
+            }
+            await page.waitForFunction(() => document.querySelector('#transportReadout')?.textContent.includes('Cycle'));
+            const progressBefore = await page.locator('#miniPlayhead').evaluate(el => el.style.transform);
+            await page.waitForFunction(previous => document.querySelector('#miniPlayhead')?.style.transform !== previous, progressBefore);
+            await page.locator('#groupingLanesContainer').scrollIntoViewIfNeeded();
+            assert(await page.locator('#resetBtn').evaluate(el => {
+                const rect = el.getBoundingClientRect();
+                return rect.top >= 0 && rect.bottom <= innerHeight;
+            }), 'Reset should remain on screen when scrolling to the rhythm tracks.', viewport);
+            await page.locator('#resetBtn').click();
+            assert(await page.locator('#soundDriver').inputValue() === 'kick' &&
+                !(await page.locator('#masterPatternControls').evaluate(el => el.open)) &&
+                await page.locator('#muteDriver').textContent() === 'M',
+                'Reset should restore the Beat instrument, compact mix labels, and closed Master panel.');
+            assert(await page.locator('#stickyBarToggle').getAttribute('aria-expanded') === 'false',
+                'Reset should be usable without opening additional controls.');
+            assert(await page.locator('h1.app-brand').isVisible() && await page.locator('#toolbarControls h1').count() === 0,
+                'App branding should stay visible outside the collapsed controls.');
+            assert(await page.locator('h1.app-brand').evaluate(el =>
+                el.getBoundingClientRect().bottom <= document.querySelector('#stickyBar').getBoundingClientRect().top),
+                'App branding should appear above the playback strip on small screens.');
+            await page.locator('#stickyBarToggle').click();
+            assert(await page.locator('#tempoSlider').isVisible() && await page.locator('#resetBtn').isVisible(),
+                'Opening Controls should expose settings and utility actions.');
+            await page.locator('#helpBtn').click();
+            assert(await page.locator('#helpModal').isVisible(), 'Help should remain accessible from Controls.');
+            await page.locator('#closeHelpModalBtn').click();
+            await page.locator('#stickyBarToggle').click();
+            assert(!(await page.locator('#toolbarControls').isVisible()), 'Closing Controls should hide the additional panel.');
+            await page.locator('#collapseAllRailsBtn').click();
+            await page.waitForTimeout(120);
+            const collapsedLanes = await page.locator('#groupingLanesContainer .grouping-lane-row').evaluateAll(rows =>
+                rows.map(row => {
+                    const rail = row.querySelector('.lane-label-area');
+                    const grid = row.querySelector('.voice-steps').getBoundingClientRect();
+                    const toggle = rail.querySelector('.rail-toggle-btn').getBoundingClientRect();
+                    return {
+                        top: grid.top, bottom: grid.bottom,
+                        instrumentWidth: rail.querySelector('.voice-instrument-select').getBoundingClientRect().width,
+                        commonControls: [...rail.querySelectorAll('.identity-group select, .head-mix-controls button')]
+                            .map(control => {
+                                const rect = control.getBoundingClientRect();
+                                return { left: rect.left, right: rect.right, top: rect.top, height: rect.height };
+                            }),
+                        deeperControlsHidden: rail.querySelector('.track-group').getBoundingClientRect().width === 0,
+                        toggleWidth: toggle.width, toggleHeight: toggle.height,
+                        expanded: rail.querySelector('.rail-toggle-btn').getAttribute('aria-expanded')
+                    };
+                }));
+            assert(collapsedLanes.every(lane => lane.instrumentWidth >= 70 && lane.instrumentWidth <= 141 &&
+                lane.deeperControlsHidden && lane.expanded === 'false' &&
+                lane.toggleWidth >= 44 && lane.toggleHeight >= 44),
+                'Collapsed lanes should retain instruments and disclosures while hiding deeper editing controls.', { viewport, collapsedLanes });
+            assert(collapsedLanes.every(lane => lane.commonControls.every(control =>
+                control.height >= 44 && control.left >= 0 && control.right <= viewport.width &&
+                (viewport.width <= 480 || Math.abs(control.top - lane.commonControls[0].top) < 1))),
+                'Common controls should fit compact headers with comfortable touch targets.', { viewport, collapsedLanes });
+            assert(collapsedLanes.every((lane, index) => index === 0 ||
+                lane.top - collapsedLanes[index - 1].bottom <= (viewport.width <= 480 ? 98 : 52)),
+                'Phone lanes should stack with compact control rows between step grids.', { viewport, collapsedLanes });
+            const compactRail = page.locator('#groupingLanesContainer .lane-label-area').first();
+            for (const selector of ['.solo-btn', '.mute-btn']) {
+                await compactRail.locator(selector).click();
+                assert(await compactRail.locator(selector).evaluate((el, activeClass) => el.classList.contains(activeClass),
+                    selector === '.solo-btn' ? 'soloed' : 'muted'),
+                    'Common mix controls should work without expanding the rail.', { viewport, selector });
+                await compactRail.locator(selector).click();
+            }
+            await compactRail.locator('.voice-instrument-select').selectOption('snare');
+            const otherPatternBeforeClear = await page.locator('#groupingLanesContainer .grouping-lane-row').nth(1)
+                .locator('.step-btn[aria-pressed="true"]').count();
+            await compactRail.locator('.compact-clear-btn').click();
+            assert(await page.locator('#groupingLanesContainer .grouping-lane-row').first()
+                .locator('.step-btn[aria-pressed="true"]').count() === 0 &&
+                await page.locator('#groupingLanesContainer .grouping-lane-row').nth(1)
+                    .locator('.step-btn[aria-pressed="true"]').count() === otherPatternBeforeClear,
+                'Compact Clear should clear only its voice pattern.');
+            await page.locator('#groupingLanesContainer .rail-toggle-btn').first().click();
+            assert(await compactRail.locator('.track-group').isVisible(),
+                'Opening a compact track should reveal deeper timing controls.');
+            assert(await compactRail.locator('.voice-instrument-select').inputValue() === 'snare',
+                'The instrument chosen from a compact rail should remain selected when expanded.');
+            await page.locator('#expandAllRailsBtn').click();
+            await page.waitForTimeout(160);
+            const voiceLayout = await page.locator('#groupingLanesContainer .lane-label-area').first().evaluate(el => {
+                const rail = el.getBoundingClientRect();
+                const instrument = el.querySelector('.voice-instrument-select').getBoundingClientRect();
+                return {
+                    instrumentWidth: instrument.width,
+                    railWidth: rail.width,
+                    trackSettingsSeparate: !!el.querySelector(':scope > .track-group .grouping-count-select'),
+                    clearInHeader: !!el.querySelector('.head-mix-controls button[title^="Clear voice"]'),
+                    touchTargets: [...el.querySelectorAll('button')].filter(button => button.getBoundingClientRect().width > 0)
+                        .map(button => ({ width: button.getBoundingClientRect().width, height: button.getBoundingClientRect().height })),
+                    overflow: [...el.querySelectorAll('select, button, input')].some(control =>
+                        control.getBoundingClientRect().width > 0 && control.getBoundingClientRect().right > rail.right + 1)
+                };
+            });
+            assert(voiceLayout.instrumentWidth >= voiceLayout.railWidth - 24 && !voiceLayout.overflow,
+                'Mobile voice instrument selectors should use the header width without clipping controls.', { viewport, voiceLayout });
+            assert(voiceLayout.trackSettingsSeparate && voiceLayout.clearInHeader,
+                'Track timing should be separate from pattern editing, with Clear in the common controls.', voiceLayout);
+            assert(voiceLayout.touchTargets.every(rect => rect.width >= 43 && rect.height >= 44),
+                'Expanded voice controls should retain comfortable touch targets.', { viewport, voiceLayout });
+            await page.locator('#collapseAllRailsBtn').click();
+            await page.locator('#groupingLanesContainer .compact-delete-btn').first().click();
+            assert(await page.locator('#groupingLanesContainer .grouping-lane-row').count() === 1 &&
+                await page.locator('#groupingLanesContainer .voice-label').first().textContent() === 'Voice 1',
+                'Compact Delete should remove its grouping track and renumber the remaining track.');
+            await page.locator('#addMasterVoiceBtn').click();
+            assert(await page.locator('#masterGrid .compact-delete-btn').count() === 2,
+                'Every Master voice should expose Delete.');
+            await page.locator('#masterGrid .compact-delete-btn').last().click();
+            assert(await page.locator('#masterGrid .voice-row').count() === 1,
+                'Compact Delete should remove an extra Master voice without removing the Master lane.');
+            await page.locator('#masterGrid .compact-delete-btn').click();
+            assert(await page.locator('#masterGrid .voice-row').count() === 0 &&
+                await page.locator('.master-beat-grid').isVisible() &&
+                await page.locator('#addMasterVoiceBtn').isVisible(),
+                'Removing the last Master voice should retain the Beat reference and Add Voice.');
+            await page.locator('#addMasterVoiceBtn').click();
+            assert(await page.locator('#masterGrid .voice-row').count() === 1 &&
+                await page.locator('#sound_master_0').isVisible(),
+                'Add Voice should recreate a usable first Master voice after the lane is emptied.');
+            assert(await page.locator('#masterBeatControls .compact-clear-btn, #masterBeatControls .compact-delete-btn').count() === 0,
+                'The reference Beat should not expose pattern Clear or Delete.');
+        }
+
+        for (const width of [768, 1440]) {
+            await page.setViewportSize({ width, height: 900 });
+            await page.reload();
+            await page.waitForFunction(() => document.querySelector('#playBtn')?.textContent === 'Pause');
+            await page.waitForTimeout(160);
+            assert(await page.locator('#stickyBarToggle').getAttribute('aria-expanded') === 'false' &&
+                !(await page.locator('#toolbarControls').isVisible()),
+                'Top controls should also start collapsed on wider screens.', { width });
+            const inlineLanes = await page.locator('#groupingLanesContainer .voice-row').evaluateAll(rows =>
+                rows.map(row => {
+                    const rail = row.querySelector('.lane-label-area').getBoundingClientRect();
+                    const grid = row.querySelector('.voice-steps').getBoundingClientRect();
+                    const select = row.querySelector('.voice-instrument-select').getBoundingClientRect();
+                    return { railRight: rail.right, gridLeft: grid.left, top: grid.top, bottom: grid.bottom,
+                        selectWidth: select.width, aligned: Math.abs(rail.top - grid.top) < 1 };
+                }));
+            assert(inlineLanes.every((lane, index) => lane.aligned && lane.selectWidth >= 130 && lane.selectWidth <= 141 &&
+                lane.railRight <= lane.gridLeft && (index === 0 || lane.top - inlineLanes[index - 1].bottom <= 6)),
+                'Wider screens should retain inline common controls and tightly stacked step grids.', { width, inlineLanes });
+        }
+
+        await page.locator('#stickyBarToggle').click();
+        await page.setViewportSize({ width: 390, height: 844 });
+        assert(await page.locator('#stickyBarToggle').getAttribute('aria-expanded') === 'true',
+            'Resizing should preserve a user-opened top controls panel.');
+        await page.locator('#stickyBarToggle').click();
+        await page.setViewportSize({ width: 1440, height: 900 });
+        assert(await page.locator('#stickyBarToggle').getAttribute('aria-expanded') === 'false',
+            'Resizing should not reopen a user-closed top controls panel.');
+        await page.locator('#masterGrid .compact-delete-btn').click();
+        await setSelect('#rhythmA', 3);
+        assert(await page.locator('#masterGrid .voice-row').count() === 0,
+            'Meter changes should preserve an empty Master lane.');
+        await page.locator('#stickyBarToggle').click();
+        await page.locator('#shareBtn').click();
+        await page.waitForFunction(() => globalThis.__lastCopiedShareUrl?.includes('?s='));
+        const emptyMasterShareUrl = await page.evaluate(() => globalThis.__lastCopiedShareUrl);
+        await page.goto(emptyMasterShareUrl, { waitUntil: 'networkidle' });
+        await page.waitForSelector('.master-beat-grid');
+        assert(await page.locator('#masterGrid .voice-row').count() === 0,
+            'Sharing and loading should preserve zero Master voices.');
+        await page.locator('#addMasterVoiceBtn').click();
+        await waitForApp();
+        assert(await page.locator('#masterGrid .voice-row').count() === 1,
+            'A shared empty Master lane should allow adding a fresh voice.');
+        await page.locator('#masterGrid .compact-delete-btn').click();
+        await page.locator('#resetBtn').click();
+        await waitForApp();
+        assert(await page.locator('#masterGrid .voice-row').count() === 1,
+            'Reset should restore the starting Master voice after the lane is emptied.');
 
         assert(pageErrors.length === 0, 'No page errors should be emitted.', pageErrors);
         assert(consoleErrors.length === 0, 'No console errors should be emitted.', consoleErrors);
