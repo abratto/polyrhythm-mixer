@@ -489,7 +489,7 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
 
     // Collapse/expand toggle for this voice's rail controls. Rendered first so
     // it reads as a disclosure triangle at the head of the row. Collapsed rails
-    // retain instrument and Solo/Mute controls. New voices default to collapsed.
+    // retain instrument and Delete controls. New voices default to collapsed.
     if (voice.railCollapsed === undefined) voice.railCollapsed = true;
     const railToggle = document.createElement('button');
     railToggle.type = 'button';
@@ -511,10 +511,7 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     identityGroup.insertBefore(railToggle, identityGroup.firstChild);
     lane._voiceRailCtrls.push(setRailCollapsed);
 
-    // Persistent M/S head controls (Ableton-style): always visible in the header
-    // even when the rail is collapsed. These bind to `voice.channel`; when the
-    // channel isn't linked yet the same elements are created later by the strut
-    // below (mountSoloMute).
+    // Channels linked after rendering mount the same expanded mix controls.
     let headSoloMuteControls = null;
     let clrBtn = null;
     let removeBtn = null;
@@ -538,6 +535,10 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         removeBtn.textContent = 'X';
         removeBtn.classList.add('compact-delete-btn');
         removeBtn.setAttribute('aria-label', removeBtn.title);
+        const deleteControls = document.createElement('div');
+        deleteControls.className = 'head-mix-controls';
+        deleteControls.appendChild(removeBtn);
+        identityGroup.appendChild(deleteControls);
     }
 
     // Nudge control — built here, lands in the pattern group.
@@ -570,16 +571,13 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     // Per-voice edit controls (Rnd/Rev/Copy)
     const editControls = createVoiceEditControls(lane, voiceIndex, state);
 
-    // Per-voice Solo/Mute — persistent head controls mounted in the always-visible
-    // identity group alongside common pattern actions. The mix sub-row carries
-    // only the volume fader.
+    // Solo/Mute/Clear are revealed with volume; Delete stays in the header.
     const mountSoloMute = (channel) => {
         const controls = createSoloMuteControls(channel, `solo_${lane.channelPrefix}_${voiceIndex}`, `mute_${lane.channelPrefix}_${voiceIndex}`, { compact: true });
-        controls.classList.add('head-mix-controls');
-        identityGroup.appendChild(controls);
+        controls.classList.add('expanded-mix-actions');
+        mixGroup.appendChild(controls);
         headSoloMuteControls = controls;
         if (clrBtn) controls.appendChild(clrBtn);
-        if (removeBtn) controls.appendChild(removeBtn);
         return controls;
     };
 
@@ -606,7 +604,7 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         mixGroup.insertBefore(volWrap, mixGroup.firstChild);
     }
 
-    // Common pattern actions stay beside Solo/Mute even when collapsed.
+    // Clear remains available alongside Solo/Mute in the expanded mix controls.
     clrBtn = document.createElement('button');
     clrBtn.type = 'button';
     clrBtn.className = 'edit-btn edit-btn-sm compact-clear-btn';
@@ -614,6 +612,7 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     clrBtn.title = `Clear voice ${voiceIndex + 1}`;
     clrBtn.setAttribute('aria-label', clrBtn.title);
     clrBtn.addEventListener('click', () => clearVoice(lane, lane.voices[voiceIndex], state));
+    mixGroup.appendChild(clrBtn);
     if (voice.channel) mountSoloMute(voice.channel);
 
     // Assemble pattern group (edit ops + nudge).
@@ -674,9 +673,7 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     if (voice.railCollapsed) labelArea.classList.add('rail-collapsed');
     row.appendChild(labelArea);
 
-    // Expose the header M/S mount so channels that link AFTER this row was built
-    // (share-load / add-voice ordering) can still land their controls in the
-    // header rather than the sub-row.
+    // Mount mix actions for channels linked after rendering (share-load / add-voice).
     voice._mountHeadMix = (channel) => {
         if (headSoloMuteControls) return headSoloMuteControls;
         return mountSoloMute(channel);
@@ -1602,7 +1599,7 @@ export function addLaneEditControls(lane, state) {
 function createSoloMuteControls(channel, idSolo, idMute, { solo = true, compact = false } = {}) {
     const wrap = document.createElement('div');
     wrap.className = 'voice-mix-controls';
-    // Compact head buttons render as one-letter M/S while keeping the full
+    // Compact buttons render as one-letter M/S while keeping the full
     // word in the accessible name / title.
     const soloText = (on) => compact ? 'S' : (on ? 'Soloed' : 'Solo');
     const muteText = (on) => compact ? 'M' : (on ? 'Muted' : 'Mute');
@@ -1654,11 +1651,11 @@ export function wireLaneMixButtons(lanes, channels) {
     // volume, and solo/mute are colocated in the Master Beat rail.
     const beatControls = document.getElementById('masterBeatControls');
     if (beatControls && channels.driver) {
-        const identityGroup = beatControls.querySelector('.identity-group');
-        if (identityGroup && !beatControls.querySelector('#soloDriver')) {
+        const mixGroup = beatControls.querySelector('.mix-group');
+        if (mixGroup && !beatControls.querySelector('#soloDriver')) {
             const controls = createSoloMuteControls(channels.driver, 'soloDriver', 'muteDriver', { compact: true });
-            controls.classList.add('head-mix-controls');
-            identityGroup.appendChild(controls);
+            controls.classList.add('expanded-mix-actions');
+            mixGroup.appendChild(controls);
         }
     }
 

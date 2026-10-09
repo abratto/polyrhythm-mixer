@@ -14,7 +14,7 @@
  * starts reading state values.
  */
 import { getDomRefs } from './dom.js';
-import { createState, resetFlashState, updateDerivedState, updatePhaseUI } from './state.js';
+import { createState, resetFlashState, updateDerivedState, updatePhaseUI, getPolyrhythmDescription } from './state.js';
 import { createLanes, resetPatterns, resizeAllLanes, buildAllLanes, buildLane, wireLaneClearButtons, wireLaneInfoButtons, markCurrentButtons, addVoice, updateVoiceInstrumentLabels, applyMixVisuals, addLaneEditControls, setMixChannels, wireLaneMixButtons } from './lanes.js';
 import { wirePulseRailCollapses, collapsePulseRails, setAllRailsCollapsed, setScrollFollow, isScrollFollow, onScrollFollowChange } from './lane-ui.js';
 import { createChannels, populateMenus, wireChannels, toggleAudio, addVoiceChannel, syncAudioStartTime, startAudioScheduler, stopAudioScheduler, resetAudioScheduler, populateInstrumentSelect, refreshSilenced } from './audio.js';
@@ -127,8 +127,7 @@ function bindChannelToVoice(prefix, voiceIndex, channel) {
 
     lane.voices[voiceIndex].channel = channel;
     channel.onInstrumentChange = () => updateVoiceInstrumentLabels(lane);
-    // If the row was already built with a header M/S mount, land the controls
-    // there (persistent header) instead of the expandable mix sub-row.
+    // Rows rendered before channel binding still need their expanded mix actions.
     lane.voices[voiceIndex]._mountHeadMix?.(channel);
     return channel;
 }
@@ -233,10 +232,15 @@ function rebuildSystem(resetWheels = false) {
     updateBeatSchemeSummary();
 }
 
-/** One-line summary of the current meter ratio shown in the Polyrhythm Beat Scheme header. */
+/** Updates the contextual explanation of the selected meters. */
 function updateBeatSchemeSummary() {
-    if (!ui.beatSchemeSummary) return;
-    ui.beatSchemeSummary.textContent = `— ${state.A} against ${state.B}`;
+    const description = getPolyrhythmDescription(state);
+    ui.beatSchemeDescription.replaceChildren(...Object.entries(description).map(([key, text]) => {
+        const line = document.createElement('div');
+        line.className = `polyrhythm-description-${key}`;
+        line.textContent = text;
+        return line;
+    }));
     const sub = document.querySelector('.pulses-section .lane-group-sub');
     if (sub) sub.textContent = `(${state.mainTeeth} pulses per cycle)`;
 }
@@ -461,7 +465,10 @@ syncGroupingLanesToFrame();
 populateMenus(channels);
 wireChannels(channels);
 wireLaneClearButtons(lanes, state);
-wireLaneInfoButtons(lanes);
+wireLaneInfoButtons({
+    ...lanes,
+    beatScheme: { infoBtn: ui.beatSchemeInfoBtn, descriptionEl: ui.beatSchemeDescription }
+});
 
 // Cache global volume to avoid Number.parseInt per trigger
 let cachedGlobalVolume = Number.parseInt(ui.masterVolumeSlider.value, 10) / 100;

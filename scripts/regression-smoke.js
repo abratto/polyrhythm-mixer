@@ -200,7 +200,7 @@ async function run() {
             meters: {
                 A: selectValue('#rhythmA'),
                 B: selectValue('#rhythmB'),
-                beatScheme: document.querySelector('#beatSchemeSummary')?.textContent?.trim() ?? null,
+                beatScheme: document.querySelector('.polyrhythm-description-title')?.textContent?.trim() ?? null,
                 masterPhrase: selectValue('#masterPhraseCycles'),
                 tempo: document.querySelector('#tempoSlider')?.value ?? null,
                 masterVolume: selectValue('#masterVolumeSlider')
@@ -499,8 +499,8 @@ async function run() {
         await page.locator('#resetBtn').click();
         await page.waitForFunction(() => document.querySelector('#rhythmA')?.value === '6' && document.querySelector('#rhythmB')?.value === '4');
         assert(
-            await page.locator('#beatSchemeSummary').textContent() === '— 6 against 4',
-            'Reset Mixer should restore the beat-scheme summary to the starting meter ratio.'
+            await page.locator('.polyrhythm-description-title').textContent() === '6 against 4 Polyrhythm',
+            'Reset Mixer should restore the meter explanation to the starting ratio.'
         );
 
         // --- Button highlight advancement ---
@@ -990,10 +990,12 @@ async function run() {
                 'Pinned buttons should place Controls first and Reset immediately after Stop.');
             assert(!(await page.locator('#masterPatternControls').evaluate(el => el.open)),
                 'Shared Master pattern controls should start collapsed.');
-            for (const selector of ['#soundDriver', '#soloDriver', '#muteDriver']) {
+            for (const selector of ['#soundDriver']) {
                 assert(await page.locator(selector).isVisible(),
                     'Master Beat should retain the same common controls as voice rows.', { viewport, selector });
             }
+            assert(!(await page.locator('#soloDriver').isVisible()) && !(await page.locator('#muteDriver').isVisible()),
+                'Beat mix actions should be hidden until its controls open.');
             const beatControlLayout = await page.locator('#masterBeatControls').evaluate(el => {
                 const controls = [...el.querySelectorAll('.identity-group select, .head-mix-controls button')]
                     .map(control => control.getBoundingClientRect());
@@ -1003,13 +1005,13 @@ async function run() {
             });
             assert(beatControlLayout, 'Master Beat common controls should fit one touch-friendly row.', viewport);
             await page.locator('#soundDriver').selectOption('snare');
+            await page.locator('#masterBeatControls .rail-toggle-btn').click();
             for (const [selector, activeClass] of [['#soloDriver', 'soloed'], ['#muteDriver', 'muted']]) {
                 await page.locator(selector).click();
                 assert(await page.locator(selector).evaluate((el, name) => el.classList.contains(name), activeClass),
                     'Master Beat mix controls should work while collapsed.', { viewport, selector });
                 await page.locator(selector).click();
             }
-            await page.locator('#masterBeatControls .rail-toggle-btn').click();
             assert(await page.locator('#volDriver').isVisible(), 'Opening Master Beat should reveal its volume control.');
             await page.locator('#masterBeatControls .rail-toggle-btn').click();
             await page.locator('#masterPatternControls > summary').click();
@@ -1088,11 +1090,18 @@ async function run() {
                 lane.top - collapsedLanes[index - 1].bottom <= (viewport.width <= 480 ? 98 : 52)),
                 'Phone lanes should stack with compact control rows between step grids.', { viewport, collapsedLanes });
             const compactRail = page.locator('#groupingLanesContainer .lane-label-area').first();
+            for (const selector of ['.solo-btn', '.mute-btn', '.compact-clear-btn']) {
+                assert(!(await compactRail.locator(selector).isVisible()),
+                    'Collapsed voices should hide Solo, Mute and Clear.', { viewport, selector });
+            }
+            assert(await compactRail.locator('.compact-delete-btn').isVisible(),
+                'Delete should remain available when the voice is collapsed.');
+            await compactRail.locator('.rail-toggle-btn').click();
             for (const selector of ['.solo-btn', '.mute-btn']) {
                 await compactRail.locator(selector).click();
                 assert(await compactRail.locator(selector).evaluate((el, activeClass) => el.classList.contains(activeClass),
                     selector === '.solo-btn' ? 'soloed' : 'muted'),
-                    'Common mix controls should work without expanding the rail.', { viewport, selector });
+                    'Mix controls should work in the expanded rail.', { viewport, selector });
                 await compactRail.locator(selector).click();
             }
             await compactRail.locator('.voice-instrument-select').selectOption('snare');
@@ -1104,7 +1113,6 @@ async function run() {
                 await page.locator('#groupingLanesContainer .grouping-lane-row').nth(1)
                     .locator('.step-btn[aria-pressed="true"]').count() === otherPatternBeforeClear,
                 'Compact Clear should clear only its voice pattern.');
-            await page.locator('#groupingLanesContainer .rail-toggle-btn').first().click();
             if (viewport.width <= 480) {
                 assert(await compactRail.locator('.pattern-group').isVisible() &&
                     !(await compactRail.locator('.track-group').isVisible()) &&
@@ -1154,7 +1162,7 @@ async function run() {
                     railWidth: rail.width,
                     railHeight: rail.height,
                     trackSettingsSeparate: !!el.querySelector(':scope > .track-group .grouping-count-select'),
-                    clearInHeader: !!el.querySelector('.head-mix-controls button[title^="Clear voice"]'),
+                    clearInHeader: !!el.querySelector('.expanded-mix-actions button[title^="Clear voice"]'),
                     touchTargets: [...el.querySelectorAll('button')].filter(button => button.getBoundingClientRect().width > 0)
                         .map(button => ({ width: button.getBoundingClientRect().width, height: button.getBoundingClientRect().height })),
                     overflow: [...el.querySelectorAll('select, button, input')].some(control =>
@@ -1166,7 +1174,7 @@ async function run() {
             assert(voiceLayout.railHeight <= (viewport.width <= 480 ? 350 : 300),
                 'Expanded phone and landscape controls should conserve vertical space.', { viewport, voiceLayout });
             assert(voiceLayout.trackSettingsSeparate && voiceLayout.clearInHeader,
-                'Track timing should be separate from pattern editing, with Clear in the common controls.', voiceLayout);
+                'Track timing should be separate from pattern editing, with Clear in the expanded mix controls.', voiceLayout);
             assert(voiceLayout.touchTargets.every(rect => rect.width >= 43 && rect.height >= 44),
                 'Expanded voice controls should retain comfortable touch targets.', { viewport, voiceLayout });
             if (viewport.width <= 480) {
@@ -1207,6 +1215,62 @@ async function run() {
                 'The reference Beat should not expose pattern Clear or Delete.');
         }
 
+        for (const width of [320, 390, 768, 1440]) {
+            await page.setViewportSize({ width, height: 900 });
+            await page.reload();
+            await page.waitForFunction(() => document.querySelector('#playBtn')?.textContent === 'Pause');
+            const help = page.locator('#beatSchemeInfoBtn');
+            const explanation = page.locator('#beatSchemeDescription');
+            assert(await help.isVisible() && !(await explanation.isVisible()),
+                'Meter help should be discoverable with its explanation initially hidden.', { width });
+            await help.focus();
+            await page.keyboard.press('Enter');
+            assert(await explanation.isVisible() && await help.getAttribute('aria-expanded') === 'true' &&
+                (await explanation.textContent()).includes('Master Cycle (12 pulses per cycle)'),
+                'Keyboard activation should explain the initial 6 against 4 grid.', { width });
+            await page.locator('#rhythmA').selectOption('5');
+            assert((await explanation.textContent()).includes('5 against 4') &&
+                (await explanation.textContent()).includes('Master Cycle (20 pulses per cycle)') &&
+                (await explanation.textContent()).includes('Meter A (5 beats per cycle) · 5 groups of 4 beats') &&
+                (await explanation.textContent()).includes('Meter B (4 beats per cycle) · 4 groups of 5 beats'),
+                'Open meter help should update its ratio and grid arithmetic.', { width });
+            assert(await help.evaluate(el => {
+                const rect = el.getBoundingClientRect();
+                return rect.left >= 0 && rect.right <= innerWidth &&
+                    document.documentElement.scrollWidth <= innerWidth;
+            }), 'Meter help should fit without horizontal overflow.', { width });
+            await help.click();
+            assert(!(await explanation.isVisible()) && await help.getAttribute('aria-expanded') === 'false',
+                'Meter help should close independently of lane controls.', { width });
+            await page.locator('#resetBtn').click();
+            assert((await explanation.textContent()).includes('6 against 4'),
+                'Reset should restore the meter explanation.', { width });
+        }
+
+        for (const width of [320, 390, 600, 768]) {
+            await page.setViewportSize({ width, height: 844 });
+            await page.reload();
+            await page.waitForFunction(() => document.querySelector('#playBtn')?.textContent === 'Pause');
+            for (const selector of ['#masterBeatControls .rail-toggle-btn', '#masterGrid .rail-toggle-btn', '#groupingLanesContainer .rail-toggle-btn']) {
+                const toggle = page.locator(selector).first();
+                await toggle.evaluate(button => {
+                    window.scrollTo(0, Math.max(0, button.getBoundingClientRect().top + scrollY - 200));
+                });
+                await page.waitForTimeout(180);
+                const before = await toggle.evaluate(button => ({ top: button.getBoundingClientRect().top, scroll: scrollY }));
+                await toggle.click();
+                await page.waitForTimeout(250);
+                const expanded = await toggle.evaluate(button => ({ top: button.getBoundingClientRect().top, scroll: scrollY }));
+                assert(Math.abs(expanded.top - before.top) <= 2 && Math.abs(expanded.scroll - before.scroll) <= 1,
+                    'Expanding a lane should keep the disclosure where the user tapped it.', { width, selector, before, expanded });
+                await toggle.click();
+                await page.waitForTimeout(250);
+                const collapsed = await toggle.evaluate(button => ({ top: button.getBoundingClientRect().top, scroll: scrollY }));
+                assert(Math.abs(collapsed.top - before.top) <= 2 && Math.abs(collapsed.scroll - before.scroll) <= 1,
+                    'Collapsing a lane should preserve the disclosure position.', { width, selector, before, collapsed });
+            }
+        }
+
         for (const width of [768, 1440]) {
             await page.setViewportSize({ width, height: 900 });
             await page.reload();
@@ -1220,36 +1284,67 @@ async function run() {
                     const rail = row.querySelector('.lane-label-area').getBoundingClientRect();
                     const grid = row.querySelector('.voice-steps').getBoundingClientRect();
                     const select = row.querySelector('.voice-instrument-select').getBoundingClientRect();
-                    return { railRight: rail.right, gridLeft: grid.left, top: grid.top, bottom: grid.bottom,
+                    return { railWidth: rail.width, railRight: rail.right, gridLeft: grid.left, top: grid.top, bottom: grid.bottom,
                         selectWidth: select.width, aligned: Math.abs(rail.top - grid.top) < 1 };
                 }));
             assert(inlineLanes.every((lane, index) => lane.aligned && lane.selectWidth >= 130 && lane.selectWidth <= 141 &&
+                Math.abs(lane.railWidth - 232) < 1 &&
                 lane.railRight <= lane.gridLeft && (index === 0 || lane.top - inlineLanes[index - 1].bottom <= 6)),
-                'Wider screens should retain inline common controls and tightly stacked step grids.', { width, inlineLanes });
+                'Wider screens should reclaim 100px from the header and retain tightly stacked step grids.', { width, inlineLanes });
         }
 
         for (const width of [320, 360, 390, 430, 480, 481, 539, 540, 599, 600, 666, 667, 720, 721, 768, 859, 860, 900, 949, 950, 1024, 1260, 1279, 1280, 1369, 1370, 1399, 1400, 1440, 1600, 1920]) {
             await page.setViewportSize({ width, height: 900 });
-            if (width <= 720) {
+            await page.waitForTimeout(180);
+            assert(await page.locator('#beatSchemeInfoBtn').evaluate(button => {
+                const help = button.getBoundingClientRect();
+                const meter = document.querySelector('#rhythmB').getBoundingClientRect();
+                return help.left >= meter.right && Math.abs(help.top + help.height / 2 - meter.top - meter.height / 2) <= 1;
+            }), 'Meter help should always sit to the right of Meter B on the same row.', { width });
+            {
                 await page.locator('#masterPatternControls > summary').click();
+                await page.waitForTimeout(180);
                 const masterPanel = await page.locator('#masterPatternControls .lane-toolbar').evaluate(el => {
                     const rect = el.getBoundingClientRect();
+                    const items = [...el.querySelectorAll('.meter-master-select, .lane-edit-controls button, #clearMasterBtn, .group-nudge-control, .lane-view-actions')];
+                    const rows = [];
+                    let unnecessaryWrap = false;
+                    const availableWidth = el.clientWidth - parseFloat(getComputedStyle(el).paddingLeft) -
+                        parseFloat(getComputedStyle(el).paddingRight);
+                    const gap = parseFloat(getComputedStyle(el).columnGap);
+                    let used = 0;
+                    items.forEach(item => {
+                        const bounds = item.getBoundingClientRect();
+                        const center = Math.round(bounds.top + bounds.height / 2);
+                        if (rows.length && rows[rows.length - 1] !== center) {
+                            if (used + gap + bounds.width <= availableWidth - 1) unnecessaryWrap = true;
+                            used = 0;
+                        }
+                        if (rows[rows.length - 1] !== center) rows.push(center);
+                        used += (used ? gap : 0) + bounds.width;
+                    });
                     return {
                         height: rect.height,
+                        rows: rows.length,
+                        unnecessaryWrap,
                         controlsFit: [...el.querySelectorAll('button, select')].every(control => {
                             const bounds = control.getBoundingClientRect();
-                            return bounds.width >= 43 && bounds.height >= 43 &&
+                            return (innerWidth > 720 || (bounds.width >= 43 && bounds.height >= 43)) &&
                                 bounds.left >= rect.left - 1 && bounds.right <= rect.right + 1;
                         })
                     };
                 });
-                assert(masterPanel.controlsFit && masterPanel.height <= (width <= 480 ? 210 : width <= 666 ? 165 : 110),
-                    'Shared Master controls should use compact rows with touch-friendly, unclipped controls.',
+                assert(masterPanel.controlsFit && !masterPanel.unnecessaryWrap &&
+                    masterPanel.height <= (width <= 480 ? 210 : width <= 539 ? 165 : width <= 720 ? 110 : width < 950 ? 85 : 50),
+                    'Shared Master controls should fill compact rows without clipping or unnecessary breaks.',
                     { width, masterPanel });
                 await page.locator('#masterPatternControls > summary').click();
             }
             await page.locator('#collapseAllRailsBtn').click();
             await page.waitForTimeout(180);
+            const collapsedActions = await page.locator('.sequencer-workspace .expanded-mix-actions button').evaluateAll(buttons =>
+                buttons.every(button => button.getBoundingClientRect().width === 0));
+            assert(collapsedActions, 'Solo, Mute and Clear should hide for every collapsed lane.', { width });
             const measureGrids = () => page.locator('.master-beat-voice-row, #masterGrid .voice-row, #groupingLanesContainer .voice-row')
                 .evaluateAll(rows => rows.map(row => {
                     const grid = row.querySelector('.voice-steps').getBoundingClientRect();
@@ -1264,32 +1359,60 @@ async function run() {
             for (let index = 0; index < await toggles.count(); index++) {
                 await toggles.nth(index).click();
                 await page.waitForTimeout(180);
+                assert(await toggles.nth(index).evaluate(button =>
+                    [...button.closest('.lane-label-area').querySelectorAll('.expanded-mix-actions button')]
+                        .every(control => control.getBoundingClientRect().width > 0)),
+                    'Expanding a lane should reveal all its mix actions.', { width, index });
                 const after = await measureGrids();
                 const expandedLayout = await toggles.nth(index).evaluate(button => {
                     const rail = button.closest('.lane-label-area');
                     const rect = rail.getBoundingClientRect();
+                    const flowSelector = '.identity-group, .lane-volume, .expanded-mix-actions button, .voice-panel-switch, .voice-edit-controls button, .voice-nudge-control, .grouping-controls .control-group, .lane-header-view-actions';
+                    const flowItems = [...rail.querySelectorAll(flowSelector)]
+                        .filter(item => item.getBoundingClientRect().width > 0)
+                        .sort((a, b) => Number(getComputedStyle(a).order) - Number(getComputedStyle(b).order));
+                    const centers = flowItems.map(item => {
+                        const bounds = item.getBoundingClientRect();
+                        return Math.round(bounds.top + bounds.height / 2);
+                    });
+                    const clone = rail.cloneNode(true);
+                    clone.style.visibility = 'hidden';
+                    clone.style.position = 'fixed';
+                    clone.style.width = `${rect.width}px`;
+                    clone.style.flexWrap = 'nowrap';
+                    rail.parentElement.appendChild(clone);
+                    const naturalItems = [...clone.querySelectorAll(flowSelector)]
+                        .filter(item => getComputedStyle(item).display !== 'none' && item.getBoundingClientRect().width > 0)
+                        .sort((a, b) => Number(getComputedStyle(a).order) - Number(getComputedStyle(b).order));
+                    naturalItems.forEach(item => { item.style.flexGrow = '0'; });
+                    const widths = naturalItems.map(item => item.getBoundingClientRect().width);
+                    clone.remove();
+                    const gap = parseFloat(getComputedStyle(rail).columnGap);
+                    let used = 0;
+                    let unnecessaryWrap = false;
+                    centers.forEach((center, i) => {
+                        if (i && center !== centers[i - 1]) {
+                            if (used + gap + widths[i] <= rect.width - 1) unnecessaryWrap = true;
+                            used = 0;
+                        }
+                        used += (used ? gap : 0) + widths[i];
+                    });
                     return {
                         height: rect.height,
                         grouping: !!rail.dataset.controlPanel,
                         beat: rail.classList.contains('master-beat-rail'),
                         instrumentWidth: rail.querySelector('select').getBoundingClientRect().width,
                         volumeWidth: rail.querySelector('.volume-fader').getBoundingClientRect().width,
-                        rowCenters: [...new Set([...rail.children].filter(group => group.getBoundingClientRect().width > 0)
-                            .map(group => {
-                                const bounds = group.getBoundingClientRect();
-                                return Math.round(bounds.top + bounds.height / 2);
-                            }))],
+                        rowCenters: [...new Set(centers)],
+                        naturalWidth: widths.reduce((sum, width) => sum + width, 0) + gap * (widths.length - 1),
+                        unnecessaryWrap,
                         touchTargets: [...rail.querySelectorAll('button')].filter(control => control.getBoundingClientRect().width > 0)
                             .every(control => {
                                 const bounds = control.getBoundingClientRect();
                                 return bounds.width >= 43 && bounds.height >= 43;
                             }),
                         overflow: document.documentElement.scrollWidth > innerWidth,
-                        singleRow: [...rail.children].filter(group => group.getBoundingClientRect().width > 0)
-                            .every(group => {
-                                const bounds = group.getBoundingClientRect();
-                                return Math.abs(bounds.top + bounds.height / 2 - rect.top - rect.height / 2) < 1;
-                            }),
+                        singleRow: new Set(centers).size === 1,
                         clippedLabels: [...rail.querySelectorAll('.grouping-controls label')]
                             .some(label => label.scrollWidth > label.clientWidth + 1),
                         clippedControls: [...rail.querySelectorAll('select, button, input')]
@@ -1303,33 +1426,37 @@ async function run() {
                 assert(!expandedLayout.overflow && !expandedLayout.clippedControls && expandedLayout.volumeWidth >= 140 &&
                     expandedLayout.height <= (width <= 480 ? 350 : width <= 720 ? 340 : width <= 1023 ? 160 : width < 1370 ? 140 : 50),
                     'Expanded controls should fit their rail and responsive height budget.', { width, index, expandedLayout });
+                assert(!expandedLayout.unnecessaryWrap,
+                    'A control cluster should only wrap when it cannot fit on the preceding row.',
+                    { width, index, expandedLayout });
                 if (width <= 720) {
                     assert(expandedLayout.touchTargets,
                         'Every expanded Rhythm Tracks rail should retain touch-friendly controls.',
                         { width, index, expandedLayout });
-                    const smallHeightBudget = expandedLayout.beat ? (width >= 540 ? 50 : 95) :
-                        expandedLayout.grouping ? (width <= 480 ? 300 : width < 600 ? 210 : 165) :
-                            (width <= 480 ? 240 : width < 600 ? 135 : 100);
+                    const smallHeightBudget = expandedLayout.beat ? (width >= 600 ? 50 : width >= 390 ? 95 : 145) :
+                            expandedLayout.grouping ? (width <= 480 ? 305 : width < 600 ? 260 : 200) :
+                                (width <= 480 ? 245 : width < 600 ? 185 : 135);
                     assert(expandedLayout.height <= smallHeightBudget,
                         'Small-screen Beat, Master and grouping rails should avoid unnecessary control rows.',
                         { width, index, smallHeightBudget, expandedLayout });
                 }
-                if (width >= 1370 || (!expandedLayout.grouping && width >= (expandedLayout.beat ? 721 : 950))) {
+                const availableWidth = await toggles.nth(index).evaluate(button => button.closest('.lane-label-area').clientWidth);
+                if (expandedLayout.naturalWidth <= availableWidth - 1) {
                     assert(expandedLayout.singleRow && !expandedLayout.clippedLabels &&
-                        expandedLayout.height <= 50 && expandedLayout.instrumentWidth >= 100,
-                        'Each lane should retain a readable single control row for as long as its controls fit.',
+                        expandedLayout.height <= (width <= 720 ? 75 : 50) && expandedLayout.instrumentWidth >= 100,
+                        'Every control should stay in one row whenever its measured minimum widths fit.',
                         { width, index, expandedLayout });
                 }
                 if (!expandedLayout.grouping && !expandedLayout.beat && width >= 721 && width <= 949) {
-                    assert(expandedLayout.rowCenters.length === 2 && expandedLayout.height <= 75,
-                        'Master voice controls should occupy exactly two compact rows at tablet widths.',
+                    assert(expandedLayout.rowCenters.length <= 2 && expandedLayout.height <= 75,
+                        'Master voice controls should occupy at most two compact rows at tablet widths.',
                         { width, index, expandedLayout });
                 }
                 if (expandedLayout.grouping && width >= 600 && width < 1370) {
-                    assert(expandedLayout.rowCenters.length === (width >= 950 ? 2 : 3) &&
+                    assert(expandedLayout.rowCenters.length <= (width >= 950 ? 2 : 3) &&
                         !expandedLayout.clippedLabels &&
-                        expandedLayout.height <= (width >= 950 ? 90 : width >= 721 ? 120 : 165),
-                        'Grouping controls should use two or three compact strips at intermediate widths.',
+                        expandedLayout.height <= (width >= 950 ? 95 : width >= 721 ? 120 : 200),
+                        'Grouping controls should use at most two or three compact rows at intermediate widths.',
                         { width, index, expandedLayout });
                     if (width <= 720) {
                         assert(expandedLayout.touchTargets,

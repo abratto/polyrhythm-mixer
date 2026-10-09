@@ -10,6 +10,7 @@
  */
 import { getActivePhraseStep, getMeshedWheelAngle } from './math.js';
 import { updateVoiceStepsForCycle } from './lanes.js';
+import { getPolyrhythmDescription } from './state.js';
 
 /** Cache for pre-rendered gear body Path2D objects, keyed by tooth count + radii. */
 const _gearBodyCache = {};
@@ -2036,11 +2037,12 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             o.fillRect(0, 0, _layerA.width, _layerA.height);
 
             // Header: current polyrhythm displayed above the gears
+            const description = getPolyrhythmDescription(state);
             o.save();
             o.fillStyle = '#ffffff';
             o.font = 'bold 16px sans-serif';
             o.textAlign = 'center';
-            o.fillText(`${state.A} against ${state.B} Polyrhythm`, canvas.width / 2, 12);
+            o.fillText(description.title, canvas.width / 2, 12);
             o.restore();
 
             // Shared meter-descriptor legend, identical across views (the
@@ -2049,11 +2051,11 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             o.font = 'bold 13px sans-serif';
             o.textAlign = 'center';
             o.fillStyle = '#ffffff';
-            o.fillText(`Master Cycle (${state.mainTeeth} pulses per cycle)`, canvas.width / 2, 30);
+            o.fillText(description.cycle, canvas.width / 2, 30);
             o.font = 'bold 12px sans-serif';
             o.textAlign = 'left';
-            const aText = `Meter A (${state.A} beats per cycle) · ${state.A} groups of ${state.teethA} beats`;
-            const bText = `Meter B (${state.B} beats per cycle) · ${state.B} groups of ${state.teethB} beats`;
+            const aText = description.meterA;
+            const bText = description.meterB;
             const legendGap = 48;
             const wA = textWidth(o, aText);
             const wB = textWidth(o, bText);

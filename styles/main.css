@@ -4011,7 +4011,7 @@
 
         /* Collapsed tracks prioritize a vertically aligned pattern stack. */
         .sequencer-workspace {
-            --compact-label-width: 332px;
+            --compact-label-width: 232px;
         }
         .sequencer-workspace .voice-row {
             margin-bottom: 0;
@@ -4903,61 +4903,6 @@
                 flex: 0 0 auto;
                 font-size: 11px;
             }
-            .master-pattern-controls > .lane-toolbar {
-                display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-                gap: 4px;
-            }
-            .master-pattern-controls .lane-actions,
-            .master-pattern-controls .lane-view-actions,
-            .master-pattern-controls .lane-edit-controls {
-                display: contents;
-            }
-            .master-pattern-controls .meter-master-select {
-                grid-column: 1 / -1;
-                grid-row: 1;
-                flex-direction: row;
-                align-items: center;
-                justify-content: space-between;
-                width: auto;
-                min-width: 0;
-            }
-            .master-pattern-controls .meter-master-select label {
-                font-size: 10px;
-                letter-spacing: 0;
-            }
-            .master-pattern-controls .meter-master-select select {
-                width: 100px;
-                min-height: 44px;
-            }
-            .master-pattern-controls .lane-edit-controls button,
-            .master-pattern-controls #clearMasterBtn {
-                grid-row: 2;
-                padding: 0 4px;
-                font-size: 10px;
-                letter-spacing: 0;
-            }
-            .master-pattern-controls .group-nudge-control {
-                grid-column: 1 / -1;
-                grid-row: 3;
-                justify-content: flex-start;
-                padding: 0;
-                margin: 0;
-            }
-            .master-pattern-controls .cycle-nav {
-                grid-column: 1 / 3;
-                grid-row: 4;
-                flex-wrap: nowrap;
-                gap: 4px;
-            }
-            .master-pattern-controls .cycle-nav-title {
-                display: none;
-            }
-            .master-pattern-controls #masterInfoBtn {
-                grid-column: 3;
-                grid-row: 4;
-                justify-self: end;
-            }
             .master-pattern-controls button {
                 min-width: 44px;
                 min-height: 44px;
@@ -4978,55 +4923,245 @@
                 margin-top: 0;
             }
         }
-        @media (min-width: 481px) and (max-width: 666px) {
-            .master-pattern-controls > .lane-toolbar {
-                grid-template-columns: repeat(4, minmax(0, 1fr));
-            }
-            .master-pattern-controls .meter-master-select {
-                grid-column: 1 / 3;
-            }
-            .master-pattern-controls .lane-edit-controls button {
-                grid-row: 1;
-            }
-            .master-pattern-controls #clearMasterBtn {
-                grid-column: 4;
-                grid-row: 2;
-            }
-            .master-pattern-controls .group-nudge-control {
-                grid-column: 1 / 4;
-                grid-row: 2;
-            }
-            .master-pattern-controls .cycle-nav {
-                grid-column: 1 / 4;
-                grid-row: 3;
-            }
-            .master-pattern-controls #masterInfoBtn {
-                grid-column: 4;
-                grid-row: 3;
+        .master-pattern-controls > .lane-toolbar {
+            display: flex;
+            flex-flow: row wrap;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 4px;
+        }
+        .master-pattern-controls :is(.lane-actions, .lane-edit-controls) {
+            display: contents;
+        }
+        .master-pattern-controls .meter-master-select {
+            flex: 0 0 auto;
+            flex-direction: column;
+            align-items: stretch;
+            width: 110px;
+            min-width: 0;
+            gap: 2px;
+        }
+        .master-pattern-controls .meter-master-select label {
+            font-size: 10px;
+            letter-spacing: 0;
+            white-space: nowrap;
+        }
+        .master-pattern-controls .meter-master-select select {
+            width: 100%;
+        }
+        .master-pattern-controls :is(.lane-edit-controls button, #clearMasterBtn) {
+            flex: 0 0 auto;
+            margin: 0;
+            padding: 0 6px;
+            font-size: 10px;
+            letter-spacing: 0;
+        }
+        .master-pattern-controls .group-nudge-control {
+            flex: 0 0 auto;
+            flex-wrap: nowrap;
+            align-self: center;
+            padding: 0;
+            margin: 0;
+            gap: 4px;
+        }
+        .master-pattern-controls .voice-nudge-label {
+            font-size: 10px;
+            letter-spacing: 0;
+        }
+        .master-pattern-controls .lane-view-actions {
+            display: flex;
+            flex: 0 0 auto;
+            flex-wrap: nowrap;
+            align-items: center;
+            margin: 0;
+            gap: 4px;
+            width: auto;
+        }
+        .master-pattern-row .master-pattern-controls .cycle-nav {
+            flex-wrap: nowrap;
+            margin: 0;
+            gap: 4px;
+        }
+        .master-pattern-controls .cycle-nav-title {
+            display: none;
+        }
+        @media (max-width: 720px) {
+            .master-pattern-controls .meter-master-select select {
+                min-height: 44px;
             }
         }
-        @media (min-width: 667px) and (max-width: 720px) {
-            .master-pattern-controls > .lane-toolbar {
-                grid-template-columns: repeat(6, minmax(0, 1fr));
-            }
+        @media (max-width: 360px), (min-width: 481px) {
             .master-pattern-controls .meter-master-select {
-                grid-column: 1 / 4;
+                flex-direction: row;
+                align-items: center;
+                width: auto;
+                gap: 4px;
             }
-            .master-pattern-controls .lane-edit-controls button,
-            .master-pattern-controls #clearMasterBtn {
+            .master-pattern-controls .meter-master-select select {
+                width: 100px;
+            }
+        }
+
+        .sequencer-workspace .expanded-mix-actions {
+            display: flex;
+            gap: 4px;
+            flex: 0 0 auto;
+        }
+        .sequencer-workspace .expanded-mix-actions button {
+            width: 28px;
+            min-width: 28px;
+            height: 34px;
+            padding: 0;
+        }
+        @media (max-width: 720px) {
+            .sequencer-workspace .expanded-mix-actions button {
+                width: 44px;
+                min-width: 44px;
+                min-height: 44px;
+                height: 44px;
+            }
+        }
+        @media (max-width: 480px) {
+            .sequencer-workspace .lane-label-area .identity-group .head-mix-controls,
+            .sequencer-workspace .lane-label-area.rail-collapsed .identity-group .head-mix-controls,
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .identity-group .head-mix-controls {
+                grid-column: 4;
                 grid-row: 1;
             }
-            .master-pattern-controls .group-nudge-control {
-                grid-column: 1 / 4;
-                grid-row: 2;
+            .sequencer-workspace .lane-label-area.rail-collapsed .identity-group,
+            .sequencer-workspace .lane-label-area:not(.rail-collapsed) .identity-group {
+                grid-template-columns: 44px auto minmax(0, 1fr) 44px;
             }
-            .master-pattern-controls .cycle-nav {
-                grid-column: 4 / 6;
-                grid-row: 2;
+        }
+
+        /* Keep disclosures stationary instead of anchoring the steps below them. */
+        html {
+            overflow-anchor: none;
+        }
+
+        /* Wrap complete control clusters according to their intrinsic widths. */
+        .sequencer-workspace .beat-scheme-summary {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .beat-scheme-description {
+            margin: 0 0 8px;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .polyrhythm-description-title {
+            color: var(--btn-fg);
+            font-weight: 700;
+        }
+        .polyrhythm-description-meterA {
+            color: #ff6b8f;
+        }
+        .polyrhythm-description-meterB {
+            color: #6ef2ff;
+        }
+        @media (max-width: 720px) {
+            .sequencer-workspace .beat-scheme-summary .lane-info-btn {
+                width: 44px;
+                height: 44px;
+                min-width: 44px;
             }
-            .master-pattern-controls #masterInfoBtn {
-                grid-column: 6;
-                grid-row: 2;
+        }
+        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) {
+            display: flex;
+            flex-flow: row wrap;
+            align-items: center;
+            gap: 4px;
+        }
+        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) :is(.mix-group, .pattern-group, .track-group, .grouping-controls, .expanded-mix-actions, .voice-edit-controls) {
+            display: contents;
+        }
+        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .voice-controls-heading {
+            display: none;
+        }
+        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .identity-group {
+            display: flex;
+            flex: 1 0 200px;
+            width: auto;
+            min-width: 0;
+            order: 0;
+        }
+        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .lane-volume {
+            flex: 1 0 180px;
+            width: auto;
+            min-width: 180px;
+            margin: 0;
+            order: 1;
+        }
+        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .volume-fader {
+            width: 0;
+            min-width: 140px;
+        }
+        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .expanded-mix-actions button {
+            order: 2;
+            flex: 0 0 auto;
+        }
+        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .voice-edit-controls button {
+            flex: 1 0 auto;
+            font-size: 10px;
+            padding: 0 4px;
+            letter-spacing: 0;
+            order: 4;
+        }
+        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .voice-nudge-control {
+            flex: 0 0 auto;
+            flex-wrap: nowrap;
+            padding: 0;
+            margin: 0;
+            gap: 4px;
+            order: 5;
+            align-self: center;
+        }
+        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .grouping-controls .control-group {
+            flex: 1 0 auto;
+            flex-direction: column;
+            align-items: stretch;
+            width: auto;
+            min-width: 0;
+            gap: 2px;
+            order: 6;
+        }
+        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .grouping-controls label {
+            white-space: nowrap;
+            letter-spacing: 0;
+        }
+        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .grouping-controls .grouping-count-group {
+            flex-basis: 66px;
+        }
+        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .grouping-controls .grouping-cycles-group {
+            flex-basis: 96px;
+        }
+        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .grouping-controls .grouping-offset-group {
+            flex-basis: 88px;
+            min-width: max-content;
+        }
+        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .lane-header-view-actions {
+            flex: 0 0 auto;
+            width: auto;
+            margin: 0;
+            flex-wrap: nowrap;
+            order: 7;
+        }
+        @media (max-width: 720px) {
+            .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .identity-group {
+                flex-basis: 212px;
+            }
+            .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .grouping-controls .grouping-offset-group {
+                flex-basis: 132px;
+            }
+        }
+        @media (max-width: 480px) {
+            .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .voice-panel-switch {
+                order: 3;
+            }
+            .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed)[data-control-panel="pattern"] .track-group,
+            .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed)[data-control-panel="timing"] .pattern-group {
+                display: none;
             }
         }
 

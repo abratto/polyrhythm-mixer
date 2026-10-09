@@ -62,6 +62,15 @@ export function createState(ui) {
     };
 }
 
+export function getPolyrhythmDescription(state) {
+    return {
+        title: `${state.A} against ${state.B} Polyrhythm`,
+        cycle: `Master Cycle (${state.mainTeeth} pulses per cycle)`,
+        meterA: `Meter A (${state.A} beats per cycle) · ${state.A} groups of ${state.teethA} beats`,
+        meterB: `Meter B (${state.B} beats per cycle) · ${state.B} groups of ${state.teethB} beats`
+    };
+}
+
 /**
  * Recalculates all derived state values from the current A, B, and phrase cycle settings.
  * Must be called whenever the user changes meter values or phrase lengths.

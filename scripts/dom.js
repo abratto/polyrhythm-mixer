@@ -13,8 +13,9 @@ export function getDomRefs() {
         // Meter selectors (A and B rhythm values)
         selectA: document.getElementById('rhythmA'),
         selectB: document.getElementById('rhythmB'),
-        // Parameterized summary of the current A × B polyrhythm beat scheme
-        beatSchemeSummary: document.getElementById('beatSchemeSummary'),
+        // Contextual explanation of the current polyrhythm
+        beatSchemeInfoBtn: document.getElementById('beatSchemeInfoBtn'),
+        beatSchemeDescription: document.getElementById('beatSchemeDescription'),
         // Master phrase length (cycles the master lane pattern spans)
         masterPhraseCycles: document.getElementById('masterPhraseCycles'),
         // Global tempo slider (BPM) and its display label
