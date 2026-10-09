@@ -1,4 +1,19 @@
 # Changelog
+## v1.31.0 — 2026-10-09
+
+### Added
+- **Contextual meter help.** A question-mark button stays beside Meter B's dropdown and reveals the same generated ratio, master-cycle, and meter-grouping description as the gears visualization.
+
+### Changed
+- **More room for steps.** Solo, Mute, and Clear move into expanded voice controls; instrument and Delete stay visible. Collapsed tablet and desktop headers are 100px narrower, preserving step alignment when controls open.
+- **Space-driven control wrapping.** Expanded controls fill available rows before wrapping, while keeping volume sliders, Nudge, Offset, and cycle navigation usable. Phone buttons retain touch-friendly targets.
+- **Compact Master pattern controls.** Phrase length, pattern edits, group nudge, and navigation wrap in logical order without stretched spacing or fixed row assignments.
+- **Simpler meter heading.** The redundant ratio label is removed; the selected ratio remains available in contextual help.
+- **Responsive regression coverage.** Browser checks cover control packing, stationary disclosures, meter-help placement and updates, and Master panel geometry across 31 viewport widths.
+
+### Fixed
+- **Disclosure buttons stay put.** Opening or closing lane controls no longer triggers browser scroll anchoring that moves the disclosure away from where it was tapped.
+
 ## v1.30.0 — 2026-10-08
 
 ### Added
