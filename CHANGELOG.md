@@ -1,4 +1,15 @@
 # Changelog
+## v1.32.0 — 2026-10-13
+
+### Added
+- **Sequential grouping numbers.** Grouping starts count from 1 through the number of groups in each master cycle, including one-pulse groups. Offset nudges move the numbered starts without changing their sequence.
+- **Grouping and theme regression coverage.** Browser checks cover group numbering, offset wrapping in both directions, phrase-cycle numbering, removal of grouping beat/bar accents, and selected-step label and playhead contrast across all ten themes.
+
+### Changed
+- **Cleaner grouping boxes.** Grouping pulse boxes no longer show the Master lane's beat/bar markers; pulse divisions, numbered starts, and playheads remain visible.
+- **Softer selected fills.** Selected grouping boxes and Rhythm Tracks steps blend their theme colors with 40% neutral slate, preserving bright selection borders and making group boundaries easier to distinguish.
+- **Clearer Master playhead.** Thicker, lightened theme-colored edges remain visible over selected steps, with at least 3:1 edge contrast across all themes. Selected Master step labels retain at least 4.5:1 contrast.
+
 ## v1.31.0 — 2026-10-09
 
 ### Added
