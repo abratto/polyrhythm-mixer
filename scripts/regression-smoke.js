@@ -313,6 +313,101 @@ async function run() {
         assert(same(initial.active.B1, [0, 1, 2, 3]), 'Meter B grouping lane voice 1 should start with the canonical 4-pulse (every onset).', initial.active.B1);
         assert(initial.grouping.length === 2 && initial.grouping[0].g === '6' && initial.grouping[1].g === '4',
             'Rhythm Tracks should default to two grouping lanes for the chosen polyrhythm (6 and 4).', initial.grouping);
+
+        const groupingRow = '#groupingLanesContainer .grouping-lane-row:nth-child(1)';
+        const assertGroupNumbers = async (count, phase) => {
+            const actual = await page.locator(`${groupingRow} .voice-row[data-voice-index="0"] .grouping-underlay-cell`)
+                .evaluateAll(cells => cells.map((cell, pulse) => ({
+                    pulse, label: cell.textContent, start: cell.classList.contains('is-start')
+                })));
+            const size = 12 / count;
+            const expected = Array.from({ length: 12 }, (_, pulse) => ({
+                pulse,
+                label: pulse % size === phase ? String(Math.floor(pulse / size) + 1) : '',
+                start: pulse % size === phase
+            }));
+            assert(same(actual, expected), 'Group numbers should follow their offset onsets without numbering other pulses.', { count, phase, actual });
+            const accents = await page.locator(`${groupingRow} .grouping-underlay-cell`)
+                .evaluateAll(cells => cells.filter(cell =>
+                    cell.classList.contains('is-beat') || cell.classList.contains('is-bar')
+                    || !['none', 'normal'].includes(getComputedStyle(cell, '::before').content)
+                ).length);
+            assert(accents === 0, 'Grouping pulse boxes should not show master beat/bar accents.', { count, phase, accents });
+        };
+        for (const count of [6, 4, 12, 1]) {
+            await expandAllRails();
+            await setSelect(`${groupingRow} .grouping-count-select`, count);
+            const size = 12 / count;
+            await assertGroupNumbers(count, 0);
+            for (let phase = 1; phase <= size && size > 1; phase++) {
+                await page.locator(`${groupingRow} .grouping-offset-next`).click();
+                await assertGroupNumbers(count, phase % size);
+            }
+            if (size > 1) {
+                await page.locator(`${groupingRow} .grouping-offset-prev`).click();
+                await assertGroupNumbers(count, size - 1);
+                await page.locator(`${groupingRow} .grouping-offset-next`).click();
+            }
+        }
+        await setSelect(`${groupingRow} .grouping-count-select`, 6);
+        await setSelect(`${groupingRow} .grouping-cycles-select`, 2);
+        await page.locator(`${groupingRow} .cycle-nav-btn`).last().click();
+        await assertGroupNumbers(6, 0);
+        await setSelect(`${groupingRow} .grouping-cycles-select`, 1);
+        await page.reload({ waitUntil: 'networkidle' });
+        await waitForApp();
+        assert(await page.locator('#masterGrid .step-btn.step-beat, #masterGrid .step-btn.step-bar').count() > 0,
+            'Master lane beat/bar accents should remain intact.');
+
+        const initialTheme = await page.locator('#themeSelect').inputValue();
+        const themes = await page.locator('#themeSelect option').evaluateAll(options => options.map(option => option.value));
+        try {
+            for (const theme of themes) {
+                await page.selectOption('#themeSelect', theme, { force: true });
+                await page.waitForTimeout(200);
+                const contrast = await page.evaluate(() => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = canvas.height = 1;
+                    const ctx = canvas.getContext('2d');
+                    const rgba = value => {
+                        ctx.clearRect(0, 0, 1, 1);
+                        ctx.fillStyle = value;
+                        ctx.fillRect(0, 0, 1, 1);
+                        return Array.from(ctx.getImageData(0, 0, 1, 1).data);
+                    };
+                    const luminance = color => color.slice(0, 3).reduce((total, channel, i) => {
+                        const value = channel / 255;
+                        return total + [0.2126, 0.7152, 0.0722][i]
+                            * (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+                    }, 0);
+                    const ratio = (a, b) => {
+                        const values = [luminance(a), luminance(b)].sort((x, y) => y - x);
+                        return (values[0] + 0.05) / (values[1] + 0.05);
+                    };
+                    const step = document.querySelector('#masterGrid .step-btn.active');
+                    const style = getComputedStyle(step);
+                    const fill = rgba(style.backgroundColor);
+                    const alt = rgba(getComputedStyle(step, '::after').backgroundColor);
+                    const shaded = fill.map((channel, i) => i < 3
+                        ? channel * (1 - alt[3] / 255) + alt[i] * alt[3] / 255 : channel);
+                    const playhead = getComputedStyle(document.querySelector('#masterGrid .lane-playhead'));
+                    const edge = rgba(playhead.borderLeftColor);
+                    return {
+                        playhead: Math.min(ratio(edge, fill), ratio(edge, shaded)),
+                        label: Math.min(ratio(rgba(style.color), fill), ratio(rgba(style.color), shaded)),
+                        edgeOpacity: edge[3],
+                        edgeWidth: parseFloat(playhead.borderLeftWidth)
+                    };
+                });
+                assert(contrast.playhead >= 3 && contrast.edgeOpacity === 255 && contrast.edgeWidth >= 3,
+                    'Master playhead edges should contrast at least 3:1 against selected fills in every theme.', { theme, contrast });
+                assert(contrast.label >= 4.5,
+                    'Selected Master step labels should remain readable in every theme.', { theme, contrast });
+            }
+        } finally {
+            await page.selectOption('#themeSelect', initialTheme, { force: true });
+        }
+
         assert(initial.mixer.masterVolInLane, 'Master wheel volume fader should be colocated in the Master lane toolbar.', initial.mixer);
         assert(await page.locator('#meterAWheelGrid').count() === 0 && await page.locator('#meterBWheelGrid').count() === 0,
             'The Meter A/B wheel lanes should be gone — the pulse lives in the grouping lanes.');

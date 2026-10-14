@@ -54,7 +54,9 @@ The **Polyrhythm Beat Scheme** defines the *frame*: Meter A and Meter B set the 
 
 Each grouping lane is one voice and one **equal division** of the master cycle. Pick a group count (any divisor of the frame) and the lane shows one box per group. The default two lanes are the groupings of the chosen polyrhythm, and **+ Voice** adds more — each lane keeps its own Grouping menu, phrase length, instrument, and controls, independent of the others.
 
-Each box is split into its pulses (the segment row along the bottom edge). The highlighted segment is where the grouping starts; the **Offset** nudge (`← 2/4 →`) slides that start by one pulse, wrapping within the group.
+Each box is split into its pulses. Groups are numbered in order within each master cycle, with each number on the highlighted pulse where that group starts. The **Offset** nudge (`← 2/4 →`) slides the numbered start by one pulse, wrapping within the group without changing its number.
+Grouping boxes omit the Master lane's beat/bar accents, keeping the pulse divisions and numbered starts visually distinct.
+Selected Rhythm Tracks steps use muted, slate-blended fills so the playhead stays distinct across themes; selection borders remain bright. The Master lane playhead uses thicker, lightened theme-colored edges to remain visible over selected steps.
 
 - **6 against 4** → frame of 12 pulses. The 6-group lane has 2 pulses per group, so each box splits into 2 segments; the 4-group lane splits into 3.
 - **3 against 4** → frame of 12 pulses. The 3-group lane has 4 pulses per group, giving **four distinct start positions** — the four "3-against-4s" (the grouping starting on pulse 1, 2, 3, or 4 of its group).

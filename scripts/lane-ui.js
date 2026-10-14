@@ -341,9 +341,7 @@ export function removeVoice(lane, index) {
  * group so the eye can count groups at a glance.
  */
 function applyGroupClasses(btn, lane, i) {
-    // Overlay grouping lanes draw their beat/bar grid in the pulse underlay
-    // (is-beat/is-bar cells), so the rectangles must stay clean — the global
-    // step-beat/step-bar/step-alt accents would paint duplicate bars/tints.
+    // Grouping lanes use numbered onsets instead of master beat/bar accents.
     if (lane.groupingOverlay) return;
 
     const isBeat = lane.isBeat?.(i);
@@ -700,20 +698,14 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
         const groupSize = typeof lane.stepSlices === 'function' ? lane.stepSlices() : 1;
         stepsContainer.dataset.groupSize = String(groupSize);
         const phase = typeof lane.stepPhase === 'function' ? lane.stepPhase() : 0;
-        const markStart = Number.isInteger(groupSize) && groupSize >= 2
+        const markStart = Number.isInteger(groupSize) && groupSize >= 1
             && Number.isInteger(phase) && phase >= 0 && phase < groupSize;
         for (let i = 0; i < state.mainTeeth; i++) {
             const cell = document.createElement('span');
             cell.className = 'grouping-underlay-cell';
-            if (i === 0) cell.classList.add('is-bar');
-            else if (isOnQuarter(i, state.mainTeeth)) cell.classList.add('is-beat');
-            // The grouping's start pulse (offset) gets a marker on the pulse box,
-            // always labelled "1": it marks where the grouping's own "1" falls.
-            // Nudging the offset slides the marker to another subdivision without
-            // changing the number, so the count stays meaningful as "the one".
             if (markStart && i % groupSize === phase) {
                 cell.classList.add('is-start');
-                cell.textContent = '1';
+                cell.textContent = String(Math.floor(i / groupSize) + 1);
             }
             underlay.appendChild(cell);
         }
