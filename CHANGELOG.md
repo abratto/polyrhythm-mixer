@@ -1,4 +1,12 @@
 # Changelog
+## v1.34.0 — 2026-10-20
+
+### Changed
+- **Master controls in the Rhythm Tracks heading.** Phrase length, Random/Reverse/Clear, Nudge Group, and cycle navigation now sit beside the Meter A and Meter B pickers instead of in a collapsible panel. They share one row from 1280px and wrap onto compact rows below that; phone controls keep 44px touch targets.
+- **One help button.** The redundant Master "?" (steps/teeth summary) is gone; the meter "?" explains the section.
+- **Plural visualization label.** The visualization panel is now titled **Polyrhythm Visualizations**.
+- **Responsive regression coverage.** Browser checks confirm the Master controls are always visible in the heading, share the meters' row on wide screens, and wrap without clipping.
+
 ## v1.33.0 — 2026-10-20
 
 ### Changed
