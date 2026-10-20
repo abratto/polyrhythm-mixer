@@ -163,6 +163,8 @@ export function createLanes(ui, state) {
     return {
         master: {
             container: ui.masterGrid,
+            // Shared Master controls live in the Rhythm Tracks heading, outside the lane's matrix row.
+            toolbarRoot: ui.masterPatternControls,
             addVoiceBtn: ui.addMasterVoiceBtn,
             clearBtn: ui.clearMasterBtn,
             className: 'master-btn',
@@ -170,10 +172,7 @@ export function createLanes(ui, state) {
             count: () => state.masterPhraseSteps,
             label: () => 'Master',
             kind: 'phrase',
-            description: () => `${state.masterPhraseSteps} steps / ${state.mainTeeth} teeth × ${state.masterPhraseCycles} ${state.masterPhraseCycles === 1 ? 'cycle' : 'cycles'}`,
             titleEl: null,
-            descriptionEl: ui.masterDescription,
-            infoBtn: ui.masterInfoBtn,
             textForStep: i => (i % state.mainTeeth) + 1,
             isBeat: i => isOnQuarter(i % state.mainTeeth, state.mainTeeth),
             isBar: i => (i % state.mainTeeth) === 0,
@@ -189,6 +188,11 @@ export function createLanes(ui, state) {
             totalCycles: () => state.masterPhraseCycles
         }
     };
+}
+
+/** The element holding a lane's toolbar (phrase length, edits, cycle nav). */
+function laneToolbarRoot(lane) {
+    return lane.toolbarRoot ?? lane.container?.closest('.matrix-row');
 }
 
 function updateLaneHeader(lane, state) {
@@ -806,7 +810,7 @@ export function updateVoiceStepsForCycle(lane, state) {
     });
 
     // Update the cycle-nav label text
-    const cycleNav = lane.container?.closest('.matrix-row')?.querySelector('.cycle-nav-label');
+    const cycleNav = laneToolbarRoot(lane)?.querySelector('.cycle-nav-label');
     if (cycleNav) {
         const following = state?.followPlayhead?.[laneKey] !== false;
         const current = lane._visibleCycle;
@@ -856,7 +860,7 @@ function addCycleNavigation(lane, state) {
     const current = state.visibleCycle[key];
     const following = state.followPlayhead[key] !== false;
 
-    const viewActions = lane.container?.closest('.matrix-row')?.querySelector('.lane-view-actions');
+    const viewActions = laneToolbarRoot(lane)?.querySelector('.lane-view-actions');
     const usesHeaderMount = typeof lane._mountHeaderViewControls === 'function';
     if (!viewActions && !usesHeaderMount) return;
 
@@ -1630,10 +1634,9 @@ function createSoloMuteControls(channel, idSolo, idMute, { solo = true, compact 
  */
 export function wireLaneMixButtons(lanes, channels) {
     const mountFor = (lane) =>
-        lane.container?.closest('.matrix-row')?.querySelector('.lane-actions');
+        laneToolbarRoot(lane)?.querySelector('.lane-actions');
     const add = (lane, channel, idSolo, idMute, mountSel) => {
-        const matrixRow = lane.container?.closest('.matrix-row');
-        const mount = mountSel ? matrixRow?.querySelector(mountSel) : mountFor(lane);
+        const mount = mountSel ? laneToolbarRoot(lane)?.querySelector(mountSel) : mountFor(lane);
         if (!mount || !channel) return;
         if (mount.querySelector(`#${idSolo}`)) return; // already wired
         mount.appendChild(createSoloMuteControls(channel, idSolo, idMute));

@@ -17,7 +17,7 @@
                 <li>Choose Meter A and Meter B — try <strong>3 against 4</strong>.</li>
                 <li>The groove is already moving silently. Click <strong>Enable Audio</strong> to hear it.</li>
                 <li>Click steps in a lane to change its pattern. Click <strong>+ Voice</strong> below Rhythm Tracks to add another rhythm track, then shape its pattern. Use <strong>Pause</strong> / <strong>Play</strong> to control playback.</li>
-                <li>Open <strong>Polyrhythm Visualization</strong> to see the rhythms move through the shared cycle. Switch views to explore gears, rings, orbit, clocks, and more.</li>
+                <li>Open <strong>Polyrhythm Visualizations</strong> to see the rhythms move through the shared cycle. Switch views to explore gears, rings, orbit, clocks, and more.</li>
             </ol>
             <p class="help-tagline">Layer rhythms, hear where they meet, and shape the groove.</p>
             <details class="help-details">
@@ -41,7 +41,7 @@
                     </section>
                     <section class="help-topic">
                         <h3>Shape the mix</h3>
-                        <p>Each voice keeps its instrument dropdown and red <strong>X</strong> (delete) beside its pattern, or just above it on phones. Expand the <strong>▸</strong> rail for <strong>Solo</strong>, <strong>Mute</strong>, <strong>Clear</strong> (clear pattern), volume, and deeper editing controls. These controls fill the available width and wrap onto more rows only when needed. The red <strong>X</strong> removes a grouping track or any Master voice, including the last one. Use <strong>+ Voice</strong> to add one back. <strong>V1</strong> means Voice 1. On narrow phones, use <strong>Pattern</strong> or <strong>Timing</strong> to switch between pattern edits and a grouping track's timing settings; switching keeps your settings. The <strong>Beat</strong> row is the Master Beat click track: its instrument stays visible; expand its rail for solo, mute, and volume. It has no Clear or Delete. Open <strong>Master pattern controls</strong> above it for the Master phrase length, shared pattern edits, group nudge, and cycle navigation. Open <strong>Controls</strong> for global settings: <strong>Tempo</strong> changes the speed; <strong>Master</strong> changes the overall level.</p>
+                        <p>Each voice keeps its instrument dropdown and red <strong>X</strong> (delete) beside its pattern, or just above it on phones. Expand the <strong>▸</strong> rail for <strong>Solo</strong>, <strong>Mute</strong>, <strong>Clear</strong> (clear pattern), volume, and deeper editing controls. These controls fill the available width and wrap onto more rows only when needed. The red <strong>X</strong> removes a grouping track or any Master voice, including the last one. Use <strong>+ Voice</strong> to add one back. <strong>V1</strong> means Voice 1. On narrow phones, use <strong>Pattern</strong> or <strong>Timing</strong> to switch between pattern edits and a grouping track's timing settings; switching keeps your settings. The <strong>Beat</strong> row is the Master Beat click track: its instrument stays visible; expand its rail for solo, mute, and volume. It has no Clear or Delete. The <strong>Rhythm Tracks</strong> heading holds the Master phrase length, shared pattern edits, group nudge, and cycle navigation beside the Meter A and Meter B dropdowns. Open <strong>Controls</strong> for global settings: <strong>Tempo</strong> changes the speed; <strong>Master</strong> changes the overall level.</p>
                     </section>
                     <section class="help-topic">
                         <h3>Save, share, and explore</h3>
@@ -136,7 +136,7 @@
     </div>
 
     <details id="polyrhythmView" class="visual-guide">
-        <summary>Polyrhythm Visualization</summary>
+        <summary>Polyrhythm Visualizations</summary>
         <button id="vizInfoBtn" class="lane-info-btn" aria-label="Show visualization explanation" aria-expanded="false" aria-controls="vizDescription">?</button>
         <div class="viz-mode-toggle" role="group" aria-label="Visualization mode">
             <button id="vizModeGears" type="button" class="viz-mode-btn active" data-mode="gears" aria-pressed="true">Gears</button>
@@ -179,7 +179,7 @@
         <div class="sequencer-workspace">
         <section class="lane-group-section phrases-section">
             <div class="lane-group-heading">
-                Rhythm Tracks
+                <span class="lane-group-title">Rhythm Tracks</span>
                 <span class="beat-scheme-inline">
                     <span class="pulse-select-line meter-a-select">
                         <span class="pulse-select-name" style="color: #ff3366;">Meter A</span>
@@ -229,36 +229,33 @@
                         </span>
                     </span>
                 </span>
+                <div id="masterPatternControls" class="master-pattern-controls" role="group" aria-label="Master pattern controls">
+                    <div class="lane-toolbar">
+                        <div class="lane-actions">
+                            <div class="control-group lane-meter-select meter-master-select">
+                                <label for="masterPhraseCycles" style="color: #ff9100;">Phrase Length</label>
+                                <select id="masterPhraseCycles">
+                                    <option value="1" selected>1 cycle</option>
+                                    <option value="2">2 cycles</option>
+                                    <option value="3">3 cycles</option>
+                                    <option value="4">4 cycles</option>
+                                    <option value="5">5 cycles</option>
+                                    <option value="6">6 cycles</option>
+                                    <option value="7">7 cycles</option>
+                                    <option value="8">8 cycles</option>
+                                </select>
+                            </div>
+                            <button id="clearMasterBtn" class="clear-btn">Clear</button>
+                            <button id="addMasterVoiceBtn" class="add-voice-btn">+ Voice</button>
+                        </div>
+                        <div class="lane-view-actions">
+                        </div>
+                    </div>
+                </div>
             </div>
             <div id="beatSchemeDescription" class="lane-description beat-scheme-description" hidden></div>
 
             <div class="matrix-row master-pattern-row" style="--lane-accent: #ff9100;">
-                <details id="masterPatternControls" class="master-pattern-controls">
-                    <summary>Master pattern controls</summary>
-                <div class="lane-toolbar">
-                    <div class="lane-actions">
-                        <div class="control-group lane-meter-select meter-master-select">
-                            <label for="masterPhraseCycles" style="color: #ff9100;">Phrase Length</label>
-                            <select id="masterPhraseCycles">
-                                <option value="1" selected>1 cycle</option>
-                                <option value="2">2 cycles</option>
-                                <option value="3">3 cycles</option>
-                                <option value="4">4 cycles</option>
-                                <option value="5">5 cycles</option>
-                                <option value="6">6 cycles</option>
-                                <option value="7">7 cycles</option>
-                                <option value="8">8 cycles</option>
-                            </select>
-                        </div>
-                        <button id="clearMasterBtn" class="clear-btn">Clear</button>
-                        <button id="addMasterVoiceBtn" class="add-voice-btn">+ Voice</button>
-                    </div>
-                    <div class="lane-view-actions">
-                        <button id="masterInfoBtn" class="lane-info-btn" aria-label="Show master wheel explanation" aria-expanded="false" aria-controls="masterDescription">?</button>
-                    </div>
-                </div>
-                <div id="masterDescription" class="lane-description" hidden></div>
-                </details>
                 <div class="voice-row master-beat-voice-row">
                     <div id="masterBeatControls" class="lane-label-area master-beat-rail">
                         <div class="voice-control-group identity-group">

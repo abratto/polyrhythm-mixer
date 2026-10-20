@@ -2007,23 +2007,23 @@
             /* Phrase and grouping toolbars flatten their action/view wrappers so
                every control wraps in one shared context and packs tightly
                instead of leaving a whole row to the cycle nav. */
-            .master-pattern-row .lane-toolbar,
+            .master-pattern-controls .lane-toolbar,
             .grouping-lane-row .lane-toolbar {
                 flex-wrap: wrap;
                 align-items: flex-end;
                 gap: 6px 8px;
             }
-            .master-pattern-row .lane-actions,
-            .master-pattern-row .lane-view-actions,
+            .master-pattern-controls .lane-actions,
+            .master-pattern-controls .lane-view-actions,
             .grouping-lane-row .lane-actions,
             .grouping-lane-row .lane-view-actions {
                 display: contents;
             }
-            .master-pattern-row .lane-view-actions > .cycle-nav,
+            .master-pattern-controls .lane-view-actions > .cycle-nav,
             .grouping-lane-row .lane-view-actions > .cycle-nav {
                 margin-left: auto;
             }
-            .master-pattern-row .cycle-nav-label,
+            .master-pattern-controls .cycle-nav-label,
             .grouping-lane-row .cycle-nav-label {
                 min-width: 72px;
             }
@@ -2539,28 +2539,28 @@
             /* --- Master phrase toolbar: same flattening so Random/Reverse/Clear,
                Nudge Group and the cycle nav wrap into a tighter block instead
                of one control per line. --- */
-            .master-pattern-row .lane-toolbar {
+            .master-pattern-controls .lane-toolbar {
                 flex-wrap: wrap;
                 align-items: flex-end;
                 gap: 6px 8px;
             }
-            .master-pattern-row .lane-actions,
-            .master-pattern-row .lane-view-actions {
+            .master-pattern-controls .lane-actions,
+            .master-pattern-controls .lane-view-actions {
                 display: contents;
             }
-            .master-pattern-row .lane-meter-select {
+            .master-pattern-controls .lane-meter-select {
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 3px;
                 min-width: 0;
             }
-            .master-pattern-row .lane-meter-select label {
+            .master-pattern-controls .lane-meter-select label {
                 letter-spacing: 0.4px;
             }
-            .master-pattern-row .lane-view-actions > .cycle-nav {
+            .master-pattern-controls .lane-view-actions > .cycle-nav {
                 margin-left: auto;
             }
-            .master-pattern-row .cycle-nav-label {
+            .master-pattern-controls .cycle-nav-label {
                 min-width: 72px;
             }
         }
@@ -3835,7 +3835,7 @@
                 flex-wrap: wrap;
             }
             .grouping-lane-row .cycle-nav-label,
-            .master-pattern-row .cycle-nav-label,
+            .master-pattern-controls .cycle-nav-label,
             .lane-header-view-actions .cycle-nav-label {
                 min-width: 72px;
             }
@@ -4149,28 +4149,29 @@
                 font-size: 10px;
             }
         }
-        .master-pattern-controls {
-            width: 100%;
-            min-width: 0;
-            margin-bottom: 6px;
-            border: 1px solid var(--panel-border);
-            border-radius: 6px;
+        /* Master pattern controls ride in the Rhythm Tracks heading next to the
+           meter pickers; the heading wraps them onto their own row when narrow. */
+        .lane-group-heading:has(> .master-pattern-controls) {
+            flex-wrap: wrap;
+            align-items: center;
+            row-gap: 8px;
         }
-        .master-pattern-controls > summary {
-            cursor: pointer;
-            padding: 10px 8px;
-            min-height: 44px;
-            box-sizing: border-box;
-            font-size: 11px;
+        .lane-group-heading > .lane-group-title {
+            flex: 0 0 auto;
+        }
+        .master-pattern-controls {
+            display: flex;
+            flex: 1 1 auto;
+            justify-content: flex-start;
+            min-width: 0;
+            margin: 0;
             font-weight: 700;
-            color: var(--btn-fg);
+            letter-spacing: normal;
+            text-transform: none;
         }
         .master-pattern-controls > .lane-toolbar {
-            padding: 8px;
+            padding: 0;
             margin: 0;
-        }
-        .master-pattern-controls > .lane-description {
-            margin: 0 8px 8px;
         }
         .sequencer-workspace .lane-label-area .head-mix-controls .compact-delete-btn {
             color: #ff667a;
@@ -4969,7 +4970,7 @@
             gap: 4px;
             width: auto;
         }
-        .master-pattern-row .master-pattern-controls .cycle-nav {
+        .master-pattern-controls .cycle-nav {
             flex-wrap: nowrap;
             margin: 0;
             gap: 4px;

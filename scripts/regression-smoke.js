@@ -258,9 +258,6 @@ async function run() {
     });
 
     const setSelect = async (selector, value) => {
-        if (selector === '#masterPhraseCycles' && !(await page.locator('#masterPatternControls').evaluate(el => el.open))) {
-            await page.locator('#masterPatternControls > summary').click();
-        }
         await page.selectOption(selector, String(value));
         await page.locator(selector).dispatchEvent('change');
     };
@@ -1083,8 +1080,9 @@ async function run() {
             assert(same(await page.locator('.toolbar-transport button').evaluateAll(buttons => buttons.map(button => button.id)),
                 ['stickyBarToggle', 'audioBtn', 'playBtn', 'stopBtn', 'resetBtn']),
                 'Pinned buttons should place Controls first and Reset immediately after Stop.');
-            assert(!(await page.locator('#masterPatternControls').evaluate(el => el.open)),
-                'Shared Master pattern controls should start collapsed.');
+            assert(await page.locator('.lane-group-heading #masterPatternControls').count() === 1 &&
+                await page.locator('#masterPatternControls details, #masterPatternControls summary').count() === 0,
+                'Shared Master pattern controls should sit in the Rhythm Tracks heading, not a collapsible panel.');
             for (const selector of ['#soundDriver']) {
                 assert(await page.locator(selector).isVisible(),
                     'Master Beat should retain the same common controls as voice rows.', { viewport, selector });
@@ -1109,14 +1107,12 @@ async function run() {
             }
             assert(await page.locator('#volDriver').isVisible(), 'Opening Master Beat should reveal its volume control.');
             await page.locator('#masterBeatControls .rail-toggle-btn').click();
-            await page.locator('#masterPatternControls > summary').click();
-            for (const selector of ['#masterPhraseCycles', '#clearMasterBtn', '#masterInfoBtn',
+            for (const selector of ['#masterPhraseCycles', '#clearMasterBtn',
                 '#masterPatternControls .cycle-nav', '#masterPatternControls .lane-edit-controls',
                 '#masterPatternControls .group-nudge-control']) {
                 assert(await page.locator(selector).isVisible(),
                     'The Master panel should expose shared phrase, editing, and navigation controls.', { viewport, selector });
             }
-            await page.locator('#masterPatternControls > summary').click();
             for (const selector of ['#resetBtn', '#transportReadout', '.toolbar-status .mini-playhead']) {
                 assert(await page.locator(selector).isVisible() && await page.locator(selector).evaluate(el => {
                     const rect = el.getBoundingClientRect();
@@ -1135,9 +1131,9 @@ async function run() {
             }), 'Reset should remain on screen when scrolling to the rhythm tracks.', viewport);
             await page.locator('#resetBtn').click();
             assert(await page.locator('#soundDriver').inputValue() === 'kick' &&
-                !(await page.locator('#masterPatternControls').evaluate(el => el.open)) &&
+                await page.locator('#masterPhraseCycles').isVisible() &&
                 await page.locator('#muteDriver').textContent() === 'Mute',
-                'Reset should restore the Beat instrument, compact mix labels, and closed Master panel.');
+                'Reset should restore the Beat instrument and compact mix labels while Master controls stay visible.');
             assert(await page.locator('#stickyBarToggle').getAttribute('aria-expanded') === 'false',
                 'Reset should be usable without opening additional controls.');
             assert(await page.locator('h1.app-brand').isVisible() && await page.locator('#toolbarControls h1').count() === 0,
@@ -1413,8 +1409,6 @@ async function run() {
                 return help.left >= meter.right && Math.abs(help.top + help.height / 2 - meter.top - meter.height / 2) <= 1;
             }), 'Meter help should always sit to the right of Meter B on the same row.', { width });
             {
-                await page.locator('#masterPatternControls > summary').click();
-                await page.waitForTimeout(180);
                 const masterPanel = await page.locator('#masterPatternControls .lane-toolbar').evaluate(el => {
                     const rect = el.getBoundingClientRect();
                     const items = [...el.querySelectorAll('.meter-master-select, .lane-edit-controls button, #clearMasterBtn, .group-nudge-control, .lane-view-actions')];
@@ -1449,7 +1443,13 @@ async function run() {
                     masterPanel.height <= (width <= 480 ? 210 : width <= 539 ? 165 : width <= 720 ? 110 : width < 950 ? 85 : 50),
                     'Shared Master controls should fill compact rows without clipping or unnecessary breaks.',
                     { width, masterPanel });
-                await page.locator('#masterPatternControls > summary').click();
+                if (width >= 1280) {
+                    assert(await page.locator('#masterPatternControls').evaluate(el => {
+                        const controls = el.getBoundingClientRect();
+                        const meter = document.querySelector('#rhythmB').getBoundingClientRect();
+                        return controls.left >= meter.right && controls.top < meter.bottom && controls.bottom > meter.top;
+                    }), 'Wide screens should keep Master controls on the same heading row as the meters.', { width });
+                }
             }
             await page.locator('#collapseAllRailsBtn').click();
             await page.waitForTimeout(180);

@@ -311,7 +311,6 @@ function resetMixerToStartingState() {
     // Re-collapse the Master Beat click-track rail so reset matches the default
     // collapsed load state.
     collapsePulseRails();
-    document.getElementById('masterPatternControls').open = false;
 
     updateDerivedState(state);
     updatePhaseUI(state, ui);

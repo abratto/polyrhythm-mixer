@@ -74,6 +74,7 @@ export function getDomRefs() {
 
         // Sequencer grid containers for each lane
         masterGrid: document.getElementById('masterGrid'),
+        masterPatternControls: document.getElementById('masterPatternControls'),
 
         // Add voice buttons for multi-voice lanes
         addMasterVoiceBtn: document.getElementById('addMasterVoiceBtn'),
@@ -82,8 +83,6 @@ export function getDomRefs() {
         clearMasterBtn: document.getElementById('clearMasterBtn'),
 
         // Lane explanation toggles and copy
-        masterInfoBtn: document.getElementById('masterInfoBtn'),
-        masterDescription: document.getElementById('masterDescription'),
 
         // Visualization explanation toggle
         vizInfoBtn: document.getElementById('vizInfoBtn'),
