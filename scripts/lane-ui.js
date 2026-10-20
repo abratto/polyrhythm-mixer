@@ -606,7 +606,7 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     clrBtn = document.createElement('button');
     clrBtn.type = 'button';
     clrBtn.className = 'edit-btn edit-btn-sm compact-clear-btn';
-    clrBtn.textContent = 'C';
+    clrBtn.textContent = 'Clear';
     clrBtn.title = `Clear voice ${voiceIndex + 1}`;
     clrBtn.setAttribute('aria-label', clrBtn.title);
     clrBtn.addEventListener('click', () => clearVoice(lane, lane.voices[voiceIndex], state));
@@ -1591,10 +1591,10 @@ export function addLaneEditControls(lane, state) {
 function createSoloMuteControls(channel, idSolo, idMute, { solo = true, compact = false } = {}) {
     const wrap = document.createElement('div');
     wrap.className = 'voice-mix-controls';
-    // Compact buttons render as one-letter M/S while keeping the full
-    // word in the accessible name / title.
-    const soloText = (on) => compact ? 'S' : (on ? 'Soloed' : 'Solo');
-    const muteText = (on) => compact ? 'M' : (on ? 'Muted' : 'Mute');
+    // Compact rail buttons keep a stable "Solo"/"Mute" label (state is shown by
+    // styling) so their width never changes and rail rows stay aligned.
+    const soloText = (on) => compact ? 'Solo' : (on ? 'Soloed' : 'Solo');
+    const muteText = (on) => compact ? 'Mute' : (on ? 'Muted' : 'Mute');
 
     let soloBtn = null;
     if (solo) {

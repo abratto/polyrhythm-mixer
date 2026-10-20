@@ -269,11 +269,11 @@ function resetFixedChannel(channel, defaults) {
     if (channel.muteEl) {
         channel.muteEl.classList.toggle('muted', defaults.muted);
         channel.muteEl.textContent = channel.muteEl.closest('.compact-mix-controls')
-            ? 'M' : (defaults.muted ? 'Muted' : 'Mute');
+            ? 'Mute' : (defaults.muted ? 'Muted' : 'Mute');
     }
     if (channel.soloEl) {
         channel.soloEl.classList.remove('soloed');
-        channel.soloEl.textContent = channel.soloEl.closest('.compact-mix-controls') ? 'S' : 'Solo';
+        channel.soloEl.textContent = 'Solo';
     }
 }
 

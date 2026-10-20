@@ -458,9 +458,9 @@ export function applyChannelState(channel, stateObj, soundKey = 's') {
         channel.muted = !!muted;
         if (channel.muteEl) {
             channel.muteEl.classList.toggle('muted', channel.muted);
-            // Preserve compact head-button labels (M/S) if the control uses them.
+            // Compact rail buttons keep a stable label; state is shown by styling.
             const compact = channel.muteEl.closest('.compact-mix-controls');
-            channel.muteEl.textContent = compact ? 'M' : (channel.muted ? 'Muted' : 'Mute');
+            channel.muteEl.textContent = compact ? 'Mute' : (channel.muted ? 'Muted' : 'Mute');
         }
     }
 
@@ -470,7 +470,7 @@ export function applyChannelState(channel, stateObj, soundKey = 's') {
         if (channel.soloEl) {
             channel.soloEl.classList.toggle('soloed', channel.soloed);
             const compact = channel.soloEl.closest('.compact-mix-controls');
-            channel.soloEl.textContent = compact ? 'S' : (channel.soloed ? 'Soloed' : 'Solo');
+            channel.soloEl.textContent = compact ? 'Solo' : (channel.soloed ? 'Soloed' : 'Solo');
         }
     }
 }

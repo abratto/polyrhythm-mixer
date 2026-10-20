@@ -670,10 +670,10 @@ async function run() {
         await page.waitForTimeout(300);
 
         // --- Solo button toggling on fixed and voice channels ---
-        // Voice solo/mute controls now render as compact header chips (S/M)
-        // while the fixed driver control keeps its full words; accept both.
-        const isSoloOff = (t) => t === 'Solo' || t === 'S';
-        const isSoloOn = (t) => t === 'Soloed' || t === 'S';
+        // Voice solo/mute rail controls keep a stable full-word label ("Solo")
+        // and show state via styling; non-compact controls still swap to "Soloed".
+        const isSoloOff = (t) => t === 'Solo';
+        const isSoloOn = (t) => t === 'Soloed' || t === 'Solo';
         async function testSolo(id) {
             const btn = page.locator(`#${id}`);
             const textBefore = await btn.textContent();
@@ -1136,7 +1136,7 @@ async function run() {
             await page.locator('#resetBtn').click();
             assert(await page.locator('#soundDriver').inputValue() === 'kick' &&
                 !(await page.locator('#masterPatternControls').evaluate(el => el.open)) &&
-                await page.locator('#muteDriver').textContent() === 'M',
+                await page.locator('#muteDriver').textContent() === 'Mute',
                 'Reset should restore the Beat instrument, compact mix labels, and closed Master panel.');
             assert(await page.locator('#stickyBarToggle').getAttribute('aria-expanded') === 'false',
                 'Reset should be usable without opening additional controls.');
@@ -1192,6 +1192,22 @@ async function run() {
             assert(await compactRail.locator('.compact-delete-btn').isVisible(),
                 'Delete should remain available when the voice is collapsed.');
             await compactRail.locator('.rail-toggle-btn').click();
+            const mixLayout = await compactRail.evaluate(rail => {
+                const rect = rail.getBoundingClientRect();
+                return [...rail.querySelectorAll('.mix-group .solo-btn, .mix-group .mute-btn, .mix-group .compact-clear-btn')]
+                    .map(btn => {
+                        const r = btn.getBoundingClientRect();
+                        return { text: btn.textContent, left: r.left, right: r.right, top: r.top, width: r.width,
+                            height: r.height, clipped: btn.scrollWidth > btn.clientWidth + 1,
+                            railLeft: rect.left, railRight: rect.right };
+                    });
+            });
+            assert(same(mixLayout.map(b => b.text), ['Solo', 'Mute', 'Clear']),
+                'Expanded voice mix actions should use full Solo, Mute and Clear labels.', { viewport, mixLayout });
+            assert(mixLayout.every(b => b.height >= 44 && b.width >= 44 && !b.clipped &&
+                b.left >= b.railLeft - 1 && b.right <= b.railRight + 1 && b.right <= viewport.width &&
+                Math.abs(b.top - mixLayout[0].top) < 1),
+                'Solo, Mute and Clear should share one unclipped, touch-friendly row inside the rail.', { viewport, mixLayout });
             for (const selector of ['.solo-btn', '.mute-btn']) {
                 await compactRail.locator(selector).click();
                 assert(await compactRail.locator(selector).evaluate((el, activeClass) => el.classList.contains(activeClass),
@@ -1462,7 +1478,7 @@ async function run() {
                 const expandedLayout = await toggles.nth(index).evaluate(button => {
                     const rail = button.closest('.lane-label-area');
                     const rect = rail.getBoundingClientRect();
-                    const flowSelector = '.identity-group, .lane-volume, .expanded-mix-actions button, .voice-panel-switch, .voice-edit-controls button, .voice-nudge-control, .grouping-controls .control-group, .lane-header-view-actions';
+                    const flowSelector = '.identity-group, .lane-volume, .expanded-mix-actions, .voice-panel-switch, .voice-edit-controls button, .voice-nudge-control, .grouping-controls .control-group, .lane-header-view-actions';
                     const flowItems = [...rail.querySelectorAll(flowSelector)]
                         .filter(item => item.getBoundingClientRect().width > 0)
                         .sort((a, b) => Number(getComputedStyle(a).order) - Number(getComputedStyle(b).order));
@@ -1519,7 +1535,7 @@ async function run() {
                     };
                 });
                 assert(!expandedLayout.overflow && !expandedLayout.clippedControls && expandedLayout.volumeWidth >= 140 &&
-                    expandedLayout.height <= (width <= 480 ? 350 : width <= 720 ? 340 : width <= 1023 ? 160 : width < 1370 ? 140 : 50),
+                    expandedLayout.height <= (width <= 480 ? 350 : width <= 720 ? 340 : width <= 1023 ? 160 : width < (expandedLayout.grouping ? 1440 : 1370) ? 140 : 50),
                     'Expanded controls should fit their rail and responsive height budget.', { width, index, expandedLayout });
                 assert(!expandedLayout.unnecessaryWrap,
                     'A control cluster should only wrap when it cannot fit on the preceding row.',
@@ -1528,9 +1544,11 @@ async function run() {
                     assert(expandedLayout.touchTargets,
                         'Every expanded Rhythm Tracks rail should retain touch-friendly controls.',
                         { width, index, expandedLayout });
+                    // Full-word Solo/Mute/Clear stay together as one cluster, so a
+                    // Master voice rail may need a third row up to 720px.
                     const smallHeightBudget = expandedLayout.beat ? (width >= 600 ? 50 : width >= 390 ? 95 : 145) :
-                            expandedLayout.grouping ? (width <= 480 ? 305 : width < 600 ? 260 : 200) :
-                                (width <= 480 ? 245 : width < 600 ? 185 : 135);
+                            expandedLayout.grouping ? (width <= 480 ? 305 : 260) :
+                                (width <= 480 ? 245 : 185);
                     assert(expandedLayout.height <= smallHeightBudget,
                         'Small-screen Beat, Master and grouping rails should avoid unnecessary control rows.',
                         { width, index, smallHeightBudget, expandedLayout });
@@ -1547,10 +1565,11 @@ async function run() {
                         'Master voice controls should occupy at most two compact rows at tablet widths.',
                         { width, index, expandedLayout });
                 }
-                if (expandedLayout.grouping && width >= 600 && width < 1370) {
-                    assert(expandedLayout.rowCenters.length <= (width >= 950 ? 2 : 3) &&
+                // Full-word Solo/Mute/Clear labels push the grouping rail's single-row fit to 1440px.
+                if (expandedLayout.grouping && width >= 600 && width < 1440) {
+                    assert(expandedLayout.rowCenters.length <= (width >= 950 ? 2 : width >= 721 ? 3 : 4) &&
                         !expandedLayout.clippedLabels &&
-                        expandedLayout.height <= (width >= 950 ? 95 : width >= 721 ? 120 : 200),
+                        expandedLayout.height <= (width >= 950 ? 95 : width >= 721 ? 130 : 260),
                         'Grouping controls should use at most two or three compact rows at intermediate widths.',
                         { width, index, expandedLayout });
                     if (width <= 720) {

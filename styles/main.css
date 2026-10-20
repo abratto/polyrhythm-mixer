@@ -4999,18 +4999,24 @@
             gap: 4px;
             flex: 0 0 auto;
         }
+        /* Full-word Solo / Mute / Clear size to their labels with tight
+           padding so the cluster stays compact on every rail. */
         .sequencer-workspace .expanded-mix-actions button {
-            width: 28px;
-            min-width: 28px;
+            width: auto;
+            min-width: 0;
             height: 34px;
-            padding: 0;
+            padding: 0 6px;
+            letter-spacing: 0;
+            white-space: nowrap;
         }
         @media (max-width: 720px) {
             .sequencer-workspace .expanded-mix-actions button {
-                width: 44px;
+                width: auto;
                 min-width: 44px;
                 min-height: 44px;
                 height: 44px;
+                padding: 0 5px;
+                letter-spacing: 0;
             }
         }
         @media (max-width: 480px) {
@@ -5065,8 +5071,17 @@
             align-items: center;
             gap: 4px;
         }
-        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) :is(.mix-group, .pattern-group, .track-group, .grouping-controls, .expanded-mix-actions, .voice-edit-controls) {
+        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) :is(.mix-group, .pattern-group, .track-group, .grouping-controls, .voice-edit-controls) {
             display: contents;
+        }
+        /* Solo / Mute / Clear wrap together as one cluster. */
+        .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .expanded-mix-actions {
+            display: flex;
+            flex: 0 0 auto;
+            flex-wrap: nowrap;
+            gap: 4px;
+            margin: 0;
+            order: 2;
         }
         .sequencer-workspace :is(#masterBeatControls, #masterGrid .lane-label-area, #groupingLanesContainer .lane-label-area):not(.rail-collapsed) .voice-controls-heading {
             display: none;
