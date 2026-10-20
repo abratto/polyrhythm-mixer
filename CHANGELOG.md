@@ -1,4 +1,11 @@
 # Changelog
+## v1.33.0 — 2026-10-20
+
+### Changed
+- **Full mix labels.** Expanded voice rails show **Solo**, **Mute**, and **Clear** instead of S, M, and C. Labels stay fixed while the button styling shows state, so widths don't shift when toggled.
+- **Grouped mix controls.** Solo, Mute, and Clear wrap as one cluster, keeping them on a single row at every viewport width. Phone buttons keep 44px touch targets.
+- **Responsive regression coverage.** Browser checks confirm the full labels fit on one unclipped row inside each rail. Grouping rails now fit on one row from 1440px; some tablet and phone rails use one extra row.
+
 ## v1.32.0 — 2026-10-13
 
 ### Added
