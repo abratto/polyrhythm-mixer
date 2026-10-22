@@ -1,4 +1,9 @@
 # Changelog
+## v1.35.1 — 2026-10-21
+
+### Fixed
+- **Grouping timeline markers match their lane colors.** Full Pattern Timeline labels and markers now resolve theme-driven grouping colors instead of falling back to grey, and refresh when the theme changes.
+
 ## v1.35.0 — 2026-10-21
 
 ### Changed
