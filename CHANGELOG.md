@@ -1,4 +1,14 @@
 # Changelog
+## v1.35.0 — 2026-10-21
+
+### Changed
+- **More realistic Batá slaps.** Okónkolo, Itótele and Iyá slaps use higher, tighter chachá pitches, short damped bodies, denser membrane overtones, stronger enú coupling, and louder Itótele/Iyá slaps.
+- **New slap synthesis.** The noise filter sweeps downward, a parallel mid-band "flesh smack" layer is added, and overtones bend slightly harder than the body.
+
+### Added
+- **Tuner-to-mixer sharing.** Pressing Play in the Hybrid tuner applies its values to the mixer (including open tabs); a "Reset mixer" button clears them.
+- **Batá slap regression test** (`npm run test:bata-slap`).
+
 ## v1.34.0 — 2026-10-20
 
 ### Changed
