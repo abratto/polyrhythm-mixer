@@ -30,6 +30,31 @@ let _scratchB = new Uint8Array(0);
 const _gearSpriteCache = new Map();
 const GEAR_SPRITE_CACHE_MAX = 24;
 
+// Canvas 2D cannot parse CSS custom-property references, so grouping lane
+// colors (which are stored as `var(--glane-N)` tokens to follow the active
+// theme) must be resolved to a concrete color before drawing. A hidden probe
+// element lets the browser compute the value, including `color-mix()` themes.
+const _resolvedColorCache = new Map();
+let _colorProbe = null;
+
+function resolveCanvasColor(color) {
+    if (typeof color !== 'string') return color;
+    if (!color.startsWith('var(') && !color.startsWith('color-mix(')) return color;
+    const theme = document.body?.dataset.theme || '';
+    const key = `${theme}|${color}`;
+    const cached = _resolvedColorCache.get(key);
+    if (cached) return cached;
+    if (!_colorProbe) {
+        _colorProbe = document.createElement('span');
+        _colorProbe.style.display = 'none';
+        document.body.appendChild(_colorProbe);
+    }
+    _colorProbe.style.color = color;
+    const resolved = getComputedStyle(_colorProbe).color || color;
+    _resolvedColorCache.set(key, resolved);
+    return resolved;
+}
+
 /** Checksums of every lane's selection so layer/sprite caches invalidate on edits. */
 function computePatternChecksum(lanes) {
     let h = 0;
@@ -1596,8 +1621,9 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width, include
         ctx.fillText(`Master${masterVoiceCount > 1 ? ` v${vi + 1}` : ''}`, startX, masterRows[vi] - 4);
     });
     groupingRows.forEach(({ lane, rows }) => {
+        const color = resolveCanvasColor(lane.color);
         rows.forEach((rowY, vi) => {
-            ctx.fillStyle = lane.color;
+            ctx.fillStyle = color;
             ctx.fillText(`G${lane.groupCount}${lane.voices.length > 1 ? ` v${vi + 1}` : ''}`, startX, rowY - 4);
         });
     });
@@ -1664,7 +1690,7 @@ function drawFullPatternTimeline(ctx, state, lanes, startX, yTop, width, include
                 for (let base = i * groupSize; base < totalSteps + groupSize; base += repeatSteps) {
                     const pos = base + phase;
                     const normalized = ((pos % totalSteps) + totalSteps) % totalSteps;
-                    drawTimelineMarker(ctx, startX + normalized * pixelPerStep, rowY, lane.color, 'dot', 4);
+                    drawTimelineMarker(ctx, startX + normalized * pixelPerStep, rowY, resolveCanvasColor(lane.color), 'dot', 4);
                 }
             });
         });
@@ -2014,7 +2040,9 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             let voiceCounts = String(lanes.master.voices.length);
             for (const lane of (lanes.grouping || [])) voiceCounts += '.' + lane.voices.length;
             _cachedVoiceCounts = voiceCounts;
-            _cachedBaseSig = [state.A, state.B, state.mainTeeth, state.teethA, state.teethB, state.masterPhraseCycles, state.masterPhraseSteps, state.fullPatternCycles, state.phaseA, state.phaseB, canvas.width, canvas.height, isMobile, _cachedVoiceCounts, _cachedPatternChecksum].join('|');
+            const groupingColors = (lanes.grouping || []).map(l => l.color).join(',');
+            const theme = document.body?.dataset.theme || '';
+            _cachedBaseSig = [state.A, state.B, state.mainTeeth, state.teethA, state.teethB, state.masterPhraseCycles, state.masterPhraseSteps, state.fullPatternCycles, state.phaseA, state.phaseB, canvas.width, canvas.height, isMobile, _cachedVoiceCounts, _cachedPatternChecksum, groupingColors, theme].join('|');
         }
         _frameNo++;
         const baseSig = _cachedBaseSig;
