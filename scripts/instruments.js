@@ -6,7 +6,7 @@
  */
 
 import { acquireOsc as poolAcquireOsc } from './pool.js';
-import { instrumentData } from './instrument-data.js';
+import { instrumentData, applyTunerOverrides, TUNER_OVERRIDES_KEY } from './instrument-data.js';
 
 // The Web Audio API cannot exponentially ramp to exactly 0, so decaying
 // envelopes ramp to this floor instead — effectively silent.
@@ -1307,11 +1307,10 @@ function playBataHigh(state, now, vol) {
  * fardela, so it is drier and sharper. It still has a few coupled behaviours
  * worth modelling:
  *   1. Body  — a fast sine fundamental (with a short tension-spike bend).
- *   2. Overtones — three inharmonic skin/shell modes, quieter by ratio.
- *   3. Coupling — the small head can't drive much air, but a little low
- *      sympathetic energy still reaches the opposite head; a micro-delayed,
- *      smoothed sine at the enú fundamental adds that low "bloom".
- *   4. Attack — a bright rawhide crack.
+ *   2. Overtones — three dense membrane modes; the first two bend on impact.
+ *   3. Coupling — a micro-delayed, smoothed sine at the enú fundamental
+ *      supplies the longer, hollow opposite-head bloom.
+ *   4. Attack — a swept bandpass crack plus a short mid-band flesh smack.
  * All layers are parameter-driven so the balance can be tuned per drum.
  */
 function playBataChacha(state, now, vol, p) {
@@ -1331,9 +1330,9 @@ function playBataChacha(state, now, vol, p) {
     bodyOsc.start(now); bodyOsc.stop(now + p.bodyDecay);
     registerCleanup(bodyOsc, bodyGain);
 
-    // 2. Inharmonic skin/shell overtones (triangle), each quieter by ratio.
-    addBataChachaOvertone(state, masterGain, now, p.baseFreq, p.overRatio1, p.overVol1, p.overDecay1);
-    addBataChachaOvertone(state, masterGain, now, p.baseFreq, p.overRatio2, p.overVol2, p.overDecay2);
+    // 2. Inharmonic membrane overtones (triangle).
+    addBataChachaOvertone(state, masterGain, now, p.baseFreq, p.overRatio1, p.overVol1, p.overDecay1, p.overPitchBend, p.overBendTime);
+    addBataChachaOvertone(state, masterGain, now, p.baseFreq, p.overRatio2, p.overVol2, p.overDecay2, p.overPitchBend, p.overBendTime);
     addBataChachaOvertone(state, masterGain, now, p.baseFreq, p.overRatio3, p.overVol3, p.overDecay3);
 
     // 3. Enú coupling — low sympathetic bloom, micro-delayed and smoothed.
@@ -1353,21 +1352,29 @@ function playBataChacha(state, now, vol, p) {
 
     // 4. Attack — rawhide crack.
     if (p.slapVol > 0) {
-        createBataSlap(state, p.slapVol, masterGain, now, p.slapDecay, p.slapFreq, p.slapQ);
+        createBataSlap(state, p.slapVol, masterGain, now, p.slapDecay, p.slapFreq, p.slapQ,
+            p.slapEndFreq, p.slapBandpass ? 'bandpass' : 'highpass');
+    }
+    if (p.smackVol > 0) {
+        createBataSlap(state, p.smackVol, masterGain, now, p.smackDecay, p.smackFreq, p.smackQ,
+            p.smackFreq, 'bandpass');
     }
 
-    const maxTail = Math.max(p.bodyDecay, p.overDecay1, p.overDecay2, p.overDecay3,
+    const maxTail = Math.max(p.bodyDecay, p.overDecay1, p.overDecay2, p.overDecay3, p.slapDecay, p.smackDecay,
         p.couplingDelay + p.couplingDecay);
     masterGain.gain.exponentialRampToValueAtTime(MIN_GAIN, now + maxTail + 0.05);
 }
 
 /** One inharmonic chachá overtone (triangle), skipped when silent. */
-function addBataChachaOvertone(state, dest, now, baseFreq, ratio, level, decay) {
+function addBataChachaOvertone(state, dest, now, baseFreq, ratio, level, decay, bend = 1, bendTime = 0.009) {
     if (!(level > 0) || !(ratio > 0) || !(decay > 0)) return;
     const osc = acquireOsc(state);
     const gain = acquireGain(state);
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(baseFreq * ratio, now);
+    osc.frequency.setValueAtTime(baseFreq * ratio * bend, now);
+    if (bend !== 1) {
+        osc.frequency.exponentialRampToValueAtTime(baseFreq * ratio, now + Math.min(bendTime, decay));
+    }
     gain.gain.setValueAtTime(level, now);
     gain.gain.exponentialRampToValueAtTime(MIN_GAIN, now + decay);
     osc.connect(gain); gain.connect(dest);
@@ -1375,17 +1382,17 @@ function addBataChachaOvertone(state, dest, now, baseFreq, ratio, level, decay) 
     registerCleanup(osc, gain);
 }
 
-/** Batá low chachá (Iyá small head) — tuned to the enú's 1.5 coupling (225 Hz). */
+/** Batá low chachá (Iyá small head). */
 function playBataLowSlap(state, now, vol) {
     playBataChacha(state, now, vol, readParams('bata_low_slap'));
 }
 
-/** Batá middle chachá (Itótele small head) — tuned to the enú's 1.6 coupling (352 Hz). */
+/** Batá middle chachá (Itótele small head). */
 function playBataMiddleSlap(state, now, vol) {
     playBataChacha(state, now, vol, readParams('bata_middle_slap'));
 }
 
-/** Batá high chachá (Okónkolo small head) — tuned to the enú's octave (600 Hz). */
+/** Batá high chachá (Okónkolo small head). */
 function playBataHighSlap(state, now, vol) {
     playBataChacha(state, now, vol, readParams('bata_high_slap'));
 }
@@ -1518,13 +1525,16 @@ function playBataPress(state, now, vol, p) {
     }
 }
 
-/** Helper: generates a hand-impact slap transient using white noise through a high-pass filter. */
-function createBataSlap(state, volume, targetNode, startTime, duration, filterFreq = 1200, q = 1.0) {
+/** Filtered hand-impact noise; other Batá strokes retain a static high-pass. */
+function createBataSlap(state, volume, targetNode, startTime, duration, filterFreq = 1200, q = 1.0, endFilterFreq = filterFreq, filterType = 'highpass') {
     const noise = acquireNoiseSource(state);
     if (!noise) return;
     const noiseFilter = state.audioCtx.createBiquadFilter();
-    noiseFilter.type = 'highpass';
+    noiseFilter.type = filterType;
     noiseFilter.frequency.setValueAtTime(filterFreq, startTime);
+    if (endFilterFreq !== filterFreq) {
+        noiseFilter.frequency.exponentialRampToValueAtTime(endFilterFreq, startTime + duration);
+    }
     noiseFilter.Q.setValueAtTime(q, startTime);
     const noiseGain = acquireGain(state);
     noiseGain.gain.setValueAtTime(volume, startTime);
@@ -1532,11 +1542,11 @@ function createBataSlap(state, volume, targetNode, startTime, duration, filterFr
     noise.connect(noiseFilter);
     noiseFilter.connect(noiseGain);
     noiseGain.connect(targetNode);
-    noise.start(startTime);
+    noise.start(startTime, filterType === 'bandpass' ? randomNoiseOffset(state, duration + 0.02) : 0);
     // The noise buffer is 1 s long; stop it at the end of the transient rather
     // than letting the source linger in the graph for the rest of the buffer.
     noise.stop(startTime + duration + 0.02);
-    registerCleanup(noiseFilter, noiseGain);
+    registerCleanup(noise, noiseFilter, noiseGain);
 }
 
 /** Cajón bass: low-frequency thump from center slap, short decay. */
@@ -1893,6 +1903,20 @@ const PRERENDER_SECONDS = 3;
 // per overlapping hit on low-end devices.
 const _prerenderBuffers = new Map();
 const _prerenderPending = new Set();
+
+// Tuner pages in other tabs save slider values; re-apply them and drop the
+// cached renders so the next hit uses the new sound.
+if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (e) => {
+        if (e.key !== TUNER_OVERRIDES_KEY) return;
+        const changed = applyTunerOverrides();
+        for (const map of [_prerenderBuffers, _prerenderPending]) {
+            for (const v of [...map.keys ? map.keys() : map]) {
+                if (changed.some(k => v === k || v.startsWith(k + ':'))) map.delete(v);
+            }
+        }
+    });
+}
 
 // Instruments that synthesize live on every hit instead of using a cached
 // buffer, because their realism depends on per-hit randomization that a single

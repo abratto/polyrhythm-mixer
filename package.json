@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "npm run test:groupings && npm run test:wheel-ratios && npm run test:scheduler-recovery && npm run test:oscillator-lifecycle && npm run test:compression",
+    "test": "npm run test:groupings && npm run test:wheel-ratios && npm run test:scheduler-recovery && npm run test:oscillator-lifecycle && npm run test:bata-slap && npm run test:compression",
+    "test:bata-slap": "node scripts/test-bata-slap.js",
     "test:oscillator-lifecycle": "node scripts/test-oscillator-lifecycle.js",
     "test:scheduler-recovery": "node scripts/test-scheduler-recovery.js",
     "test:wheel-ratios": "node scripts/test-wheel-ratios.js",

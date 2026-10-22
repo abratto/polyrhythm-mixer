@@ -510,29 +510,37 @@ export const instrumentData = {
     family: 'hybrid',
     label: 'Batá Slap (Low)',
     params: [
-      { k: 'baseFreq',      v: 320,  label: 'Base Frequency',   unit: 'Hz', lo: 80, hi: 600, step: 1, gloss: 'Iyá slap register (D4–F4, 290–350 Hz). Woody, thudding clack.' },
-      { k: 'pitchBend',     v: 1.15, label: 'Pitch Bend',       unit: '',   lo: 1.0, hi: 1.3, step: 0.01, gloss: 'Tight skin without fardela yields a sharp deflection on impact.' },
-      { k: 'pitchBendTime', v: 0.015,label: 'Pitch Bend Time',  unit: 's',  lo: 0.005, hi: 0.08, step: 0.001, gloss: 'Fast settle.' },
-      { k: 'bodyVol',       v: 0.35, label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Low fundamental — kept modest so the slap cracks rather than thuds.' },
-      { k: 'bodyDecay',     v: 0.08, label: 'Body Decay',       unit: 's',  lo: 0.02, hi: 0.5, step: 0.005, gloss: 'Short — a thud would be longer and lower.' },
-      { k: 'overRatio1',    v: 1.6,  label: 'Overtone 1 Ratio', unit: '',   lo: 1.1, hi: 3.0, step: 0.01, gloss: 'First inharmonic shell mode.' },
-      { k: 'overVol1',      v: 0.34, label: 'Overtone 1 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Boosted — the ringing crack that carries the stroke.' },
-      { k: 'overDecay1',    v: 0.16, label: 'Overtone 1 Decay', unit: 's',  lo: 0.02, hi: 0.5, step: 0.005, gloss: 'Rings on past the body.' },
-      { k: 'overRatio2',    v: 2.3,  label: 'Overtone 2 Ratio', unit: '',   lo: 1.1, hi: 4.0, step: 0.01, gloss: 'Second shell mode.' },
-      { k: 'overVol2',      v: 0.20, label: 'Overtone 2 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Bright upper partial.' },
-      { k: 'overDecay2',    v: 0.13, label: 'Overtone 2 Decay', unit: 's',  lo: 0.02, hi: 0.4, step: 0.005, gloss: 'Rings on.' },
-      { k: 'overRatio3',    v: 3.1,  label: 'Overtone 3 Ratio', unit: '',   lo: 1.1, hi: 5.0, step: 0.01, gloss: 'Third shell mode.' },
-      { k: 'overVol3',      v: 0.12, label: 'Overtone 3 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'High sparkle.' },
-      { k: 'overDecay3',    v: 0.10, label: 'Overtone 3 Decay', unit: 's',  lo: 0.02, hi: 0.4, step: 0.005, gloss: 'Ring length.' },
-      { k: 'couplingFreq',  v: 150,  label: 'Enú Coupling Freq',unit: 'Hz', lo: 50, hi: 400, step: 1, gloss: 'Low sympathetic tone of the opposite (enú) head.' },
-      { k: 'couplingVol',   v: 0.02, label: 'Coupling Volume',  unit: '',   lo: 0, hi: 0.5, step: 0.01, gloss: 'Barely present — too much low bloom reads as a thud.' },
-      { k: 'couplingDelay', v: 0.002,label: 'Coupling Delay',   unit: 's',  lo: 0, hi: 0.02, step: 0.0005, gloss: 'Micro-delay before the coupled head responds.' },
-      { k: 'couplingAttack',v: 0.008,label: 'Coupling Attack',  unit: 's',  lo: 0.001, hi: 0.05, step: 0.001, gloss: 'Smoothed onset.' },
-      { k: 'couplingDecay', v: 0.06, label: 'Coupling Decay',   unit: 's',  lo: 0.01, hi: 0.3, step: 0.005, gloss: 'Coupling length.' },
-      { k: 'slapFreq',      v: 2800, label: 'Slap Filter Freq', unit: 'Hz', lo: 200, hi: 8000, step: 10, gloss: 'Iyá slap keeps more energy below 1 kHz — dense and dry.' },
-      { k: 'slapQ',         v: 2.5,  label: 'Slap Q',           unit: '',   lo: 0.5, hi: 5.0, step: 0.1, gloss: 'More resonant crack.' },
-      { k: 'slapVol',       v: 0.62, label: 'Slap Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Attack transient level — the "thwack".' },
-      { k: 'slapDecay',     v: 0.02, label: 'Slap Decay',       unit: 's',  lo: 0.003, hi: 0.1, step: 0.001, gloss: 'Sharp transient.' }
+      { k: 'baseFreq',      v: 390,  label: 'Base Frequency',   unit: 'Hz', lo: 80, hi: 600, step: 1, gloss: 'Iyá small-head fundamental; the hand quickly damps this low component.' },
+      { k: 'pitchBend',     v: 1.38, label: 'Pitch Bend',       unit: '',   lo: 1.0, hi: 1.5, step: 0.01, gloss: 'Initial tension spike from the slap.' },
+      { k: 'pitchBendTime', v: 0.008,label: 'Pitch Bend Time',  unit: 's',  lo: 0.005, hi: 0.08, step: 0.001, gloss: 'Fast settle, slightly slower than the smaller drums.' },
+      { k: 'bodyVol',       v: 0.38, label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Damped fundamental, quieter than the first membrane mode.' },
+      { k: 'bodyDecay',     v: 0.03,label: 'Body Decay',       unit: 's',  lo: 0.02, hi: 0.5, step: 0.001, gloss: 'Hand damping cuts the fundamental within 35 ms.' },
+      { k: 'overRatio1',    v: 1.46, label: 'Overtone 1 Ratio', unit: '',   lo: 1.1, hi: 3.0, step: 0.01, gloss: 'First asymmetric membrane mode; carries the slap pitch.' },
+      { k: 'overVol1',      v: 0.54, label: 'Overtone 1 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Boosted — the ringing crack that carries the stroke.' },
+      { k: 'overDecay1',    v: 0.072,label: 'Overtone 1 Decay', unit: 's',  lo: 0.02, hi: 0.5, step: 0.001, gloss: 'First membrane mode rings beyond the damped fundamental.' },
+      { k: 'overRatio2',    v: 1.86, label: 'Overtone 2 Ratio', unit: '',   lo: 1.1, hi: 4.0, step: 0.01, gloss: 'Second asymmetric membrane mode adds skin character.' },
+      { k: 'overVol2',      v: 0.28, label: 'Overtone 2 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Upper membrane partial level.' },
+      { k: 'overDecay2',    v: 0.044,label: 'Overtone 2 Decay', unit: 's',  lo: 0.02, hi: 0.4, step: 0.001, gloss: 'Fades before the first membrane mode.' },
+      { k: 'overRatio3',    v: 2.29, label: 'Overtone 3 Ratio', unit: '',   lo: 1.1, hi: 5.0, step: 0.01, gloss: 'High edge mode adds a brief rim bite.' },
+      { k: 'overVol3',      v: 0.16, label: 'Overtone 3 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Subtle upper-mode sheen.' },
+      { k: 'overDecay3',    v: 0.028,label: 'Overtone 3 Decay', unit: 's',  lo: 0.02, hi: 0.4, step: 0.001, gloss: 'Brief edge-mode decay.' },
+      { k: 'couplingFreq',  v: 142,  label: 'Enú Coupling Freq',unit: 'Hz', lo: 50, hi: 400, step: 1, gloss: 'Low sympathetic resonance of the opposite enú head.' },
+      { k: 'couplingVol',   v: 0.25, label: 'Coupling Volume',  unit: '',   lo: 0, hi: 0.5, step: 0.01, gloss: 'Hollow opposite-head bloom beneath the slap.' },
+      { k: 'couplingDelay', v: 0.0027,label: 'Coupling Delay',  unit: 's',  lo: 0, hi: 0.02, step: 0.0001, gloss: 'Micro-delay before the coupled head responds.' },
+      { k: 'couplingAttack',v: 0.009,label: 'Coupling Attack',  unit: 's',  lo: 0.001, hi: 0.05, step: 0.001, gloss: 'Smoothed air-column onset.' },
+      { k: 'couplingDecay', v: 0.185,label: 'Coupling Decay',   unit: 's',  lo: 0.01, hi: 0.3, step: 0.005, gloss: 'Opposite-head resonance outlasts the choked slap.' },
+      { k: 'slapBandpass',  v: 1,    label: 'Slap Bandpass',    unit: '',   lo: 0, hi: 1, step: 1, gloss: '1 uses a swept bandpass; 0 restores the previous swept high-pass.' },
+      { k: 'slapFreq',      v: 3800, label: 'Slap Filter Freq', unit: 'Hz', lo: 200, hi: 8000, step: 10, gloss: 'Starting frequency of the downward skin-snap sweep.' },
+      { k: 'slapEndFreq',   v: 1700, label: 'Slap End Freq',    unit: 'Hz', lo: 200, hi: 8000, step: 10, gloss: 'Ending filter frequency, reached over Slap Decay.' },
+      { k: 'slapQ',         v: 1.2,  label: 'Slap Q',           unit: '',   lo: 0.5, hi: 5.0, step: 0.1, gloss: 'Broad snap instead of a narrow resonant tick.' },
+      { k: 'slapVol',       v: 0.92, label: 'Slap Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Dominant skin-snap level.' },
+      { k: 'slapDecay',     v: 0.042,label: 'Slap Decay',       unit: 's',  lo: 0.003, hi: 0.1, step: 0.001, gloss: 'Noise-envelope decay and downward sweep time.' },
+      { k: 'smackFreq',     v: 950,  label: 'Flesh Smack Freq', unit: 'Hz', lo: 200, hi: 3000, step: 10, gloss: 'Broad mid-band hand-impact layer beneath the skin snap.' },
+      { k: 'smackQ',        v: 0.9,  label: 'Flesh Smack Q',    unit: '',   lo: 0.5, hi: 3, step: 0.1, gloss: 'Low Q keeps the hand impact broad.' },
+      { k: 'smackVol',      v: 0.18, label: 'Flesh Smack Volume',unit: '',  lo: 0, hi: 1, step: 0.01, gloss: 'Independent hand-impact level; 0 disables this layer.' },
+      { k: 'smackDecay',    v: 0.015,label: 'Flesh Smack Decay',unit: 's',  lo: 0.003, hi: 0.1, step: 0.001, gloss: 'Short hand-impact decay, separate from the skin snap.' },
+      { k: 'overPitchBend', v: 1.449,label: 'Overtone Bend',    unit: '',   lo: 1, hi: 1.6, step: 0.001, gloss: 'Initial frequency ratio for modes 1 and 2: body bend times 1.05. Set 1 for static modes.' },
+      { k: 'overBendTime',  v: 0.009,label: 'Overtone Bend Time',unit: 's', lo: 0.001, hi: 0.03, step: 0.001, gloss: 'Time for modes 1 and 2 to converge to their nominal frequencies.' }
     ]
   },
 
@@ -540,29 +548,37 @@ export const instrumentData = {
     family: 'hybrid',
     label: 'Batá Slap (Middle)',
     params: [
-      { k: 'baseFreq',      v: 440,  label: 'Base Frequency',   unit: 'Hz', lo: 100, hi: 800, step: 1, gloss: 'Itótele slap register (G4–B4, 390–495 Hz). Centred mid-tone.' },
-      { k: 'pitchBend',     v: 1.15, label: 'Pitch Bend',       unit: '',   lo: 1.0, hi: 1.3, step: 0.01, gloss: 'Sharp deflection on impact.' },
-      { k: 'pitchBendTime', v: 0.01, label: 'Pitch Bend Time',  unit: 's',  lo: 0.005, hi: 0.08, step: 0.001, gloss: 'Very fast settle.' },
-      { k: 'bodyVol',       v: 0.50, label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Fundamental level.' },
-      { k: 'bodyDecay',     v: 0.11, label: 'Body Decay',       unit: 's',  lo: 0.02, hi: 0.5, step: 0.005, gloss: 'Dry — smaller diameter, higher tension.' },
-      { k: 'overRatio1',    v: 1.6,  label: 'Overtone 1 Ratio', unit: '',   lo: 1.1, hi: 3.0, step: 0.01, gloss: 'First inharmonic shell mode.' },
-      { k: 'overVol1',      v: 0.18, label: 'Overtone 1 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Loudest overtone.' },
-      { k: 'overDecay1',    v: 0.10, label: 'Overtone 1 Decay', unit: 's',  lo: 0.02, hi: 0.4, step: 0.005, gloss: 'Ring length.' },
-      { k: 'overRatio2',    v: 2.4,  label: 'Overtone 2 Ratio', unit: '',   lo: 1.1, hi: 4.0, step: 0.01, gloss: 'Second shell mode.' },
-      { k: 'overVol2',      v: 0.10, label: 'Overtone 2 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Second mode.' },
-      { k: 'overDecay2',    v: 0.08, label: 'Overtone 2 Decay', unit: 's',  lo: 0.02, hi: 0.4, step: 0.005, gloss: 'Ring length.' },
-      { k: 'overRatio3',    v: 3.2,  label: 'Overtone 3 Ratio', unit: '',   lo: 1.1, hi: 5.0, step: 0.01, gloss: 'Third shell mode.' },
-      { k: 'overVol3',      v: 0.05, label: 'Overtone 3 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Quietest mode.' },
-      { k: 'overDecay3',    v: 0.06, label: 'Overtone 3 Decay', unit: 's',  lo: 0.02, hi: 0.4, step: 0.005, gloss: 'Ring length.' },
-      { k: 'couplingFreq',  v: 220,  label: 'Enú Coupling Freq',unit: 'Hz', lo: 50, hi: 400, step: 1, gloss: 'Low sympathetic tone of the opposite (enú) head.' },
-      { k: 'couplingVol',   v: 0.06, label: 'Coupling Volume',  unit: '',   lo: 0, hi: 0.5, step: 0.01, gloss: 'How much low bloom reaches the enú.' },
-      { k: 'couplingDelay', v: 0.002,label: 'Coupling Delay',   unit: 's',  lo: 0, hi: 0.02, step: 0.0005, gloss: 'Micro-delay before the coupled head responds.' },
-      { k: 'couplingAttack',v: 0.007,label: 'Coupling Attack',  unit: 's',  lo: 0.001, hi: 0.05, step: 0.001, gloss: 'Smoothed onset.' },
-      { k: 'couplingDecay', v: 0.05, label: 'Coupling Decay',   unit: 's',  lo: 0.01, hi: 0.3, step: 0.005, gloss: 'Coupling length.' },
-      { k: 'slapFreq',      v: 4500, label: 'Slap Filter Freq', unit: 'Hz', lo: 200, hi: 8000, step: 10, gloss: 'Itótele slap bridges Iyá and Okónkolo brightness.' },
-      { k: 'slapQ',         v: 2.5,  label: 'Slap Q',           unit: '',   lo: 0.5, hi: 5.0, step: 0.1, gloss: 'Resonant crack.' },
-      { k: 'slapVol',       v: 0.55, label: 'Slap Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Attack transient level.' },
-      { k: 'slapDecay',     v: 0.015,label: 'Slap Decay',       unit: 's',  lo: 0.003, hi: 0.1, step: 0.001, gloss: 'Fast transient.' }
+      { k: 'baseFreq',      v: 485,  label: 'Base Frequency',   unit: 'Hz', lo: 100, hi: 800, step: 1, gloss: 'Itótele small-head fundamental, quickly damped by the hand.' },
+      { k: 'pitchBend',     v: 1.34, label: 'Pitch Bend',       unit: '',   lo: 1.0, hi: 1.5, step: 0.01, gloss: 'Sharp tension spike on impact.' },
+      { k: 'pitchBendTime', v: 0.007,label: 'Pitch Bend Time',  unit: 's',  lo: 0.005, hi: 0.08, step: 0.001, gloss: 'Very fast pitch settle.' },
+      { k: 'bodyVol',       v: 0.32, label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Damped fundamental, quieter than the first membrane mode.' },
+      { k: 'bodyDecay',     v: 0.026,label: 'Body Decay',       unit: 's',  lo: 0.02, hi: 0.5, step: 0.001, gloss: 'Hand damping cuts the fundamental within 28 ms.' },
+      { k: 'overRatio1',    v: 1.47, label: 'Overtone 1 Ratio', unit: '',   lo: 1.1, hi: 3.0, step: 0.01, gloss: 'First asymmetric membrane mode; carries the slap pitch.' },
+      { k: 'overVol1',      v: 0.48, label: 'Overtone 1 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Louder than the damped fundamental.' },
+      { k: 'overDecay1',    v: 0.062,label: 'Overtone 1 Decay', unit: 's',  lo: 0.02, hi: 0.4, step: 0.001, gloss: 'First membrane mode rings beyond the body.' },
+      { k: 'overRatio2',    v: 1.89, label: 'Overtone 2 Ratio', unit: '',   lo: 1.1, hi: 4.0, step: 0.01, gloss: 'Second asymmetric membrane mode adds skin character.' },
+      { k: 'overVol2',      v: 0.25, label: 'Overtone 2 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Upper membrane partial level.' },
+      { k: 'overDecay2',    v: 0.038,label: 'Overtone 2 Decay', unit: 's',  lo: 0.02, hi: 0.4, step: 0.001, gloss: 'Fades before the first membrane mode.' },
+      { k: 'overRatio3',    v: 2.33, label: 'Overtone 3 Ratio', unit: '',   lo: 1.1, hi: 5.0, step: 0.01, gloss: 'High edge mode adds a brief rim bite.' },
+      { k: 'overVol3',      v: 0.14, label: 'Overtone 3 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Subtle upper-mode sheen.' },
+      { k: 'overDecay3',    v: 0.024,label: 'Overtone 3 Decay', unit: 's',  lo: 0.02, hi: 0.4, step: 0.001, gloss: 'Brief edge-mode decay.' },
+      { k: 'couplingFreq',  v: 205,  label: 'Enú Coupling Freq',unit: 'Hz', lo: 50, hi: 400, step: 1, gloss: 'Low sympathetic resonance of the opposite enú head.' },
+      { k: 'couplingVol',   v: 0.18, label: 'Coupling Volume',  unit: '',   lo: 0, hi: 0.5, step: 0.01, gloss: 'Hollow opposite-head bloom beneath the slap.' },
+      { k: 'couplingDelay', v: 0.0021,label: 'Coupling Delay',  unit: 's',  lo: 0, hi: 0.02, step: 0.0001, gloss: 'Micro-delay before the coupled head responds.' },
+      { k: 'couplingAttack',v: 0.007,label: 'Coupling Attack',  unit: 's',  lo: 0.001, hi: 0.05, step: 0.001, gloss: 'Smoothed air-column onset.' },
+      { k: 'couplingDecay', v: 0.14,label: 'Coupling Decay',   unit: 's',  lo: 0.01, hi: 0.3, step: 0.005, gloss: 'Opposite-head resonance outlasts the choked slap.' },
+      { k: 'slapBandpass',  v: 1,    label: 'Slap Bandpass',    unit: '',   lo: 0, hi: 1, step: 1, gloss: '1 uses a swept bandpass; 0 restores the previous swept high-pass.' },
+      { k: 'slapFreq',      v: 4200, label: 'Slap Filter Freq', unit: 'Hz', lo: 200, hi: 8000, step: 10, gloss: 'Starting frequency of the downward skin-snap sweep.' },
+      { k: 'slapEndFreq',   v: 1950, label: 'Slap End Freq',    unit: 'Hz', lo: 200, hi: 8000, step: 10, gloss: 'Ending filter frequency, reached over Slap Decay.' },
+      { k: 'slapQ',         v: 1.3,  label: 'Slap Q',           unit: '',   lo: 0.5, hi: 5.0, step: 0.1, gloss: 'Broad snap instead of a narrow resonant tick.' },
+      { k: 'slapVol',       v: 0.85, label: 'Slap Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Dominant skin-snap level.' },
+      { k: 'slapDecay',     v: 0.036,label: 'Slap Decay',       unit: 's',  lo: 0.003, hi: 0.1, step: 0.001, gloss: 'Noise-envelope decay and downward sweep time.' },
+      { k: 'smackFreq',     v: 1150, label: 'Flesh Smack Freq', unit: 'Hz', lo: 200, hi: 3000, step: 10, gloss: 'Broad mid-band hand-impact layer beneath the skin snap.' },
+      { k: 'smackQ',        v: 0.9,  label: 'Flesh Smack Q',    unit: '',   lo: 0.5, hi: 3, step: 0.1, gloss: 'Low Q keeps the hand impact broad.' },
+      { k: 'smackVol',      v: 0.18, label: 'Flesh Smack Volume',unit: '',  lo: 0, hi: 1, step: 0.01, gloss: 'Independent hand-impact level; 0 disables this layer.' },
+      { k: 'smackDecay',    v: 0.015,label: 'Flesh Smack Decay',unit: 's',  lo: 0.003, hi: 0.1, step: 0.001, gloss: 'Short hand-impact decay, separate from the skin snap.' },
+      { k: 'overPitchBend', v: 1.407,label: 'Overtone Bend',    unit: '',   lo: 1, hi: 1.6, step: 0.001, gloss: 'Initial frequency ratio for modes 1 and 2: body bend times 1.05. Set 1 for static modes.' },
+      { k: 'overBendTime',  v: 0.009,label: 'Overtone Bend Time',unit: 's', lo: 0.001, hi: 0.03, step: 0.001, gloss: 'Time for modes 1 and 2 to converge to their nominal frequencies.' }
     ]
   },
 
@@ -570,29 +586,37 @@ export const instrumentData = {
     family: 'hybrid',
     label: 'Batá Slap (High)',
     params: [
-      { k: 'baseFreq',      v: 580,  label: 'Base Frequency',   unit: 'Hz', lo: 200, hi: 1200, step: 1, gloss: 'Okónkolo slap register (C5–E5, 520–660 Hz). Sharp and bright.' },
-      { k: 'pitchBend',     v: 1.18, label: 'Pitch Bend',       unit: '',   lo: 1.0, hi: 1.3, step: 0.01, gloss: 'Maximum tension yields extreme, instantaneous deflection.' },
-      { k: 'pitchBendTime', v: 0.008,label: 'Pitch Bend Time',  unit: 's',  lo: 0.005, hi: 0.08, step: 0.001, gloss: 'Instantaneous.' },
-      { k: 'bodyVol',       v: 0.40, label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Needs less volume at this pitch.' },
-      { k: 'bodyDecay',     v: 0.09, label: 'Body Decay',       unit: 's',  lo: 0.02, hi: 0.4, step: 0.005, gloss: 'Dies almost instantly.' },
-      { k: 'overRatio1',    v: 1.7,  label: 'Overtone 1 Ratio', unit: '',   lo: 1.1, hi: 3.0, step: 0.01, gloss: 'First inharmonic shell mode.' },
-      { k: 'overVol1',      v: 0.16, label: 'Overtone 1 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Loudest overtone.' },
-      { k: 'overDecay1',    v: 0.08, label: 'Overtone 1 Decay', unit: 's',  lo: 0.02, hi: 0.4, step: 0.005, gloss: 'Ring length.' },
-      { k: 'overRatio2',    v: 2.5,  label: 'Overtone 2 Ratio', unit: '',   lo: 1.1, hi: 4.0, step: 0.01, gloss: 'Second shell mode.' },
-      { k: 'overVol2',      v: 0.09, label: 'Overtone 2 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Second mode.' },
-      { k: 'overDecay2',    v: 0.06, label: 'Overtone 2 Decay', unit: 's',  lo: 0.02, hi: 0.4, step: 0.005, gloss: 'Ring length.' },
-      { k: 'overRatio3',    v: 3.4,  label: 'Overtone 3 Ratio', unit: '',   lo: 1.1, hi: 5.0, step: 0.01, gloss: 'Third shell mode.' },
-      { k: 'overVol3',      v: 0.04, label: 'Overtone 3 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Quietest mode.' },
-      { k: 'overDecay3',    v: 0.05, label: 'Overtone 3 Decay', unit: 's',  lo: 0.02, hi: 0.4, step: 0.005, gloss: 'Ring length.' },
-      { k: 'couplingFreq',  v: 300,  label: 'Enú Coupling Freq',unit: 'Hz', lo: 50, hi: 400, step: 1, gloss: 'Low sympathetic tone of the opposite (enú) head.' },
-      { k: 'couplingVol',   v: 0.05, label: 'Coupling Volume',  unit: '',   lo: 0, hi: 0.5, step: 0.01, gloss: 'How much low bloom reaches the enú.' },
-      { k: 'couplingDelay', v: 0.0015,label: 'Coupling Delay',  unit: 's',  lo: 0, hi: 0.02, step: 0.0005, gloss: 'Micro-delay before the coupled head responds.' },
-      { k: 'couplingAttack',v: 0.005,label: 'Coupling Attack',  unit: 's',  lo: 0.001, hi: 0.05, step: 0.001, gloss: 'Smoothed onset.' },
-      { k: 'couplingDecay', v: 0.04, label: 'Coupling Decay',   unit: 's',  lo: 0.01, hi: 0.3, step: 0.005, gloss: 'Coupling length.' },
-      { k: 'slapFreq',      v: 3800, label: 'Slap Filter Freq', unit: 'Hz', lo: 200, hi: 8000, step: 10, gloss: 'Okónkolo slap cuts through at ~3–4 kHz (very rapid, 30–50 ms).' },
-      { k: 'slapQ',         v: 3.0,  label: 'Slap Q',           unit: '',   lo: 0.5, hi: 5.0, step: 0.1, gloss: 'Very tight resonance.' },
-      { k: 'slapVol',       v: 0.6,  label: 'Slap Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Attack transient level.' },
-      { k: 'slapDecay',     v: 0.01, label: 'Slap Decay',       unit: 's',  lo: 0.003, hi: 0.1, step: 0.001, gloss: 'Microscopic snap.' }
+      { k: 'baseFreq',      v: 580,  label: 'Base Frequency',   unit: 'Hz', lo: 200, hi: 1200, step: 1, gloss: 'Okónkolo small-head fundamental, quickly damped by the hand.' },
+      { k: 'pitchBend',     v: 1.28, label: 'Pitch Bend',       unit: '',   lo: 1.0, hi: 1.5, step: 0.01, gloss: 'Strong initial tension spike from the sharp slap.' },
+      { k: 'pitchBendTime', v: 0.006,label: 'Pitch Bend Time',  unit: 's',  lo: 0.005, hi: 0.08, step: 0.001, gloss: 'The smallest head settles in 6 ms.' },
+      { k: 'bodyVol',       v: 0.24, label: 'Body Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Damped fundamental, quieter than the first membrane mode.' },
+      { k: 'bodyDecay',     v: 0.022,label: 'Body Decay',       unit: 's',  lo: 0.02, hi: 0.4, step: 0.001, gloss: 'Hand damping cuts the fundamental within 22 ms.' },
+      { k: 'overRatio1',    v: 1.48, label: 'Overtone 1 Ratio', unit: '',   lo: 1.1, hi: 3.0, step: 0.01, gloss: 'First asymmetric membrane mode; carries the slap pitch.' },
+      { k: 'overVol1',      v: 0.36, label: 'Overtone 1 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Louder than the damped fundamental.' },
+      { k: 'overDecay1',    v: 0.05,label: 'Overtone 1 Decay', unit: 's',  lo: 0.02, hi: 0.4, step: 0.001, gloss: 'First membrane mode rings beyond the body.' },
+      { k: 'overRatio2',    v: 1.91, label: 'Overtone 2 Ratio', unit: '',   lo: 1.1, hi: 4.0, step: 0.01, gloss: 'Second asymmetric membrane mode adds skin character.' },
+      { k: 'overVol2',      v: 0.18, label: 'Overtone 2 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Upper membrane partial level.' },
+      { k: 'overDecay2',    v: 0.032,label: 'Overtone 2 Decay', unit: 's',  lo: 0.02, hi: 0.4, step: 0.001, gloss: 'Fades before the first membrane mode.' },
+      { k: 'overRatio3',    v: 2.36, label: 'Overtone 3 Ratio', unit: '',   lo: 1.1, hi: 5.0, step: 0.01, gloss: 'High edge mode adds a brief rim bite.' },
+      { k: 'overVol3',      v: 0.1, label: 'Overtone 3 Volume',unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Subtle upper-mode sheen.' },
+      { k: 'overDecay3',    v: 0.02,label: 'Overtone 3 Decay', unit: 's',  lo: 0.02, hi: 0.4, step: 0.001, gloss: 'Brief edge-mode decay.' },
+      { k: 'couplingFreq',  v: 280,  label: 'Enú Coupling Freq',unit: 'Hz', lo: 50, hi: 400, step: 1, gloss: 'Low sympathetic resonance of the opposite enú head.' },
+      { k: 'couplingVol',   v: 0.12, label: 'Coupling Volume',  unit: '',   lo: 0, hi: 0.5, step: 0.01, gloss: 'Hollow opposite-head bloom beneath the slap.' },
+      { k: 'couplingDelay', v: 0.0016,label: 'Coupling Delay',  unit: 's',  lo: 0, hi: 0.02, step: 0.0001, gloss: 'Micro-delay before the coupled head responds.' },
+      { k: 'couplingAttack',v: 0.005,label: 'Coupling Attack',  unit: 's',  lo: 0.001, hi: 0.05, step: 0.001, gloss: 'Smoothed air-column onset.' },
+      { k: 'couplingDecay', v: 0.1,label: 'Coupling Decay',   unit: 's',  lo: 0.01, hi: 0.3, step: 0.005, gloss: 'Opposite-head resonance outlasts the choked slap.' },
+      { k: 'slapBandpass',  v: 1,    label: 'Slap Bandpass',    unit: '',   lo: 0, hi: 1, step: 1, gloss: '1 uses a swept bandpass; 0 restores the previous swept high-pass.' },
+      { k: 'slapFreq',      v: 4600, label: 'Slap Filter Freq', unit: 'Hz', lo: 200, hi: 8000, step: 10, gloss: 'Starting frequency of the downward skin-snap sweep.' },
+      { k: 'slapEndFreq',   v: 2200, label: 'Slap End Freq',    unit: 'Hz', lo: 200, hi: 8000, step: 10, gloss: 'Ending filter frequency, reached over Slap Decay.' },
+      { k: 'slapQ',         v: 1.4,  label: 'Slap Q',           unit: '',   lo: 0.5, hi: 5.0, step: 0.1, gloss: 'Broad snap instead of a narrow resonant tick.' },
+      { k: 'slapVol',       v: 0.7, label: 'Slap Volume',      unit: '',   lo: 0, hi: 1, step: 0.01, gloss: 'Dominant skin-snap level.' },
+      { k: 'slapDecay',     v: 0.03,label: 'Slap Decay',       unit: 's',  lo: 0.003, hi: 0.1, step: 0.001, gloss: 'Noise-envelope decay and downward sweep time.' },
+      { k: 'smackFreq',     v: 1350, label: 'Flesh Smack Freq', unit: 'Hz', lo: 200, hi: 3000, step: 10, gloss: 'Broad mid-band hand-impact layer beneath the skin snap.' },
+      { k: 'smackQ',        v: 0.9,  label: 'Flesh Smack Q',    unit: '',   lo: 0.5, hi: 3, step: 0.1, gloss: 'Low Q keeps the hand impact broad.' },
+      { k: 'smackVol',      v: 0.18, label: 'Flesh Smack Volume',unit: '',  lo: 0, hi: 1, step: 0.01, gloss: 'Independent hand-impact level; 0 disables this layer.' },
+      { k: 'smackDecay',    v: 0.015,label: 'Flesh Smack Decay',unit: 's',  lo: 0.003, hi: 0.1, step: 0.001, gloss: 'Short hand-impact decay, separate from the skin snap.' },
+      { k: 'overPitchBend', v: 1.344,label: 'Overtone Bend',    unit: '',   lo: 1, hi: 1.6, step: 0.001, gloss: 'Initial frequency ratio for modes 1 and 2: body bend times 1.05. Set 1 for static modes.' },
+      { k: 'overBendTime',  v: 0.009,label: 'Overtone Bend Time',unit: 's', lo: 0.001, hi: 0.03, step: 0.001, gloss: 'Time for modes 1 and 2 to converge to their nominal frequencies.' }
     ]
   },
 
@@ -1396,3 +1420,36 @@ export const instrumentData = {
   },
 
 };
+
+// ── Tuner overrides ────────────────────────────────────────────────────
+// The tuner pages save slider values to localStorage so the mixer can play
+// them as part of a full rhythm. Cleared with the tuner's "Reset mixer" button.
+export const TUNER_OVERRIDES_KEY = 'polyrhythm.tunerOverrides';
+
+export function applyTunerOverrides() {
+  let overrides;
+  try {
+    overrides = JSON.parse(localStorage.getItem(TUNER_OVERRIDES_KEY) || '{}');
+  } catch { return []; }
+  const changed = [];
+  for (const [inst, vals] of Object.entries(overrides || {})) {
+    const params = instrumentData[inst]?.params;
+    if (!params) continue;
+    for (const p of params) {
+      if (typeof vals[p.k] === 'number' && p.v !== vals[p.k]) {
+        p.v = vals[p.k];
+        if (!changed.includes(inst)) changed.push(inst);
+      }
+    }
+  }
+  return changed;
+}
+
+export function saveTunerOverride(inst) {
+  let overrides = {};
+  try { overrides = JSON.parse(localStorage.getItem(TUNER_OVERRIDES_KEY) || '{}'); } catch {}
+  overrides[inst] = Object.fromEntries(instrumentData[inst].params.map(p => [p.k, p.v]));
+  localStorage.setItem(TUNER_OVERRIDES_KEY, JSON.stringify(overrides));
+}
+
+if (typeof localStorage !== 'undefined') applyTunerOverrides();
