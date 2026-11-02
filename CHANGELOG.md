@@ -1,4 +1,14 @@
 # Changelog
+## v1.36.0 — 2026-11-02
+
+### Added
+- **Voice projection.** Click any voice label (`V1`, `V2`) in Rhythm Tracks to project that voice's rhythm into the active visualization. Projection follows the currently visible phrase cycle and works for both grouping-lane and Master voices.
+- **Projection in five views.** Gears adds an inner projection circle with lane-colored spokes; Rings adds a projection ring; Orbit adds rotating projected markers; Shapes connects projected hits into a polygon; Align adds a projected-voice lane.
+- **Projection status chip.** The visualization header identifies the projected voice and offers a clear button. Projected hits use the voice's lane color and light at 12 o'clock in sync with their pulses.
+
+### Fixed
+- **Voice visualization duplicate glyphs.** The active syllable is cleared from the cached lyric strip before its live redraw, so `Kpla`, `Ka`, and `Tu` render once instead of appearing doubled.
+
 ## v1.35.1 — 2026-10-21
 
 ### Fixed
