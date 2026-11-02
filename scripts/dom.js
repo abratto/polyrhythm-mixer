@@ -87,6 +87,9 @@ export function getDomRefs() {
         // Visualization explanation toggle
         vizInfoBtn: document.getElementById('vizInfoBtn'),
         vizDescription: document.getElementById('vizDescription'),
+        vizProjection: document.getElementById('vizProjection'),
+        vizProjectionName: document.getElementById('vizProjectionName'),
+        vizProjectionClear: document.getElementById('vizProjectionClear'),
 
         // Rhythm Tracks dynamic grouping lanes
         groupingLanesContainer: document.getElementById('groupingLanesContainer'),

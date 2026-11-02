@@ -18,6 +18,7 @@
 import { getActivePhraseStep, isOnQuarter, quarterBeatPeriod, lcm } from './math.js';
 import { createVoiceChannel } from './channels.js';
 import { buildLane } from './lanes.js';
+import { clearProjectionForLane, refreshProjectionUI } from './projection.js';
 
 // Grouping lane colors are theme-driven: each slot references a --glane-N
 // custom property so the lane accent (and its labels) resolve against the
@@ -428,6 +429,7 @@ function rebuildGroupingLane(lane) {
     if (index < 0) return;
     renderLaneRow(lane, index);
     updateFullPatternCycles();
+    refreshProjectionUI();
     if (typeof _deps.onChange === 'function') _deps.onChange();
 }
 
@@ -447,6 +449,7 @@ export function buildGroupingLanes() {
     appendAddVoiceButton(container);
     _lastSyncedFrame = _deps.state.mainTeeth;
     updateFullPatternCycles();
+    refreshProjectionUI();
     if (typeof _deps.onChange === 'function') _deps.onChange();
 }
 
@@ -495,6 +498,7 @@ export function removeGroupingLane(index) {
     const { lanes, state } = _deps;
     if (index < 0 || index >= lanes.grouping.length) return;
     const [removed] = lanes.grouping.splice(index, 1);
+    clearProjectionForLane(removed);
     delete state.followPlayhead[removed.cycleKey];
     delete state.visibleCycle[removed.cycleKey];
     _deps.channels.groupingVoices = lanes.grouping.flatMap(l => l.voiceChannels);

@@ -1383,6 +1383,49 @@
             background: #ff9100;
             color: #000;
         }
+        .viz-projection {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin: 0 10px 10px 14px;
+            padding: 4px 6px 4px 10px;
+            border: 1px solid color-mix(in srgb, currentColor 38%, #3a3a4c);
+            border-radius: 999px;
+            background: rgba(20, 20, 27, 0.82);
+            color: #a1a1aa;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            vertical-align: middle;
+        }
+        .viz-projection[hidden] {
+            display: none;
+        }
+        .viz-projection-name {
+            color: inherit;
+            letter-spacing: 0.4px;
+        }
+        .viz-projection-clear {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            border: 1px solid #3a3a4c;
+            border-radius: 50%;
+            background: #20202c;
+            color: #d5d5df;
+            font-size: 14px;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .viz-projection-clear:hover,
+        .viz-projection-clear:focus-visible {
+            border-color: #ffffff;
+            color: #ffffff;
+        }
         canvas {
             display: block;
             width: 100%;
@@ -2087,6 +2130,19 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
             flex-shrink: 0;
+            cursor: pointer;
+            border-radius: 3px;
+            padding: 1px 3px;
+            margin: -1px -3px;
+        }
+        .voice-label:hover,
+        .voice-label:focus-visible {
+            background: rgba(255, 255, 255, 0.07);
+            outline: none;
+        }
+        .voice-label.is-projected {
+            background: color-mix(in srgb, currentColor 18%, transparent);
+            box-shadow: inset 0 0 0 1px currentColor;
         }
         .voice-steps-column {
             display: flex;

@@ -1621,6 +1621,40 @@ async function run() {
         assert(await page.locator('#masterGrid .voice-row').count() === 1,
             'Reset should restore the starting Master voice after the lane is emptied.');
 
+        if (!(await page.locator('#polyrhythmView').evaluate(el => el.open))) {
+            await page.locator('#polyrhythmView > summary').click();
+        }
+        const projectionLabels = page.locator('#groupingLanesContainer .grouping-lane-row .voice-label');
+        await projectionLabels.first().click();
+        let projectionState = await page.evaluate(() => ({
+            hidden: document.getElementById('vizProjection').hidden,
+            name: document.getElementById('vizProjectionName').textContent,
+            pressed: document.querySelector('.voice-label.is-projected')?.getAttribute('aria-pressed')
+        }));
+        assert(!projectionState.hidden && /^G\d+ V1$/.test(projectionState.name) &&
+            projectionState.pressed === 'true',
+            'Clicking a voice label should project that rhythm and expose the projection chip.', projectionState);
+        await projectionLabels.nth(1).click();
+        projectionState = await page.evaluate(() => ({
+            name: document.getElementById('vizProjectionName').textContent,
+            projectedCount: document.querySelectorAll('.voice-label.is-projected').length
+        }));
+        assert(/^G\d+ V1$/.test(projectionState.name) && projectionState.projectedCount === 1,
+            'Selecting another voice should switch the projection to that single voice.', projectionState);
+        for (const modeId of ['vizModeGears', 'vizModeRings', 'vizModeOrbit', 'vizModeShapes', 'vizModeAlign']) {
+            await page.locator(`#${modeId}`).click();
+            await page.waitForTimeout(120);
+            assert(await page.locator(`#${modeId}`).getAttribute('aria-pressed') === 'true',
+                `Projection should render without errors in ${modeId}.`);
+        }
+        await page.locator('#vizProjectionClear').click();
+        projectionState = await page.evaluate(() => ({
+            hidden: document.getElementById('vizProjection').hidden,
+            projectedCount: document.querySelectorAll('.voice-label.is-projected').length
+        }));
+        assert(projectionState.hidden && projectionState.projectedCount === 0,
+            'Clearing the projection should hide the chip and remove the label highlight.', projectionState);
+
         assert(pageErrors.length === 0, 'No page errors should be emitted.', pageErrors);
         assert(consoleErrors.length === 0, 'No console errors should be emitted.', consoleErrors);
 

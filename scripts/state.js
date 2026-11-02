@@ -58,7 +58,9 @@ export function createState(ui) {
         // Whether each multi-cycle lane auto-follows the playhead (false = pinned/manual)
         followPlayhead: { master: true },
         // Which round visualization renders: 'gears' (mechanical) or 'rings' (clock face)
-        vizMode: 'gears'
+        vizMode: 'gears',
+        // Ephemeral voice projection: { laneKey, voiceIndex } or null
+        projectedVoice: null
     };
 }
 

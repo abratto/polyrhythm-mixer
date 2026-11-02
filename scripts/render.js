@@ -11,6 +11,7 @@
 import { getActivePhraseStep, getMeshedWheelAngle } from './math.js';
 import { updateVoiceStepsForCycle } from './lanes.js';
 import { getPolyrhythmDescription } from './state.js';
+import { getProjectedVoice, projectedRotationAngle } from './projection.js';
 
 /** Cache for pre-rendered gear body Path2D objects, keyed by tooth count + radii. */
 const _gearBodyCache = {};
@@ -924,6 +925,157 @@ function drawRingFlash(ctx, N, r, cx, cy, color, dotR, mainAngle, isMobile) {
 }
 
 
+/** Draws one projected-rhythm marker: lane-colored, white-ringed, glowing. */
+function drawProjectedMarker(ctx, x, y, color, radius, active, isMobile, alpha = 1) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = isMobile ? 1 : 1.5;
+    if (!isMobile) {
+        ctx.shadowColor = color;
+        ctx.shadowBlur = active ? 16 : 7;
+    }
+    ctx.beginPath();
+    ctx.arc(x, y, radius * (active ? 1.25 : 1), 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.stroke();
+    if (active) {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x, y, Math.max(1.5, radius * 0.42), 0, 2 * Math.PI);
+        ctx.fill();
+    }
+    ctx.restore();
+}
+
+/** Static projected rhythm ring (Rings/Shapes/Gears, optionally rotated). */
+function drawProjectedRingMarkers(ctx, ticks, N, r, cx, cy, color, dotR, currentTick, rotation, isMobile) {
+    if (!ticks.length || !N) return;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.26;
+    ctx.lineWidth = isMobile ? 1 : 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    const step = (2 * Math.PI) / N;
+    for (const tick of ticks) {
+        const angle = -Math.PI / 2 - tick * step + rotation;
+        drawProjectedMarker(
+            ctx,
+            r * Math.cos(angle),
+            r * Math.sin(angle),
+            color,
+            dotR,
+            tick === currentTick,
+            isMobile
+        );
+    }
+    ctx.restore();
+}
+
+/** Inner-circle projection with lane-colored spokes for the Gears view. */
+function drawProjectedInnerRingMarkers(ctx, ticks, N, r, hubR, cx, cy, color, dotR, rotation, isMobile) {
+    if (!ticks.length || !N) return;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.24;
+    ctx.lineWidth = isMobile ? 1 : 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    const step = (2 * Math.PI) / N;
+    const flashWindow = Math.min(0.16, Math.max(0.035, step * 0.35));
+    for (const tick of ticks) {
+        // Locked to the gear rotation; mirror the tick order inside this ring
+        // so each tick reaches 12 o'clock when its pulse fires.
+        const angle = projectedRotationAngle(tick, N, rotation);
+        const x = r * Math.cos(angle);
+        const y = r * Math.sin(angle);
+        const delta = angle + Math.PI / 2;
+        const absDelta = Math.abs(Math.atan2(Math.sin(delta), Math.cos(delta)));
+        const hit = absDelta < flashWindow ? 1 - (absDelta / flashWindow) : 0;
+        const active = hit > 0.45;
+        ctx.globalAlpha = 0.4 + 0.42 * hit;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = active ? (isMobile ? 2 : 2.5) : (isMobile ? 1.25 : 1.75);
+        ctx.beginPath();
+        ctx.moveTo(hubR * Math.cos(angle), hubR * Math.sin(angle));
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        drawProjectedMarker(ctx, x, y, color, dotR, active, isMobile, 0.65 + 0.35 * hit);
+    }
+    ctx.restore();
+}
+
+/** Rotating projected rhythm ring for the Orbit view. */
+function drawProjectedOrbitMarkers(ctx, ticks, N, r, cx, cy, color, dotR, mainAngle, isMobile) {
+    if (!ticks.length || !N) return;
+    const period = (2 * Math.PI) / N;
+    const flashWindow = Math.min(0.16, Math.max(0.035, period * 0.35));
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.26;
+    ctx.lineWidth = isMobile ? 1 : 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    for (const tick of ticks) {
+        // Mirror the tick order inside this projection ring so tick 0 starts at
+        // 12 o'clock and each tick reaches the top when its pulse fires, while
+        // still rotating in lockstep with the other orbit rings.
+        const angle = projectedRotationAngle(tick, N, -mainAngle);
+        const delta = angle + Math.PI / 2;
+        const absDelta = Math.abs(Math.atan2(Math.sin(delta), Math.cos(delta)));
+        const hit = absDelta < flashWindow ? 1 - (absDelta / flashWindow) : 0;
+        drawProjectedMarker(
+            ctx,
+            r * Math.cos(angle),
+            r * Math.sin(angle),
+            color,
+            dotR,
+            hit > 0.45,
+            isMobile,
+            0.5 + 0.5 * hit
+        );
+    }
+    ctx.restore();
+}
+
+/** Connects projected hits into a polygon for the Shapes view. */
+function drawProjectedPolygon(ctx, ticks, N, r, cx, cy, color, isMobile) {
+    if (ticks.length < 3 || !N) return;
+    ctx.save();
+    ctx.translate(cx, cy);
+    const step = (2 * Math.PI) / N;
+    ctx.beginPath();
+    ticks.forEach((tick, index) => {
+        const angle = -Math.PI / 2 - tick * step;
+        const x = r * Math.cos(angle);
+        const y = r * Math.sin(angle);
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.12;
+    ctx.fill();
+    ctx.globalAlpha = 0.72;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isMobile ? 1.5 : 2;
+    ctx.stroke();
+    ctx.restore();
+}
+
 // ── Voice view: Anlo Ewe verbalization (Kpla / Ka / Tu) ─────────────────
 // For one master measure, every tick that fires a meter pulse becomes a
 // spoken syllable: 'Kpla' when both meters strike together (both hands),
@@ -1059,12 +1211,17 @@ function drawVerbalizationView(ctx, state, cx, cy, dialR, timelineX, timelineWid
         if (partialW > 0.5) ctx.fillRect(cx - v.rowHalf[it.row], stripTopY + rowBandTop, partialW, 32);
     }
 
-    // Active syllable at full alpha with its white underline (redrawn live)
+    // Active syllable at full alpha with its white underline (redrawn live).
+    // Clear the cached word first so it is rendered once, not over its own
+    // semi-transparent sprite copy.
     ctx.font = v.stripFont;
     ctx.textAlign = 'center';
-    ctx.fillStyle = VERBAL_COLORS[active.kind];
     const wordX = cx + it.x;
     const wordY = stripTopY + it.y;
+    const fontPx = parseInt(v.stripFont.match(/(\d+)px/)?.[1] || '18', 10);
+    ctx.fillStyle = '#08080c';
+    ctx.fillRect(wordX - it.w / 2 - 3, wordY - fontPx, it.w + 6, fontPx * 1.35);
+    ctx.fillStyle = VERBAL_COLORS[active.kind];
     ctx.fillText(active.word, wordX, wordY);
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 1.5;
@@ -1167,23 +1324,24 @@ function getAlignSprite(state, isMobile) {
     return { canvas: off, width: w, height: h, labelW, x0, laneWidth, laneSpan, yBeat, yA, yB, coincideTicks };
 }
 
-function drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile) {
+function drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile, projection = null) {
     const stepSize = (2 * Math.PI) / state.mainTeeth;
     const sprite = getAlignSprite(state, isMobile);
     // Shifted up so the lanes and countdown sit clear of the master cycle
     // timeline below (which starts around y = 395 with its markers).
     const originY = cy - sprite.laneSpan - 55;
     const originX = timelineX - (sprite.width - timelineWidth) / 2;
+    const projectedY = sprite.yB + 50;
     ctx.drawImage(sprite.canvas, originX, originY);
 
-    // Live playhead sweeping all three lanes
+    // Live playhead sweeping all three lanes (and the projection lane)
     const measureProgress = (((state.mainAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) / (2 * Math.PI);
     const px = originX + sprite.x0 + measureProgress * sprite.laneWidth;
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(px, originY + sprite.yBeat - 26);
-    ctx.lineTo(px, originY + sprite.yB + 26);
+    ctx.lineTo(px, originY + (projection ? projectedY + 26 : sprite.yB + 26));
     ctx.stroke();
 
     // Sweep flashes: a mark lights crisply as the playhead crosses it —
@@ -1208,6 +1366,26 @@ function drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, mast
     flashLane(state.A, originY + sprite.yA, '#ff6b8f', 8.5);
     flashLane(state.B, originY + sprite.yB, '#6ef2ff', 8.5);
 
+    if (projection) {
+        const color = resolveCanvasColor(projection.color);
+        const laneY = originY + projectedY;
+        const currentTick = ((Math.floor(state.mainAngle / stepSize) % state.mainTeeth) + state.mainTeeth) % state.mainTeeth;
+        ctx.strokeStyle = '#2d2d3d';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(originX + sprite.x0, laneY);
+        ctx.lineTo(originX + sprite.x0 + sprite.laneWidth, laneY);
+        ctx.stroke();
+        ctx.fillStyle = color;
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(projection.label, originX + sprite.labelW, laneY + 4);
+        for (const tick of projection.ticks) {
+            const x = originX + sprite.x0 + (tick / state.mainTeeth) * sprite.laneWidth;
+            drawProjectedMarker(ctx, x, laneY, color, isMobile ? 5 : 6, tick === currentTick, isMobile);
+        }
+    }
 }
 
 // ── Clock view: old-school digital counters ────────────────────────────
@@ -1937,6 +2115,9 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
 
         const currentStep = Math.floor(state.mainAngle / stepSize);
         const prevStep = Math.floor(prevMainAngle / stepSize);
+        const currentTick = ((currentStep % state.mainTeeth) + state.mainTeeth) % state.mainTeeth;
+        const projected = getProjectedVoice(state, lanes);
+        const projectedColor = projected ? resolveCanvasColor(projected.color) : '';
 
         // Quarter-note click (every π/2 radians = every beat)
         const quarterSize = Math.PI / 2;
@@ -2143,6 +2324,10 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             drawRingFlash(ctx, state.A, dial.rMeterA, cx, cy, '#ff6b8f', 8.5, state.mainAngle, isMobile);
             drawRingFlash(ctx, state.B, dial.rMeterB, cx, cy, '#6ef2ff', 8.5, state.mainAngle, isMobile);
             drawRingFlash(ctx, 4, dial.rBeat, cx, cy, '#ff9100', 8.5, state.mainAngle, isMobile);
+            if (projected) {
+                drawProjectedRingMarkers(ctx, projected.ticks, state.mainTeeth, dialR * 0.82, cx, cy,
+                    projectedColor, isMobile ? 5 : 5.75, currentTick, 0, isMobile);
+            }
         } else if (state.vizMode === 'orbit') {
             // ── Orbit view: fixed hand, rotating pulse dots ──
             const rTicks = dialR * DIAL_RING_FRACTIONS.master;
@@ -2180,6 +2365,10 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
             drawOrbitRing(ctx, state.A, rMeterA, cx, cy, '#ff3366', 8.5, state.mainAngle, isMobile, false);
             drawOrbitRing(ctx, state.B, rMeterB, cx, cy, '#00e5ff', 8.5, state.mainAngle, isMobile, false);
             drawOrbitRing(ctx, 4, rBeat, cx, cy, '#ff9100', 8.5, state.mainAngle, isMobile, false);
+            if (projected) {
+                drawProjectedOrbitMarkers(ctx, projected.ticks, state.mainTeeth, dialR * 0.82, cx, cy,
+                    projectedColor, isMobile ? 5 : 5.75, state.mainAngle, isMobile);
+            }
 
             // Fixed hand pivot.
             ctx.save();
@@ -2195,11 +2384,16 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
         } else if (state.vizMode === 'phase3d') {
             drawPhase3DView(ctx, state, cx, cy, dialR, isMobile);
         } else if (state.vizMode === 'align') {
-            drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile);
+            drawAlignView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile, projected);
         } else if (state.vizMode === 'voice') {
             drawVerbalizationView(ctx, state, cx, cy, dialR, timelineX, timelineWidth, masterCurrentCycle, isMobile);
         } else if (state.vizMode === 'shapes') {
             drawShapesView(ctx, state, cx, cy, dialR, isMobile);
+            if (projected) {
+                drawProjectedPolygon(ctx, projected.ticks, state.mainTeeth, dialR * 0.82, cx, cy, projectedColor, isMobile);
+                drawProjectedRingMarkers(ctx, projected.ticks, state.mainTeeth, dialR * 0.82, cx, cy,
+                    projectedColor, isMobile ? 5 : 5.75, currentTick, 0, isMobile);
+            }
         } else {
             // ── Gears view: the mechanical construction ──
 
@@ -2216,6 +2410,13 @@ export function startAnimation({ canvas, ctx, ui, state, lanes, channels, markCu
 
             drawGear(ctx, cxA, cy, rAInner, rAOuter, state.teethA, angles.A, '#ff3366', true, state.flash.A, null, isMobile);
             drawGear(ctx, cxB, cy, rBInner, rBOuter, state.teethB, angles.B, '#00e5ff', true, state.flash.B, null, isMobile);
+
+            if (projected) {
+                const rProjection = rMainInner * 0.7;
+                const hubR = rMainInner * 0.28;
+                drawProjectedInnerRingMarkers(ctx, projected.ticks, state.mainTeeth, rProjection, hubR, cx, cy,
+                    projectedColor, Math.max(4, rMainOuter * 0.028), angles.main, isMobile);
+            }
         }
 
         // Master-cycle timeline layer: rebuilt only when the playing master

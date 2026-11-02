@@ -22,6 +22,7 @@ import { wireControls, shouldAutoOpenHelpModal, openHelpModal, closeHelpModal } 
 import { copyShareLink, loadStateFromUrl, applyChannelState } from './share.js';
 import { closeSaveRhythmModal, closeSavedRhythmsModal, openSaveRhythmModal, openSavedRhythmsModal, saveCurrentRhythm } from './saved-rhythms.js';
 import { startAnimation } from './render.js';
+import { initProjectionUI, refreshProjectionUI } from './projection.js';
 import { initGroupingLanes, syncGroupingLanesToFrame, resetGroupingLanes } from './grouping-lanes.js';
 import { wireGridScrollSync } from './scroll-sync.js';
 
@@ -230,6 +231,7 @@ function rebuildSystem(resetWheels = false) {
     buildAllLanes(lanes, state);
     refreshSilenced(channels);
     updateBeatSchemeSummary();
+    refreshProjectionUI();
 }
 
 /** Updates the contextual explanation of the selected meters. */
@@ -324,6 +326,7 @@ function resetMixerToStartingState() {
     resetAudioScheduler(state);
     refreshSilenced(channels);
     updateBeatSchemeSummary();
+    refreshProjectionUI();
 }
 
 function rebuildAllVoiceMixerStrips() {
@@ -629,6 +632,8 @@ wireLaneMixButtons(lanes, channels);
 // Initialize mix-driven lane visuals (dim when muted / solo-excluded)
 refreshSilenced(channels);
 
+initProjectionUI({ state, lanes, ui });
+
 // Async initialization: load shared state from URL, then start animation
 (async () => {
     const loadedFromUrl = await loadStateFromUrl(shareDeps);
@@ -643,6 +648,8 @@ refreshSilenced(channels);
         wireLaneMixButtons(lanes, channels);
         applyMixVisuals(lanes, channels);
     }
+
+    refreshProjectionUI();
 
     // Phase 8: Show help modal for first-time visitors
     if (shouldAutoOpenHelpModal()) {

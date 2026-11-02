@@ -17,7 +17,7 @@
                 <li>Choose Meter A and Meter B — try <strong>3 against 4</strong>.</li>
                 <li>The groove is already moving silently. Click <strong>Enable Audio</strong> to hear it.</li>
                 <li>Click steps in a lane to change its pattern. Click <strong>+ Voice</strong> below Rhythm Tracks to add another rhythm track, then shape its pattern. Use <strong>Pause</strong> / <strong>Play</strong> to control playback.</li>
-                <li>Open <strong>Polyrhythm Visualizations</strong> to see the rhythms move through the shared cycle. Switch views to explore gears, rings, orbit, clocks, and more.</li>
+                <li>Open <strong>Polyrhythm Visualizations</strong> to see the rhythms move through the shared cycle. Switch views to explore gears, rings, orbit, clocks, and more. Click a voice label such as <strong>V1</strong> to project that rhythm onto the active visualization.</li>
             </ol>
             <p class="help-tagline">Layer rhythms, hear where they meet, and shape the groove.</p>
             <details class="help-details">
@@ -34,6 +34,10 @@
                     <section class="help-topic">
                         <h3>Explore groupings</h3>
                         <p>A grouping lane divides the cycle into equal parts. Choose the number of parts with <strong>Grouping</strong>; <strong>Offset</strong> moves the highlighted start pulse within each group. A step shows the smaller pulses inside that part.</p>
+                    </section>
+                    <section class="help-topic">
+                        <h3>Project a rhythm</h3>
+                        <p>Click a voice label such as <strong>V1</strong> in Rhythm Tracks to project that voice onto the active visualization. Its hits appear in the voice's lane color in <strong>Gears</strong>, <strong>Rings</strong>, <strong>Orbit</strong>, <strong>Shapes</strong>, and <strong>Align</strong>. Click the same label again, or the <strong>×</strong> in the projecting chip, to clear it.</p>
                     </section>
                     <section class="help-topic">
                         <h3>Create longer phrases</h3>
@@ -148,6 +152,11 @@
             <button id="vizModeAlign" type="button" class="viz-mode-btn" data-mode="align" aria-pressed="false">Align</button>
             <button id="vizModeVoice" type="button" class="viz-mode-btn" data-mode="voice" aria-pressed="false">Voice</button>
             <button id="vizModeShapes" type="button" class="viz-mode-btn" data-mode="shapes" aria-pressed="false">Shapes</button>
+        </div>
+        <div id="vizProjection" class="viz-projection" hidden>
+            <span class="viz-projection-label">Projecting</span>
+            <span id="vizProjectionName" class="viz-projection-name"></span>
+            <button id="vizProjectionClear" type="button" class="viz-projection-clear" aria-label="Clear projected rhythm">×</button>
         </div>
         <div id="vizDescription" class="lane-description" hidden>
             <p><strong>Gears.</strong> The centre wheel is one measure of music: it turns once per 4 beats, and every tooth is one pulse. With 6 against 4 it has 12 teeth — Meter A fires every 2, Meter B every 3. The 4 grey spokes inside are the quarter-note beats. Pink marks show where Meter A's pulses land, cyan where Meter B's land; when both land on the same tooth the colour blends to magenta — both meters firing together. Use the visualization switch (above the picture) to flip between mechanical, clock-face, orbit, and phase-diagram views.</p>

@@ -21,6 +21,7 @@ The **audio clock drives the visual**. The master wheel angle is computed from t
 - **Per-lane controls** — Instrument select, volume, solo, and mute are colocated with each sequencer
 - **Master Beat reference strip** — 4/4 click track displayed alongside the polyrhythm beat scheme
 - **Gear visualization** — Grey 4/4 spokes, pink (A) and cyan (B) meter spokes, and magenta overlap where they land on the same tooth; colored dots mark active pulse positions
+- **Voice projection** — Click a voice label (`V1`, `V2`) to project that rhythm into the active visualization. Gears, Rings, Orbit, Shapes, and Align show lane-colored hit markers; click again or use the projection chip to clear.
 - **Cycle navigation** — Multi-cycle phrase support with ◀/▶ browsing and auto-follow playhead
 - **Instrument tuning pages** — Interactive parameter tuning for hybrid and membrane families (`tuners/hybrid.html`, `tuners/membrane.html`)
 - **Synthesized percussion** — 16 instruments generated in real-time via Web Audio API (oscillators, noise, filters)

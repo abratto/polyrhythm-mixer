@@ -13,6 +13,7 @@
  */
 import { isOnQuarter, quarterBeatPeriod } from './math.js';
 import { populateInstrumentSelect, bindSoloMute } from './audio.js';
+import { clearProjectionForLane, isVoiceProjected, laneProjectionKey, toggleProjectedVoice } from './projection.js';
 
 /**
  * Tracks an in-progress click-drag paint across step buttons. Only one lane
@@ -275,6 +276,7 @@ export function resetPatterns(state, lanes) {
 
     if (lanes.master.voices[0]?.selected.length > 0) lanes.master.voices[0].selected[0] = true;
 
+    state.projectedVoice = null;
     state.lastActive = { master: -1 };
 }
 
@@ -335,6 +337,7 @@ export function addVoice(lane) {
 /** Removes a voice from a multi-voice lane. Grouping lanes retain one voice. */
 export function removeVoice(lane, index) {
     if (!lane.isMultiVoice || (lane.channelPrefix !== 'master' && lane.voices.length <= 1)) return;
+    clearProjectionForLane(lane);
     lane.voices.splice(index, 1);
 }
 
@@ -474,7 +477,24 @@ function buildVoiceButtons(lane, voice, voiceIndex, state) {
     label.className = 'voice-label';
     label.textContent = `Voice ${voiceIndex + 1}`;
     label.dataset.compactLabel = String(voiceIndex + 1);
+    label.dataset.laneKey = laneProjectionKey(lane);
+    label.dataset.voiceIndex = String(voiceIndex);
     label.style.color = lane.color;
+    label.setAttribute('role', 'button');
+    label.setAttribute('tabindex', '0');
+    const projected = isVoiceProjected(state, lane, voiceIndex);
+    label.classList.toggle('is-projected', projected);
+    label.setAttribute('aria-pressed', String(projected));
+    label.title = projected
+        ? 'Stop projecting this voice in the visualizations'
+        : 'Project this voice in the visualizations';
+    const toggleProjectionForVoice = () => toggleProjectedVoice(lane, voiceIndex);
+    label.addEventListener('click', toggleProjectionForVoice);
+    label.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        toggleProjectionForVoice();
+    });
     identityGroup.appendChild(label);
 
     // Per-voice instrument selector — sits next to the "Voice N" label in the
