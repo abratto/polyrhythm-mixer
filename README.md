@@ -66,7 +66,7 @@ Offset is per lane, so different lanes can sit at different phases. A grouping o
 
 ## Share Links & Versioning
 
-Share payloads are compressed (DEFLATE) and Base64URL-encoded with a `z:` prefix. Each payload carries a version number with automatic migration on load (v0 → v5). Saved rhythms use the same format in localStorage.
+Share payloads are compressed (DEFLATE) and Base64URL-encoded with a `z:` prefix. Each payload carries a version number with automatic migration on load (v0 → v6). Saved rhythms use the same format in localStorage.
 
 ## Technical Notes
 

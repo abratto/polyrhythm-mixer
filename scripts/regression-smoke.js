@@ -219,13 +219,12 @@ async function run() {
                 B2: activeIndexesFor(gl(2, 2, '.step-btn.active'))
             },
             grouping: groupingRows.map(row => {
-                const slicedCell = row.querySelector('.sequencer-container > .voice-row[data-voice-index="0"] .step-btn.has-slices');
-                const slices = slicedCell ? Array.from(slicedCell.querySelectorAll('.step-slice')) : [];
+                const underlay = Array.from(row.querySelectorAll('.grouping-underlay-cell'));
                 return {
                     g: row.querySelector('.grouping-count-select')?.value ?? null,
                     c: row.querySelector('.grouping-cycles-select')?.value ?? null,
                     voices: row.querySelectorAll('.sequencer-container > .voice-row[data-voice-index]').length,
-                    offset: slices.length ? slices.findIndex(s => s.classList.contains('start')) : null,
+                    offset: underlay.findIndex(cell => cell.classList.contains('is-start')),
                     active: Array.from(row.querySelectorAll('.sequencer-container > .voice-row[data-voice-index="0"] .step-btn.active')).map(b => Array.from(b.parentElement.children).indexOf(b))
                 };
             }),
@@ -236,7 +235,9 @@ async function run() {
                 masterVoice1Sound: selectValue('#sound_master_0'),
                 masterVoice2Sound: selectValue('#sound_master_1'),
                 AVoice1Sound: selectValue(gl(1, 1, '.voice-instrument-select')),
-                BVoice1Sound: selectValue(gl(2, 1, '.voice-instrument-select'))
+                AVoice2Sound: selectValue(gl(1, 2, '.voice-instrument-select')),
+                BVoice1Sound: selectValue(gl(2, 1, '.voice-instrument-select')),
+                BVoice2Sound: selectValue(gl(2, 2, '.voice-instrument-select'))
             },
             voiceLabels: {
                 master1: selectText('#masterGrid .voice-row:nth-child(1) .voice-instrument-select'),
@@ -856,17 +857,32 @@ async function run() {
         const legacySaved = await snapshot();
         assert(legacySaved.meters.A === '3' && legacySaved.meters.B === '4' && legacySaved.meters.tempo === '96', 'Legacy saved payload should migrate meter settings.', legacySaved);
         assert(same(legacySaved.active.master1, [0]), 'Legacy saved payload should migrate the master pattern.', legacySaved.active);
-        // The wheel lanes are gone: their patterns fold into the linked grouping
-        // lanes' voice 1 — aw [0,1,2] = A onsets 0,1,2 and bw [0..3] = B onsets,
-        // merged with the migrated phrase patterns ap [0,2] / bp [0,3].
-        assert(same(legacySaved.active.A1, [0, 1, 2]), 'Legacy saved payload should fold the A wheel into grouping lane 1.', legacySaved.active);
-        assert(same(legacySaved.active.B1, [0, 1, 2, 3]), 'Legacy saved payload should fold the B wheel into grouping lane 2.', legacySaved.active);
+        assert(same(legacySaved.active.A1, [0, 2]), 'Legacy phrase and wheel A patterns should remain separate voices.', legacySaved.active);
+        assert(same(legacySaved.active.A2, [0, 1, 2]), 'Legacy saved payload should preserve the A wheel pattern.', legacySaved.active);
+        assert(same(legacySaved.active.B1, [0, 3]), 'Legacy phrase and wheel B patterns should remain separate voices.', legacySaved.active);
+        assert(same(legacySaved.active.B2, [0, 1, 2, 3]), 'Legacy saved payload should preserve the B wheel pattern.', legacySaved.active);
+        assert(
+            same(
+                [legacySaved.mixer.AVoice1Sound, legacySaved.mixer.AVoice2Sound, legacySaved.mixer.BVoice1Sound, legacySaved.mixer.BVoice2Sound],
+                ['woodblock', 'rimshot', 'cowbell', 'claves']
+            ),
+            'Legacy phrase and wheel voices should keep their independent instruments.',
+            legacySaved.mixer
+        );
 
         await page.goto(legacyShareUrl, { waitUntil: 'networkidle' });
         await waitForApp();
         const legacyShared = await snapshot();
         assert(legacyShared.meters.A === '3' && legacyShared.meters.B === '4' && legacyShared.meters.tempo === '96', 'Legacy share URL should migrate meter settings.', legacyShared);
-        assert(same(legacyShared.active.master1, [0]) && same(legacyShared.active.A1, [0, 1, 2]) && same(legacyShared.active.B1, [0, 1, 2, 3]), 'Legacy share URL should migrate patterns and fold wheel pulses into the grouping lanes.', legacyShared.active);
+        assert(
+            same(legacyShared.active.master1, [0])
+                && same(legacyShared.active.A1, [0, 2])
+                && same(legacyShared.active.A2, [0, 1, 2])
+                && same(legacyShared.active.B1, [0, 3])
+                && same(legacyShared.active.B2, [0, 1, 2, 3]),
+            'Legacy share URL should preserve phrase and wheel patterns as separate voices.',
+            legacyShared.active
+        );
 
         // --- Master phrase cycle count round-trips through share (regression:
         //     the restore clamp once capped masterPhrase at 4, but the selector
@@ -942,9 +958,15 @@ async function run() {
         await page.waitForTimeout(600);
         const recoveredHighlight = await page.evaluate(() => {
             const btns = document.querySelectorAll('#masterGrid .voice-row:nth-child(1) .step-btn');
-            return Array.from(btns).some(b => b.classList.contains('current'));
+            return {
+                found: Array.from(btns).some(b => b.classList.contains('current')),
+                buttons: btns.length,
+                current: Array.from(btns).findIndex(b => b.classList.contains('current')),
+                active: Array.from(btns).findIndex(b => b.classList.contains('active')),
+                audio: document.querySelector('#audioBtn')?.textContent?.trim()
+            };
         });
-        assert(recoveredHighlight, 'After a main-thread stall, the step highlight should recover on the next frame.');
+        assert(recoveredHighlight.found, 'After a main-thread stall, the step highlight should recover on the next frame.', recoveredHighlight);
 
         // --- Visualization mode switcher ---
         // --- Visualization mode switcher (nine views) ---
@@ -1654,6 +1676,69 @@ async function run() {
         }));
         assert(projectionState.hidden && projectionState.projectedCount === 0,
             'Clearing the projection should hide the chip and remove the label highlight.', projectionState);
+
+        const phasedLegacyPayload = {
+            v: 4,
+            m: { A: 6, B: 4, phraseA: 1, phraseB: 1, phaseA: 1, phaseB: 2, masterPhrase: 1, tempo: 108 },
+            p: {
+                m: [{ s: [0], i: 'kick', v: 0.7, u: 0 }],
+                ap: [{ s: [0], i: 'woodblock', v: 0.6, u: 0 }],
+                aw: { s: [1, 2, 3, 4] },
+                bp: [{ s: [0], i: 'cowbell', v: 0.5, u: 0 }],
+                bw: { s: [2, 5, 8, 11] }
+            },
+            c: {
+                driver: { s: 'shaker', v: 0.5, u: 0 },
+                awheel: { s: 'rimshot', v: 0.4, u: 0 },
+                bwheel: { s: 'claves', v: 0.3, u: 0 }
+            }
+        };
+        await page.goto(`${BASE_URL}/?s=${encodeLegacyPayload(phasedLegacyPayload)}`, { waitUntil: 'networkidle' });
+        await waitForApp();
+        const phasedLegacy = await snapshot();
+        assert(phasedLegacy.grouping[0].offset === 1 && phasedLegacy.grouping[1].offset === 2,
+            'Legacy A/B phases should restore as grouping offsets.', phasedLegacy.grouping);
+        assert(phasedLegacy.grouping.length === 3 && phasedLegacy.grouping[2].g === '12',
+            'Legacy off-onset wheel teeth should restore on an exact pulse-resolution lane.',
+            phasedLegacy.grouping);
+        assert(same(phasedLegacy.active.A2, [0, 1]), 'Legacy onset-aligned wheel hits should use a separate A voice.', phasedLegacy.active);
+        assert(same(phasedLegacy.grouping[2].active, [2, 4]), 'Legacy off-onset wheel teeth should keep their exact timing.', phasedLegacy.grouping[2]);
+
+        const emptyGroupingSaveName = `Empty Groupings ${Date.now()}`;
+        await page.evaluate(({ key, name }) => {
+            const rhythms = JSON.parse(localStorage.getItem(key) || '[]');
+            rhythms.unshift({
+                id: 'empty-grouping-save',
+                name,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                payload: {
+                    v: 6,
+                    m: { A: 3, B: 4, masterPhrase: 1, phaseA: 0, phaseB: 0, tempo: 90, masterVolume: 80 },
+                    p: { m: [{ s: [0], i: 'clap', v: 0.5, u: 0, o: 0 }], gl: [] },
+                    c: { driver: { s: 'kick', v: 0.6, u: 0, o: 0 } }
+                }
+            });
+            localStorage.setItem(key, JSON.stringify(rhythms));
+        }, { key: SAVED_RHYTHMS_KEY, name: emptyGroupingSaveName });
+        await page.goto(`${BASE_URL}/?cache-bust=empty-groupings-${Date.now()}`, { waitUntil: 'networkidle' });
+        await waitForApp();
+        await page.locator('#loadRhythmBtn').click();
+        await page.locator('.saved-rhythm-item', { hasText: emptyGroupingSaveName }).locator('.saved-rhythm-load-btn').click();
+        await page.waitForFunction(() => document.querySelector('#savedRhythmsModal')?.classList.contains('hidden'));
+        assert(
+            await page.locator('#groupingLanesContainer .grouping-lane-row').count() === 0,
+            'Loading a saved rhythm with no grouping lanes should not recreate the default lanes.'
+        );
+        await page.locator('#shareBtn').click();
+        await page.waitForFunction(() => globalThis.__lastCopiedShareUrl?.includes('?s='));
+        const emptyGroupingShareUrl = await page.evaluate(() => globalThis.__lastCopiedShareUrl);
+        await page.goto(emptyGroupingShareUrl, { waitUntil: 'networkidle' });
+        await waitForApp();
+        assert(
+            await page.locator('#groupingLanesContainer .grouping-lane-row').count() === 0,
+            'Sharing and loading a rhythm with no grouping lanes should preserve the empty list.'
+        );
 
         assert(pageErrors.length === 0, 'No page errors should be emitted.', pageErrors);
         assert(consoleErrors.length === 0, 'No console errors should be emitted.', consoleErrors);

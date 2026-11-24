@@ -599,7 +599,7 @@ export function serializeGroupingLanes(serializeVoice) {
 
 /** Restores grouping lanes from a share/save payload. */
 export function restoreGroupingLanes(data, applyVoiceState) {
-    if (!_deps || !Array.isArray(data) || data.length === 0) return false;
+    if (!_deps || !Array.isArray(data)) return false;
     const { state, lanes, channels } = _deps;
     const valid = divisorsForGroups(state.mainTeeth);
     _nextId = 0;
@@ -630,7 +630,6 @@ export function restoreGroupingLanes(data, applyVoiceState) {
         });
     });
 
-    if (!lanes.grouping.length) return false;
     ensureCycleKeys(_deps);
     buildGroupingLanes();
     return true;
