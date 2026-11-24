@@ -5,10 +5,10 @@
  * can share their configurations. Supports versioned payloads with automatic
  * migration from older formats, and fails silently on invalid data.
  *
- * Payload structure (v2):
- *   { v: 2, m: { A, B, phraseA, ... }, p: { m: [voice...], ap: [voice...], ... }, c: { driver, custom, ... } }
+ * Payload structure (v6):
+ *   { v: 6, m: { A, B, masterPhrase, ... }, p: { m: [voice...], gl: [lane...] }, c: { driver, ... } }
  *
- * Migration: v0/v1 payloads are automatically converted to v2 on load.
+ * Migration: v0-v5 payloads are automatically converted to v6 on load.
  * Future versions (v > current) are rejected.
  */
 
@@ -226,15 +226,27 @@ function migrateV1toV2(payload) {
     const p = payload.p;
     if (!p || typeof p !== 'object') return payload;
 
+    const legacyChannels = payload.c;
+    const wrapVoice = (arr, channelIndex) => {
+        const voice = { s: Array.isArray(arr) ? arr : [] };
+        if (!Array.isArray(legacyChannels?.s) || !Array.isArray(legacyChannels?.v) || !Array.isArray(legacyChannels?.u)) {
+            return voice;
+        }
+
+        voice.i = legacyChannels.s[channelIndex] || null;
+        voice.v = legacyChannels.v[channelIndex] ?? 0.5;
+        voice.u = legacyChannels.u[channelIndex] || 0;
+        return voice;
+    };
+
     // Wrap single arrays in voice objects
-    const wrapVoice = (arr) => [{ s: Array.isArray(arr) ? arr : [] }];
     const wrapSingle = (arr) => ({ s: Array.isArray(arr) ? arr : [] });
 
     payload.p = {
-        m: wrapVoice(p.m),
-        ap: wrapVoice(p.ap),
+        m: [wrapVoice(p.m, 1)],
+        ap: [wrapVoice(p.ap, 2)],
         aw: wrapSingle(p.aw),
-        bp: wrapVoice(p.bp),
+        bp: [wrapVoice(p.bp, 4)],
         bw: wrapSingle(p.bw)
     };
 
@@ -299,16 +311,18 @@ function migrateV4toV5(payload) {
     if (!m) return payload;
     const p = payload.p || {};
 
-    const toLane = (voices, groupCount, cycles) => ({
+    const mainTeeth = lcm(m.A, m.B);
+    const toLane = (voices, groupCount, cycles, linked, phase) => ({
         g: groupCount,
         c: cycles || 1,
-        lk: null,
+        ph: ((phase || 0) % (mainTeeth / groupCount) + (mainTeeth / groupCount)) % (mainTeeth / groupCount),
+        lk: linked,
         v: Array.isArray(voices) ? voices : [{ s: [] }]
     });
 
     p.gl = [
-        toLane(p.ap, m.A, m.phraseA),
-        toLane(p.bp, m.B, m.phraseB)
+        toLane(p.ap, m.A, m.phraseA, 'A', m.phaseA),
+        toLane(p.bp, m.B, m.phraseB, 'B', m.phaseB)
     ];
     delete p.ap;
     delete p.bp;
@@ -323,12 +337,9 @@ function migrateV4toV5(payload) {
 
 /**
  * Migrates v5 payloads (wheel lanes) to v6 (wheel lanes removed).
- * The Meter A/B wheel patterns ride onto the linked A/B grouping lanes:
- * onset-aligned hits merge into voice 1 (which already carries the canonical
- * pulse); any hits NOT on a group onset — possible because the wheels were
- * tooth-editable — are preserved as an extra voice at tooth positions
- * (voice step s → tooth s × teethX, with the lane's offset folded in).
- * The wheel channel's instrument/mix settings land on voice 1's channel.
+ * Onset-aligned hits become a separate voice so old wheel and phrase channels
+ * remain independent. Off-onset hits move to an unlinked, pulse-resolution
+ * grouping lane so their exact tooth timing is preserved.
  */
 function migrateV5toV6(payload) {
     const m = payload.m;
@@ -336,51 +347,63 @@ function migrateV5toV6(payload) {
     const c = payload.c;
     if (m && p && Array.isArray(p.gl)) {
         const mainTeeth = lcm(m.A, m.B);
-        const teethFor = (lk) => lk === 'A' ? mainTeeth / m.A : mainTeeth / m.B;
         const wheels = { A: p.aw, B: p.bw };
         const wheelChannels = { A: c?.awheel, B: c?.bwheel };
-        // Pre-v5 lanes didn't record a link; lane order is [A, B] from the
-        // v4→v5 migration, so fall back to position when lk is missing.
-        const laneFor = (lk) =>
-            p.gl.find(entry => entry && entry.lk === lk)
-            || p.gl[lk === 'A' ? 0 : 1];
+        const laneFor = (lk) => p.gl.find(entry => entry && entry.lk === lk);
+        const compactChannel = (stateObj) => {
+            if (!stateObj || typeof stateObj !== 'object') return {};
+            const voice = {};
+            const sound = stateObj.s ?? stateObj.instrument;
+            const volume = stateObj.v ?? stateObj.volume;
+            const muted = stateObj.u ?? stateObj.muted;
+            const soloed = stateObj.o ?? stateObj.soloed;
+            if (sound) voice.i = sound;
+            if (typeof volume === 'number') voice.v = volume;
+            if (muted !== undefined) voice.u = muted ? 1 : 0;
+            if (soloed !== undefined) voice.o = soloed ? 1 : 0;
+            return voice;
+        };
+        const wheelVoice = (steps, channelState) => ({
+            s: [...new Set(steps)].sort((a, b) => a - b),
+            ...compactChannel(channelState)
+        });
 
         ['A', 'B'].forEach(lk => {
             const wheel = wheels[lk];
             const wheelSel = Array.isArray(wheel?.s) ? wheel.s : [];
-            const lane = laneFor(lk);
-            if (!lane) return;
-            lane.lk = lane.lk || lk;
-            const teeth = teethFor(lk);
-            const groupCount = Number.isInteger(lane.g) ? lane.g : m[lk];
-            const phase = Number.isInteger(lane.ph) ? lane.ph : 0;
-            const cycleTeeth = teeth * groupCount;
+            if (!wheelSel.length) return;
 
-            // Fold the wheel pattern into tooth positions, then split into
-            // onset-aligned (→ voice 1) and off-onset extras (→ new voice).
+            const lane = laneFor(lk);
+            const teeth = mainTeeth / m[lk];
+            const groupCount = m[lk];
+            const phase = Number.isInteger(lane?.ph) ? lane.ph : 0;
             const onsetSteps = [];
-            const extraTeeth = [];
-            wheelSel.forEach(tooth => {
-                const rel = ((tooth - phase) % cycleTeeth + cycleTeeth) % cycleTeeth;
-                if (rel % teeth === 0) onsetSteps.push(rel / teeth);
-                else extraTeeth.push(tooth % cycleTeeth);
+            const offOnsetTeeth = [];
+
+            wheelSel.forEach(rawTooth => {
+                if (!Number.isInteger(rawTooth)) return;
+                const tooth = ((rawTooth % mainTeeth) + mainTeeth) % mainTeeth;
+                const relative = ((tooth - phase) % mainTeeth + mainTeeth) % mainTeeth;
+                if (lane && relative % teeth === 0 && relative / teeth < groupCount) {
+                    onsetSteps.push(relative / teeth);
+                } else {
+                    offOnsetTeeth.push(tooth);
+                }
             });
 
-            if (!Array.isArray(lane.v)) lane.v = [];
+            const channelState = wheelChannels[lk];
             if (onsetSteps.length) {
-                if (!lane.v[0]) lane.v[0] = { s: [] };
-                const merged = new Set([...(lane.v[0].s || []), ...onsetSteps]);
-                lane.v[0].s = [...merged].sort((x, y) => x - y);
+                if (!Array.isArray(lane.v)) lane.v = [];
+                lane.v.push(wheelVoice(onsetSteps, channelState));
             }
-            const chState = wheelChannels[lk];
-            if (chState && lane.v[0]) {
-                if (typeof chState.s === 'string' && chState.s) lane.v[0].i = chState.s;
-                if (typeof chState.v === 'number') lane.v[0].v = chState.v;
-                if (chState.u) lane.v[0].u = 1;
-                if (chState.o) lane.v[0].o = 1;
-            }
-            if (extraTeeth.length) {
-                lane.v.push({ s: extraTeeth.map(t => Math.floor(t / teeth)) });
+            if (offOnsetTeeth.length) {
+                p.gl.push({
+                    g: mainTeeth,
+                    c: 1,
+                    ph: 0,
+                    lk: null,
+                    v: [wheelVoice(offOnsetTeeth, channelState)]
+                });
             }
         });
     }
@@ -395,7 +418,7 @@ function migrateV5toV6(payload) {
  * Runs the appropriate migration functions based on the payload version.
  * Throws if the payload is invalid or from a future (unsupported) version.
  */
-function migratePayload(payload) {
+export function migratePayload(payload) {
     if (!payload || typeof payload !== 'object') {
         throw new Error('Invalid share payload');
     }
