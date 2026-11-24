@@ -124,7 +124,10 @@ async function run() {
 
     page.on('pageerror', error => pageErrors.push(error.message));
     page.on('console', message => {
-        if (message.type() === 'error') consoleErrors.push(message.text());
+        const location = message.location().url || '';
+        if (message.type() === 'error' && !location.endsWith('/favicon.ico')) {
+            consoleErrors.push(`${message.text()} ${location}`.trim());
+        }
     });
 
     await page.addInitScript(({ helpKey }) => {
