@@ -1,4 +1,13 @@
 # Changelog
+## v1.36.1 — 2026-11-23
+
+### Fixed
+- **Cross-generation rhythm migration.** Legacy saved rhythms and share links now preserve phrase and wheel instruments, volume, mute, and solo settings independently instead of overwriting one channel with the other.
+- **Legacy phase restoration.** Meter A/B phase offsets now migrate into grouping-lane offsets.
+- **Legacy wheel timing.** Arbitrary off-onset wheel hits retain their exact pulse timing on a pulse-resolution grouping lane.
+- **Empty Rhythm Tracks round trips.** Save, load, and share now preserve an intentionally empty grouping-lane list.
+- **Migration regression coverage.** Added focused serialization tests and live-browser checks for legacy saves, share links, phases, instruments, timing, and empty lanes.
+
 ## v1.36.0 — 2026-11-02
 
 ### Added
